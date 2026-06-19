@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card p-4 text-center">
+            <h5 class="fw-bold mb-3" style="color: var(--sidebar-color);">Terminal do Balcão</h5>
+            
+            <div class="d-inline-block p-4 rounded-circle mb-3" style="background-color: #e6fffa; border: 2px solid #319795;">
+                <i class="fas fa-keyboard fa-2x text-success"></i>
+            </div>
+            
+            <h6 class="text-success fw-bold m-0"><i class="fas fa-circle small"></i> Pronto para Digitação</h6>
+            <p class="text-muted small mt-2">O cliente deve digitar o DDD + Telefone no teclado numérico do caixa.</p>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-mobile-alt text-warning"></i> Identificação por Telefone (Tempo Real)</div>
+            <div class="card-body p-4">
+                
+                <div class="p-4 rounded shadow-sm text-center border mb-4" style="background: linear-gradient(135deg, var(--dourado-claro) 0%, #fff 100%); border-color: var(--rosa-pastel) !important;">
+                    <span class="badge bg-success mb-2"><i class="fas fa-phone-alt"></i> Telefone Detectado</span>
+                    <h3 class="fw-bold m-0" style="color: var(--sidebar-color);">Pontuação Computada!</h3>
+                    
+                    <div class="row my-4 align-items-center">
+                        <div class="col-4 border-end">
+                            <span class="text-muted small d-block">TELEFONE</span>
+                            <strong class="fs-5">(11) 99999-1111</strong>
+                        </div>
+                        <div class="col-4 border-end">
+                            <span class="text-muted small d-block">CLIENTE</span>
+                            <strong class="fs-5">Ana Silva</strong>
+                        </div>
+                        <div class="col-4">
+                            <span class="text-muted small d-block">NOVO SALDO</span>
+                            <strong class="fs-4 text-success">160 pts</strong>
+                        </div>
+                    </div>
+                    
+                    <small class="text-muted"><i class="fas fa-check-circle text-success"></i> Sinal visual enviado: LED Verde e som emitidos no Arduino.</small>
+                </div>
+
+                <h6 class="fw-bold mb-3" style="color: var(--sidebar-color);"><i class="fas fa-history"></i> Últimos Clientes Pontuados</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hora</th>
+                                <th>Telefone Digitado</th>
+                                <th>Cliente Identificado</th>
+                                <th>Pontos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>19:45</td>
+                                <td><code>(11) 99999-1111</code></td>
+                                <td>Ana Silva</td>
+                                <td><span class="badge bg-success">+10 pts</span></td>
+                            </tr>
+                            <tr>
+                                <td>19:22</td>
+                                <td><code>(11) 98888-2222</code></td>
+                                <td>Beatriz Souza</td>
+                                <td><span class="badge bg-success">+10 pts</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

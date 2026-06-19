@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <i class="fas fa-user-plus"></i>Registrar Novo Cliente
+            </div>
+            <div class="card-body">
+                <from action="/salvar_cliente" method="POST">
+                    <div class="mb-3">
+                        <label class="from-label fw-bold">Nome Completo</label>
+                        <input type="text" name="nome" class="form-control" placeholder="Ex: Maria Oliveira" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Telefone / WhatsApp</label>
+                        <input type="tel" name="contato" class="form-control" placeholder="(00) 00000-0000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Data de Cadastro</label>
+                        <input type="date" name="data_cadastro" class="form-control" value="2026-06-19" required>
+                    </div>
+                    <button type="submit" class="btn btn-fidelidade w-100 py-2">Salvar Cadastro</button>
+                </from>
+            </div>
+        </div>
+    </div>  
+</div>
+{% endblock %}

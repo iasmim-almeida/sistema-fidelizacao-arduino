@@ -1,0 +1,108 @@
+/* frontend/static/css/style.css */
+:root {
+    --bg-sistema: #fff9fa;       /* Fundo esbranquiçado com toque de rosa bem sutil */
+    --sidebar-color: #fcaec7;    /* Rosa pastel lindo e suave para a barra lateral */
+    --sidebar-hover: #f896b5;    /* Um rosa um pouquinho mais intenso para o efeito de seleção */
+    --rosa-pastel: #fecddb;      /* Rosa bem bebê para bordinhas */
+    --dourado-claro: #fbf1d1;    /* Fundo de cartões em dourado pastel */
+    --dourado-botao: #e5c060;    /* Botão dourado suave */
+    --texto-escuro: #5c3a43;     /* Um marrom/rosa bem escuro para o texto ficar legível (acessibilidade) */
+}
+
+
+body {
+    background-color: var(--bg-sistema);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--texto-escuro);
+    overflow-x: hidden;
+}
+
+/* Estrutura do Layout (Igual ao Print) */
+.wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+#sidebar {
+    width: 260px;
+    background-color: var(--sidebar-color);
+    color: white;
+    padding: 20px 0;
+    flex-shrink: 0;
+}
+
+#content {
+    flex-grow: 1;
+    padding: 30px;
+}
+
+/* Estilo do Menu Lateral */
+.sidebar-heading {
+    padding: 10px 25px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: var(--texto-escuro);
+}
+
+.sidebar-section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--texto-escuro);
+    padding: 15px 25px 5px 25px;
+}
+
+.nav-link-sidebar {
+    display: flex;
+    align-items: center;
+    padding: 12px 25px;
+    color: var(--texto-escuro);
+    text-decoration: none;
+    transition: 0.2s;
+    font-size: 0.95rem;
+}
+
+.nav-link-sidebar i {
+    margin-right: 15px;
+    width: 20px;
+    text-align: center;
+}
+
+.nav-link-sidebar:hover, .nav-link-sidebar.active {
+    background-color: var(--sidebar-hover);
+    color: white;
+    border-left: 4px solid var(--dourado-botao);
+}
+
+/* Banner de Boas-Vindas */
+.banner-welcome {
+    background: linear-gradient(135deg, var(--sidebar-color) 0%, #880e4f 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 35px;
+    margin-bottom: 25px;
+}
+
+/* Cartões de Indicadores */
+.card-indicator {
+    background: white;
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+}
+
+/* Botões do Sistema */
+.btn-fidelidade {
+    background: linear-gradient(135deg, #e5c158 0%, var(--dourado-botao) 100%);
+    color: #4a3300;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+}
+.btn-fidelidade:hover {
+    background: #aa8413;
+    color: white;
+}

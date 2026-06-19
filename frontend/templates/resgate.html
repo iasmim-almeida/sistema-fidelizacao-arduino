@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-gift text-warning"></i> Validar e Entregar Recompensa
+            </div>
+            <div class="card-body p-4">
+                
+                <form action="/confirmar_resgate" method="POST">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold" style="color: var(--sidebar-color);">1. Quem está resgatando?</label>
+                        <select name="cliente_id" class="form-select form-select-lg" required>
+                            <option value="">Selecione o cliente (Nome - Telefone)...</option>
+                            <option value="1">Ana Silva — (11) 99999-1111 [Saldo: 160 pts]</option>
+                            <option value="2">Beatriz Souza — (11) 98888-2222 [Saldo: 45 pts]</option>
+                        </select>
+                        <div class="form-text">O saldo atual do cliente aparece ao lado do nome para ajudar a vendedora.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold" style="color: var(--sidebar-color);">2. Selecione o Prêmio Escolhido</label>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="border p-3 rounded d-flex align-items-center justify-content-between bg-white shadow-sm" style="border-color: var(--rosa-pastel) !important;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="p-3 rounded me-3 text-danger" style="background-color: #fff5f7;"><i class="fas fa-cookie-bite fa-lg"></i></div>
+                                        <div>
+                                            <h6 class="fw-bold m-0">Brinde Simples</h6>
+                                            <small class="text-muted">Custo: 50 pontos</small>
+                                        </div>
+                                    </div>
+                                    <input type="radio" name="premio" value="brinde_50" class="form-check-input ms-2" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="border p-3 rounded d-flex align-items-center justify-content-between bg-white shadow-sm" style="border-color: var(--rosa-pastel) !important;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="p-3 rounded me-3 text-warning" style="background-color: var(--dourado-claro);"><i class="fas fa-percentage fa-lg"></i></div>
+                                        <div>
+                                            <h6 class="fw-bold m-0">15% de Desconto</h6>
+                                            <small class="text-muted">Custo: 100 pontos</small>
+                                        </div>
+                                    </div>
+                                    <input type="radio" name="premio" value="desconto_100" class="form-check-input ms-2">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-fidelidade w-100 py-3 fs-5">
+                            <i class="fas fa-check-circle"></i> Confirmar Entrega e Deduzir Pontos
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header text-muted bg-light" style="font-size: 0.9rem;">
+                <i class="fas fa-history"></i> Últimos Prêmios Entregues Hoje
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                    <tbody>
+                        <tr>
+                            <td class="ps-4">15:30</td>
+                            <td><strong>Carlos Oliveira</strong></td>
+                            <td>Brinde Simples</td>
+                            <td class="text-danger fw-bold text-end pe-4">-50 pts</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
