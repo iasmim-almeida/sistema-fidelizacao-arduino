@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FideliZa – Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <style>
+    :root {
+      --brand-primary: #4F46E5;
+      --brand-secondary: #7C3AED;
+      --brand-light: #EEF2FF;
+      --brand-dark: #1E1B4B;
+      --accent: #F59E0B;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--brand-dark) 0%, #312E81 60%, #4338CA 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .login-card {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+    }
+
+    .brand-logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+    }
+
+    .brand-logo i {
+      color: white;
+      font-size: 1.8rem;
+    }
+
+    .brand-name {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--brand-dark);
+      letter-spacing: -0.5px;
+    }
+
+    .brand-name span {
+      color: var(--brand-primary);
+    }
+
+    .brand-tagline {
+      color: #6B7280;
+      font-size: 0.875rem;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: 0.875rem;
+    }
+
+    .form-control {
+      border: 2px solid #E5E7EB;
+      border-radius: 10px;
+      padding: 0.65rem 1rem;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      border-color: var(--brand-primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .input-group .form-control {
+      border-right: none;
+    }
+
+    .input-group-text {
+      background: white;
+      border: 2px solid #E5E7EB;
+      border-left: none;
+      border-radius: 0 10px 10px 0;
+      cursor: pointer;
+      color: #9CA3AF;
+      transition: color 0.2s;
+    }
+
+    .input-group-text:hover {
+      color: var(--brand-primary);
+    }
+
+    .input-group:focus-within .form-control,
+    .input-group:focus-within .input-group-text {
+      border-color: var(--brand-primary);
+    }
+
+    .btn-login {
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      border: none;
+      border-radius: 10px;
+      padding: 0.75rem;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.3px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-login:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #D1D5DB;
+      font-size: 0.8rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #E5E7EB;
+    }
+
+    .badge-demo {
+      background: var(--brand-light);
+      color: var(--brand-primary);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .badge-demo code {
+      background: none;
+      color: var(--brand-secondary);
+      font-weight: 700;
+    }
+
+    .alert-error {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #B91C1C;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      padding: 0.65rem 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <!-- Logo e Marca -->
+    <div class="text-center mb-4">
+      <div class="brand-logo">
+        <i class="bi bi-stars"></i>
+      </div>
+      <h1 class="brand-name">Fideli<span>Za</span></h1>
+      <p class="brand-tagline">Sistema de fidelização de clientes</p>
+    </div>
+
+    <!-- Alerta de erro (oculto por padrão) -->
+    <div id="alertaErro" class="alert-error mb-3 d-none">
+      <i class="bi bi-exclamation-circle me-1"></i>
+      E-mail ou senha incorretos. Tente novamente.
+    </div>
+
+    <!-- Formulário -->
+    <form id="formLogin" novalidate>
+      <div class="mb-3">
+        <label for="email" class="form-label">E-mail</label>
+        <input
+          type="email"
+          class="form-control"
+          id="email"
+          placeholder="seu@email.com"
+          required
+          autocomplete="email"
+        />
+      </div>
+
+      <div class="mb-4">
+        <label for="senha" class="form-label">Senha</label>
+        <div class="input-group">
+          <input
+            type="password"
+            class="form-control"
+            id="senha"
+            placeholder="••••••••"
+            required
+            autocomplete="current-password"
+          />
+          <span class="input-group-text" id="toggleSenha" title="Mostrar/ocultar senha">
+            <i class="bi bi-eye" id="iconeSenha"></i>
+          </span>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-login btn-primary w-100 text-white mb-3">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
+      </button>
+    </form>
+
+    <!-- Acesso demo -->
+    <div class="divider mb-3">acesso de demonstração</div>
+    <div class="badge-demo text-center">
+      E-mail: <code>admin@loja.com</code> &nbsp;|&nbsp; Senha: <code>1234</code>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Toggle mostrar/ocultar senha
+    document.getElementById('toggleSenha').addEventListener('click', function () {
+      const input = document.getElementById('senha');
+      const icone = document.getElementById('iconeSenha');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icone.className = 'bi bi-eye-slash';
+      } else {
+        input.type = 'password';
+        icone.className = 'bi bi-eye';
+      }
+    });
+
+    // Login simples (demonstração)
+    document.getElementById('formLogin').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+      const alerta = document.getElementById('alertaErro');
+
+      if (email === 'admin@loja.com' && senha === '1234') {
+        alerta.classList.add('d-none');
+        window.location.href = 'dashboard.html';
+      } else {
+        alerta.classList.remove('d-none');
+      }
+    });
+  </script>
+</body>
+</html>
