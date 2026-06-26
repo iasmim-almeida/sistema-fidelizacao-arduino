@@ -1,108 +1,329 @@
-/* frontend/static/css/style.css */
+/* ===========================================
+   FIDELIZA - STYLE.CSS
+   =========================================== */
+
+/* ========= VARIÁVEIS ========= */
 :root {
-    --bg-sistema: #fff9fa;       /* Fundo esbranquiçado com toque de rosa bem sutil */
-    --sidebar-color: #fcaec7;    /* Rosa pastel lindo e suave para a barra lateral */
-    --sidebar-hover: #f896b5;    /* Um rosa um pouquinho mais intenso para o efeito de seleção */
-    --rosa-pastel: #fecddb;      /* Rosa bem bebê para bordinhas */
-    --dourado-claro: #fbf1d1;    /* Fundo de cartões em dourado pastel */
-    --dourado-botao: #e5c060;    /* Botão dourado suave */
-    --texto-escuro: #5c3a43;     /* Um marrom/rosa bem escuro para o texto ficar legível (acessibilidade) */
+    --bg-sistema: #fff9fa;
+    --sidebar-color: #fcaec7;
+    --sidebar-hover: #f896b5;
+
+    --rosa-pastel: #fecddb;
+    --rosa-claro: #fff1f5;
+
+    --dourado-claro: #fbf1d1;
+    --dourado-botao: #e5c060;
+
+    --texto-escuro: #5c3a43;
+
+    --gradiente-banner: linear-gradient(
+        90deg,
+        #f3839f 0%,
+        #a83a59 50%,
+        #5c1630 100%
+    );
+
+    --sombra-card: 0 8px 20px rgba(92, 58, 67, 0.08);
 }
 
+/* ========= GERAL ========= */
 
-body {
-    background-color: var(--bg-sistema);
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    color: var(--texto-escuro);
-    overflow-x: hidden;
+body{
+    margin:0;
+    background:var(--bg-sistema);
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color:var(--texto-escuro);
+    overflow-x:hidden;
 }
 
-/* Estrutura do Layout (Igual ao Print) */
-.wrapper {
-    display: flex;
-    min-height: 100vh;
+/* ========= LAYOUT ========= */
+
+.wrapper{
+    display:flex;
+    min-height:100vh;
 }
 
-#sidebar {
-    width: 260px;
-    background-color: var(--sidebar-color);
-    color: white;
-    padding: 20px 0;
-    flex-shrink: 0;
+#sidebar{
+    width:260px;
+    background:var(--sidebar-color);
+    flex-shrink:0;
+    padding:20px 0;
 }
 
-#content {
-    flex-grow: 1;
-    padding: 30px;
+#content{
+    flex:1;
+    padding:30px;
 }
 
-/* Estilo do Menu Lateral */
-.sidebar-heading {
-    padding: 10px 25px;
-    font-size: 1.5rem;
-    font-weight: bold;
-    letter-spacing: 1px;
-    color: var(--texto-escuro);
+/* ========= SIDEBAR ========= */
+
+.sidebar-heading{
+    padding:10px 25px;
+    font-size:30px;
+    font-weight:700;
+    color:var(--texto-escuro);
 }
 
-.sidebar-section-title {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--texto-escuro);
-    padding: 15px 25px 5px 25px;
+.sidebar-section-title{
+    padding:18px 25px 8px;
+    text-transform:uppercase;
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--texto-escuro);
 }
 
-.nav-link-sidebar {
-    display: flex;
-    align-items: center;
-    padding: 12px 25px;
-    color: var(--texto-escuro);
-    text-decoration: none;
-    transition: 0.2s;
-    font-size: 0.95rem;
+.nav-link-sidebar{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    text-decoration:none;
+    color:var(--texto-escuro);
+    padding:13px 25px;
+    transition:.3s;
+    font-size:15px;
 }
 
-.nav-link-sidebar i {
-    margin-right: 15px;
-    width: 20px;
-    text-align: center;
+.nav-link-sidebar i{
+    width:18px;
+    text-align:center;
 }
 
-.nav-link-sidebar:hover, .nav-link-sidebar.active {
-    background-color: var(--sidebar-hover);
-    color: white;
-    border-left: 4px solid var(--dourado-botao);
+.nav-link-sidebar:hover,
+.nav-link-sidebar.active{
+    background:var(--sidebar-hover);
+    color:#fff;
+    border-left:4px solid var(--dourado-botao);
 }
 
-/* Banner de Boas-Vindas */
-.banner-welcome {
-    background: linear-gradient(135deg, var(--sidebar-color) 0%, #880e4f 100%);
-    color: white;
-    border-radius: 15px;
-    padding: 35px;
-    margin-bottom: 25px;
+/* ========= BANNERS ========= */
+
+.banner-welcome,
+.card-balance,
+.card-welcome,
+.client-banner{
+    background:var(--gradiente-banner);
+    color:#fff;
+    border-radius:18px;
+    padding:30px;
+    margin-bottom:25px;
+    box-shadow:var(--sombra-card);
 }
 
-/* Cartões de Indicadores */
-.card-indicator {
-    background: white;
-    border: 1px solid rgba(0,0,0,0.05);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+.banner-welcome h3,
+.card-welcome h3,
+.client-banner h3,
+.card-balance h1{
+    margin:0;
+    font-weight:700;
 }
 
-/* Botões do Sistema */
-.btn-fidelidade {
-    background: linear-gradient(135deg, #e5c158 0%, var(--dourado-botao) 100%);
-    color: #4a3300;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
+.banner-welcome p,
+.client-banner p{
+    margin-top:8px;
+    opacity:.9;
 }
-.btn-fidelidade:hover {
-    background: #aa8413;
-    color: white;
+
+/* ========= CARDS ========= */
+
+.card-indicator,
+.card-client,
+.card-stats{
+    background:#fff;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:var(--sombra-card);
+    border:1px solid rgba(0,0,0,.05);
+}
+
+.card-client{
+    border-left:4px solid var(--rosa-pastel);
+}
+
+/* ========= ÍCONES ========= */
+
+.icon-box,
+.reward-icon,
+.icon-circle{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border-radius:14px;
+}
+
+.icon-box{
+    width:55px;
+    height:55px;
+    background:var(--rosa-claro);
+    color:#d85f82;
+    font-size:22px;
+}
+
+.reward-icon{
+    width:50px;
+    height:50px;
+    background:var(--dourado-claro);
+    color:var(--dourado-botao);
+    font-size:20px;
+}
+
+.icon-circle{
+    width:45px;
+    height:45px;
+    border-radius:50%;
+    font-size:18px;
+}
+
+/* ========= BOTÕES ========= */
+
+.btn-fidelidade{
+    background:linear-gradient(135deg,#e5c158,var(--dourado-botao));
+    border:none;
+    color:#4a3300;
+    font-weight:600;
+    border-radius:10px;
+    padding:10px 22px;
+    transition:.3s;
+}
+
+.btn-fidelidade:hover{
+    background:#aa8413;
+    color:#fff;
+}
+
+.btn-reward{
+    background:#d85f82;
+    color:#fff;
+    border:none;
+}
+
+.btn-reward:hover{
+    background:#c64d70;
+    color:#fff;
+}
+
+.btn-reward:disabled{
+    background:#d6d6d6;
+    color:#fff;
+}
+
+/* ========= PROGRESS ========= */
+
+.progress{
+    height:14px;
+    border-radius:20px;
+    background:#f3dce3;
+}
+
+.progress-bar{
+    background:#d85f82;
+    border-radius:20px;
+}
+
+/* ========= RECOMPENSAS ========= */
+
+.reward-card{
+    background:#fff;
+    border-radius:14px;
+    border:1px solid #f0d8df;
+    padding:18px;
+    display:flex;
+    align-items:center;
+    gap:15px;
+    height:100%;
+}
+
+/* ========= HISTÓRICO ========= */
+
+.history-item{
+    background:#fff;
+    border:1px solid #eeeeee;
+    border-radius:12px;
+    padding:16px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.history-points{
+    font-weight:700;
+    color:#198754;
+}
+
+/* ========= TABELAS ========= */
+
+.table-extrato{
+    background:#fff;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:var(--sombra-card);
+}
+
+.table-extrato th{
+    background:var(--rosa-claro);
+    color:var(--texto-escuro);
+    border:none;
+    padding:16px;
+    font-weight:700;
+}
+
+.table-extrato td{
+    padding:16px;
+    vertical-align:middle;
+}
+
+/* ========= BADGES ========= */
+
+.badge-ganho{
+    background:#e7f8ed;
+    color:#198754;
+    padding:6px 12px;
+    border-radius:8px;
+    font-weight:700;
+}
+
+.badge-resgate{
+    background:#fff1f5;
+    color:#d85f82;
+    padding:6px 12px;
+    border-radius:8px;
+    font-weight:700;
+}
+
+/* ========= COMO PONTUAR ========= */
+
+.how-to-earn{
+    background:#fffdf6;
+    border:1px dashed #d4a373;
+    border-radius:16px;
+    padding:20px;
+}
+
+/* ========= RESPONSIVO ========= */
+
+@media(max-width:768px){
+
+    #sidebar{
+        width:220px;
+    }
+
+    #content{
+        padding:20px;
+    }
+
+    .banner-welcome,
+    .client-banner,
+    .card-balance{
+        padding:22px;
+    }
+
+    .history-item{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+    }
+
+    .reward-card{
+        flex-direction:column;
+        text-align:center;
+    }
 }

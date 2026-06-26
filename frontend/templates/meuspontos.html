@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FideliZa - Meus Pontos</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="../static/css/style.css">
+
+  <style>
+    /* Reutilizando e refinando o padrão visual do seu app */
+    .card-balance {
+      background: linear-gradient(135deg, #5c3a43, #8a5865);
+      border-radius: 18px;
+      padding: 30px;
+      color: #ffffff;
+      box-shadow: 0 10px 25px rgba(92, 58, 67, 0.15);
+      margin-bottom: 24px;
+    }
+
+    .card-stats {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #f0d8df;
+      box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+      height: 100%;
+    }
+
+    .icon-circle {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    /* Estilo para a tabela de extrato */
+    .table-extrato {
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+      border: 1px solid #eeeeee;
+    }
+
+    .table-extrato th {
+      background-color: #fff1f5;
+      color: #5c3a43;
+      font-weight: 700;
+      border: none;
+      padding: 16px;
+    }
+
+    .table-extrato td {
+      padding: 16px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f8f9fa;
+    }
+
+    .badge-ganho {
+      background-color: #e7f8ed;
+      color: #198754;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .badge-resgate {
+      background-color: #fff1f5;
+      color: #d85f82;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .how-to-earn {
+      background-color: #fffdf6;
+      border: 1px dashed #d4a373;
+      border-radius: 16px;
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <nav id="sidebar">
+      <div class="sidebar-heading mb-4 px-4">
+        <i class="fas fa-sparkles text-warning"></i> FideliZa
+      </div>
+
+      <div class="sidebar-section-title">Cliente</div>
+      <a href="testecliente.html" class="nav-link-sidebar">
+        <i class="fas fa-home"></i> Início
+      </a>
+      <a href="meuspontos.html" class="nav-link-sidebar active">
+        <i class="fas fa-coins"></i> Meus pontos
+      </a>
+      <a href="recompesas.html" class="nav-link-sidebar">
+        <i class="fas fa-gift"></i> Recompensas
+      </a>
+      <a href="historico.html" class="nav-link-sidebar active">
+        <i class="fas fa-clock-rotate-left"></i>
+        Histórico
+      </a>
+      <div class="sidebar-section-title">Conta</div>
+      <a href="login.html" class="nav-link-sidebar">
+        <i class="fas fa-right-from-bracket"></i> Sair
+      </a>
+    </nav>
+
+    <div id="content">
+      <div class="mb-4">
+        <h4 class="fw-bold m-0">Pontuação</h4>
+        <small class="text-muted">Gerencie e acompanhe a evolução dos seus pontos</small>
+      </div>
+
+      <div class="card-welcome d-flex justify-content-between align-items-center row g-3">
+        <div class="col-12 col-sm-7">
+          <span class="text-uppercase opacity-75 small fw-bold tracking-wider">Seu saldo atual</span>
+          <h1 class="display-4 fw-black m-0 mt-1" style="font-weight: 800;"><span id="saldoAtual">120</span> <span
+              style="font-size: 24px;">pontos</span></h1>
+          <p class="m-0 mt-2 opacity-75 small">Expira em: 22/06/2027 (daqui a 1 ano)</p>
+        </div>
+        <div class="col-12 col-sm-5 text-sm-end">
+          <a href="recompesas.html" class="btn btn-light text-dark fw-bold px-4 py-2 rounded-pill shadow-sm">
+            <i class="fas fa-gift me-2 text-danger"></i>Ir para Recompensas
+          </a>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+          <div class="card-stats">
+            <div class="icon-circle" style="background-color: #e7f8ed; color: #198754;">
+              <i class="fas fa-arrow-trend-up"></i>
+            </div>
+            <small class="text-muted d-block">Total acumulado</small>
+            <h4 class="fw-bold m-0 mt-1" id="totalAcumulado">120 pts</h4>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="card-stats">
+            <div class="icon-circle" style="background-color: #fff1f5; color: #d85f82;">
+              <i class="fas fa-arrow-trend-down"></i>
+            </div>
+            <small class="text-muted d-block">Total utilizados</small>
+            <h4 class="fw-bold m-0 mt-1" id="totalUtilizado">0 pts</h4>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="card-stats">
+            <div class="how-to-earn">
+              <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-circle-info me-2"></i>Como pontuar?</h6>
+              <p class="small text-muted m-0 mt-1">A cada <strong>R$ 1,00</strong> gasto em compras em nossa loja, você
+                ganha <strong>1 ponto</strong> direto no app!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Script rápido caso queira mudar os valores de saldo via JS futuramente
+    const dadosPontos = {
+      saldo: 120,
+      acumulado: 120,
+      utilizado: 0
+    };
+
+    document.getElementById('saldoAtual').textContent = dadosPontos.saldo;
+    document.getElementById('totalAcumulado').textContent = `${dadosPontos.acumulado} pts`;
+    document.getElementById('totalUtilizado').textContent = `${dadosPontos.utilizado} pts`;
+  </script>
+
+</body>
+
+</html>

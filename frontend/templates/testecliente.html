@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FideliZa - Início</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="../static/css/style.css">
+
+  <style>
+    /* Estilos específicos adicionais para a organização dos passos da Home */
+    .step-card {
+      height: 100%;
+      transition: transform 0.2s ease;
+    }
+
+    .step-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      background-color: #fff1f5;
+      color: #5c3a43;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .icon-box {
+      font-size: 32px;
+      color: #8a5865;
+    }
+
+    .quick-link-card {
+      background-color: #fffdf6;
+      border: 1px dashed #d4a373;
+      border-radius: 16px;
+      padding: 20px;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <!-- Menu Lateral -->
+    <nav id="sidebar">
+      <div class="sidebar-heading mb-4 px-4">
+        <i class="fas fa-sparkles text-warning"></i> FideliZa
+      </div>
+
+      <div class="sidebar-section-title">Cliente</div>
+      <a href="testecliente.html" class="nav-link-sidebar active">
+        <i class="fas fa-home"></i> Início
+      </a>
+      <a href="meuspontos.html" class="nav-link-sidebar">
+        <i class="fas fa-coins"></i> Meus pontos
+      </a>
+      <a href="recompesas.html" class="nav-link-sidebar">
+        <i class="fas fa-gift"></i> Recompensas
+      </a>
+      <a href="historico.html" class="nav-link-sidebar active">
+        <i class="fas fa-clock-rotate-left"></i>
+        Histórico
+      </a>
+      <div class="sidebar-section-title">Conta</div>
+      <a href="login.html" class="nav-link-sidebar">
+        <i class="fas fa-right-from-bracket"></i> Sair
+      </a>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <div id="content">
+
+      <!-- Banner de Boas-Vindas com o Gradiente Unificado -->
+      <div class="card-welcome d-flex justify-content-between align-items-center row g-3">
+        <div class="col-12 col-md-8 text-center text-md-start">
+          <h1 class="display-6 fw-bold m-0" style="font-weight: 800;">
+            Bem-vindo de volta, <span id="nomeCliente">Amanda Silva</span>! 👋
+          </h1>
+          <p class="m-0 mt-2 opacity-90 small">Aqui está um resumo do seu programa de fidelização hoje.</p>
+        </div>
+        <div class="col-12 col-md-4 text-center text-md-end">
+          <a href="meuspontos.html" class="btn btn-light text-dark fw-bold px-4 py-2 rounded-pill shadow-sm">
+            <i class="fas fa-coins me-2 text-warning"></i>Ver Meu Saldo
+          </a>
+        </div>
+      </div>
+
+      <!-- Seção: Como Funciona o App -->
+      <div class="mb-4">
+        <h4 class="fw-bold m-0">Como funciona o FideliZa?</h4>
+        <small class="text-muted">Acumule vantagens e troque por prêmios em apenas 3 passos</small>
+      </div>
+
+      <div class="row g-4 mb-5">
+        <!-- Passo 1 -->
+        <div class="col-12 col-md-4">
+          <div class="card-stats step-card d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="icon-box"><i class="fas fa-basket-shopping"></i></div>
+                <div class="step-number">1</div>
+              </div>
+              <h5 class="fw-bold text-dark">Compre na Loja</h5>
+              <p class="text-muted small m-0">Faça suas compras normalmente. Cada R$ 1,00 gasto em nosso estabelecimento
+                se transforma em 1 ponto direto na sua conta do aplicativo.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Passo 2 -->
+        <div class="col-12 col-md-4">
+          <div class="card-stats step-card d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="icon-box"><i class="fas fa-star text-warning"></i></div>
+                <div class="step-number">2</div>
+              </div>
+              <h5 class="fw-bold text-dark">Acumule Pontos</h5>
+              <p class="text-muted small m-0">Acompanhe seus pontos subindo em tempo real pelo seu painel. Eles ficam
+                guardados com segurança e têm validade de até 1 ano.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Passo 3 -->
+        <div class="col-12 col-md-4">
+          <div class="card-stats step-card d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="icon-box"><i class="fas fa-gifts text-danger"></i></div>
+                <div class="step-number">3</div>
+              </div>
+              <h5 class="fw-bold text-dark">Resgate Prêmios</h5>
+              <p class="text-muted small m-0">Acesse o catálogo de recompensas, escolha o seu prêmio favorito e faça a
+                troca usando o saldo acumulado. É simples e prático!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Atalho Rápido -->
+      <div class="row">
+        <div class="col-12">
+          <a href="recompesas.html" class="quick-link-card text-center text-md-start">
+            <div class="row align-items-center g-3">
+              <div class="col-12 col-md-9">
+                <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-fire me-2"></i>Pronto para resgatar?</h6>
+                <p class="small text-muted m-0 mt-1">Seu saldo atual já pode dar direito a mimos especiais. Confira as
+                  recompensas disponíveis!</p>
+              </div>
+              <div class="col-12 col-md-3 text-md-end">
+                <span class="btn btn-warning btn-sm fw-bold px-3 rounded-pill" href="recompesas.html">Ver Catálogo <i
+                    class="fas fa-arrow-right ms-1"></i></span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Altere o nome da cliente dinamicamente se necessário
+    const usuario = {
+      nome: "Amanda Silva"
+    };
+    document.getElementById('nomeCliente').textContent = usuario.nome;
+  </script>
+
+</body>
+
+</html>
