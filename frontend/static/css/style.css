@@ -92,7 +92,6 @@ body{
 .nav-link-sidebar.active{
     background:var(--sidebar-hover);
     color:#fff;
-    border-left:4px solid var(--dourado-botao);
 }
 
 /* ========= BANNERS ========= */
@@ -327,3 +326,275 @@ body{
         text-align:center;
     }
 }
+
+/* CSS PARTE CLIENTE */
+
+        body {
+            background: #f8f8fb;
+        }
+
+        .page-title {
+            font-weight: 700;
+            color: #5c3a43;
+        }
+
+        .search-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, .05);
+        }
+
+        .history-card {
+
+            background: white;
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 15px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            transition: .3s;
+
+            border-left: 5px solid #d85f82;
+
+        }
+
+        .history-card:hover {
+
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, .08);
+
+        }
+
+        .icon-history {
+
+            width: 55px;
+            height: 55px;
+
+            border-radius: 50%;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            font-size: 22px;
+
+            margin-right: 15px;
+
+        }
+
+        .icon-compra {
+
+            background: #e7f8ed;
+            color: #198754;
+
+        }
+
+        .icon-resgate {
+
+            background: #fff1f5;
+            color: #d85f82;
+
+        }
+
+        .icon-bonus {
+
+            background: #fff7d6;
+            color: #e6a700;
+
+        }
+
+        .points-positive {
+
+            color: #198754;
+            font-size: 22px;
+            font-weight: bold;
+
+        }
+
+        .points-negative {
+
+            color: #dc3545;
+            font-size: 22px;
+            font-weight: bold;
+
+        }
+
+        .date-title {
+
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 30px;
+            margin-bottom: 15px;
+
+            color: #5c3a43;
+
+        }
+
+  /* Reutilizando e refinando o padrão visual do seu app */
+    .card-balance {
+      background: linear-gradient(135deg, #5c3a43, #8a5865);
+      border-radius: 18px;
+      padding: 30px;
+      color: #ffffff;
+      box-shadow: 0 10px 25px rgba(92, 58, 67, 0.15);
+      margin-bottom: 24px;
+    }
+
+    .card-stats {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #f0d8df;
+      box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+      height: 100%;
+    }
+
+    .icon-circle {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    /* Estilo para a tabela de extrato */
+    .table-extrato {
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+      border: 1px solid #eeeeee;
+    }
+
+    .table-extrato th {
+      background-color: #fff1f5;
+      color: #5c3a43;
+      font-weight: 700;
+      border: none;
+      padding: 16px;
+    }
+
+    .table-extrato td {
+      padding: 16px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f8f9fa;
+    }
+
+    .badge-ganho {
+      background-color: #e7f8ed;
+      color: #198754;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .badge-resgate {
+      background-color: #fff1f5;
+      color: #d85f82;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .how-to-earn {
+      background-color: #fffdf6;
+      border: 1px dashed #d4a373;
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    /* Estilos específicos para a vitrine de recompensas de moda */
+        .reward-card {
+            background: #ffffff;
+            border: 1px solid #f0d8df;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+        }
+
+        .reward-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(92, 58, 67, 0.08);
+        }
+
+        .reward-img-container {
+            background-color: #fff1f5;
+            height: 170px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 52px;
+            color: #a83a59;
+            position: relative;
+        }
+
+        .badge-cost {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background-color: #5c1630;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .reward-body {
+            padding: 20px;
+        }
+
+        .btn-lock {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #ced4da;
+            cursor: not-allowed;
+        }
+
+/* Estilos específicos adicionais para a organização dos passos da Home */
+    .step-card {
+      height: 100%;
+      transition: transform 0.2s ease;
+    }
+
+    .step-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      background-color: #fff1f5;
+      color: #5c3a43;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .icon-box {
+      font-size: 32px;
+      color: #8a5865;
+    }
+
+    .quick-link-card {
+      background-color: #fffdf6;
+      border: 1px dashed #d4a373;
+      border-radius: 16px;
+      padding: 20px;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }

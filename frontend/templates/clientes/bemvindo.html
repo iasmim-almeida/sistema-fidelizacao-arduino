@@ -1,90 +1,56 @@
+<!--{% extends "base_clientes.html" %}
+{% block content %}-->
+
+
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FideliZa - Início</title>
-
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="../static/css/style.css">
-
-  <style>
-    /* Estilos específicos adicionais para a organização dos passos da Home */
-    .step-card {
-      height: 100%;
-      transition: transform 0.2s ease;
-    }
-
-    .step-card:hover {
-      transform: translateY(-5px);
-    }
-
-    .step-number {
-      width: 40px;
-      height: 40px;
-      background-color: #fff1f5;
-      color: #5c3a43;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 16px;
-    }
-
-    .icon-box {
-      font-size: 32px;
-      color: #8a5865;
-    }
-
-    .quick-link-card {
-      background-color: #fffdf6;
-      border: 1px dashed #d4a373;
-      border-radius: 16px;
-      padding: 20px;
-      text-decoration: none;
-      color: inherit;
-      display: block;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FideliZa - Painel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../../static/css/style.css">
 </head>
-
 <body>
 
-  <div class="wrapper">
-    <!-- Menu Lateral -->
-    <nav id="sidebar">
-      <div class="sidebar-heading mb-4 px-4">
-        <i class="fas fa-sparkles text-warning"></i> FideliZa
+<div class="wrapper">
+  <nav id="sidebar">
+    <div class="sidebar-heading mb-4 px-4">
+      <i class="fas fa-sparkles text-warning"></i> FideliZa
+    </div>
+        
+    <div class="sidebar-section-title">Principal</div>
+    <a href="bemvindo.html" class="nav-link-sidebar active"><i class="fas fa-home"></i> Início</a>
+    <a href="meuspontos.html" class="nav-link-sidebar"><i class="fas fa-users"></i> Meus pontos</a>
+    <a href="recompensas.html" class="nav-link-sidebar"><i class="fas fa-gift"></i> Recompensas</a>
+    <a href="historico.html" class="nav-link-sidebar"><i class="fas fa-chart-bar"></i> Historico</a>
+  </nav>
+
+  <div id="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+          <h4 class="fw-bold m-0">
+              <!--{% block page_title %}-->Dashboard<!--{% endblock %}-->
+          </h4>
+          <small class="text-muted">
+              <!--{% block page_subtitle %}-->Início<!--{% endblock %}-->
+          </small>
       </div>
 
-      <div class="sidebar-section-title">Cliente</div>
-      <a href="testecliente.html" class="nav-link-sidebar active">
-        <i class="fas fa-home"></i> Início
-      </a>
-      <a href="meuspontos.html" class="nav-link-sidebar">
-        <i class="fas fa-coins"></i> Meus pontos
-      </a>
-      <a href="recompesas.html" class="nav-link-sidebar">
-        <i class="fas fa-gift"></i> Recompensas
-      </a>
-      <a href="historico.html" class="nav-link-sidebar active">
-        <i class="fas fa-clock-rotate-left"></i>
-        Histórico
-      </a>
-      <div class="sidebar-section-title">Conta</div>
-      <a href="login.html" class="nav-link-sidebar">
-        <i class="fas fa-right-from-bracket"></i> Sair
-      </a>
-    </nav>
+      <div>
+          <a href="../vendedora/dashboard.html" class="btn btn-light btn-sm rounded-circle shadow-sm p-2"><i class="fas fa-home"></i></a>
+          <a href="../login.html" class="btn btn-light btn-sm rounded-circle shadow-sm p-2"><i class="fas fa-sign-out-alt"></i></a>
+      </div>
+    </div>
+
+      <!--{% block content %}{% endblock %}-->
 
     <!-- Conteúdo Principal -->
     <div id="content">
 
-      <!-- Banner de Boas-Vindas com o Gradiente Unificado -->
-      <div class="card-welcome d-flex justify-content-between align-items-center row g-3">
+    <!-- Banner de Boas-Vindas com o Gradiente Unificado -->
+    <div class="card-welcome d-flex justify-content-between align-items-center row g-3">
         <div class="col-12 col-md-8 text-center text-md-start">
           <h1 class="display-6 fw-bold m-0" style="font-weight: 800;">
             Bem-vindo de volta, <span id="nomeCliente">Amanda Silva</span>! 👋
@@ -96,13 +62,13 @@
             <i class="fas fa-coins me-2 text-warning"></i>Ver Meu Saldo
           </a>
         </div>
-      </div>
+    </div>
 
-      <!-- Seção: Como Funciona o App -->
-      <div class="mb-4">
-        <h4 class="fw-bold m-0">Como funciona o FideliZa?</h4>
-        <small class="text-muted">Acumule vantagens e troque por prêmios em apenas 3 passos</small>
-      </div>
+    <!-- Seção: Como Funciona o App -->
+    <div class="mb-4">
+      <h4 class="fw-bold m-0">Como funciona o FideliZa?</h4>
+      <small class="text-muted">Acumule vantagens e troque por prêmios em apenas 3 passos</small>
+    </div>
 
       <div class="row g-4 mb-5">
         <!-- Passo 1 -->
@@ -154,7 +120,7 @@
       <!-- Atalho Rápido -->
       <div class="row">
         <div class="col-12">
-          <a href="recompesas.html" class="quick-link-card text-center text-md-start">
+          <a href="recompensas.html" class="quick-link-card text-center text-md-start">
             <div class="row align-items-center g-3">
               <div class="col-12 col-md-9">
                 <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-fire me-2"></i>Pronto para resgatar?</h6>
@@ -162,16 +128,15 @@
                   recompensas disponíveis!</p>
               </div>
               <div class="col-12 col-md-3 text-md-end">
-                <span class="btn btn-warning btn-sm fw-bold px-3 rounded-pill" href="recompesas.html">Ver Catálogo <i
+                <span class="btn btn-warning btn-sm fw-bold px-3 rounded-pill" href="recompensas.html">Ver Catálogo <i
                     class="fas fa-arrow-right ms-1"></i></span>
               </div>
             </div>
           </a>
         </div>
       </div>
-
-    </div>
   </div>
+</div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -182,7 +147,7 @@
     };
     document.getElementById('nomeCliente').textContent = usuario.nome;
   </script>
-
 </body>
-
 </html>
+
+<!--{% endblock %}-->

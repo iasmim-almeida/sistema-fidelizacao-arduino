@@ -18,7 +18,7 @@
         
         <div class="sidebar-section-title">Principal</div>
         <a href="/dashboard" class="nav-link-sidebar active"><i class="fas fa-home"></i> Início</a>
-        <a href="/cadastro" class="nav-link-sidebar"><i class="fas fa-users"></i> Clientes</a>
+        <a href="/clientes" class="nav-link-sidebar"><i class="fas fa-users"></i> Clientes</a>
         
         <div class="sidebar-section-title">Programa</div>
         <a href="/pontuar" class="nav-link-sidebar"><i class="fas fa-coins"></i> Fidelização</a>
@@ -29,12 +29,16 @@
     <div id="content">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="fw-bold m-0">Dashboard</h4>
-                <small class="text-muted">Início</small>
+                <h4 class="fw-bold m-0">
+                    {% block page_title %}{% endblock %}
+                </h4>
+                <small class="text-muted">
+                    {% block page_subtitle %}{% endblock %}
+                </small>
             </div>
+    
             <div>
-                <button class="btn btn-light btn-sm rounded-circle shadow-sm p-2 me-2"><i class="fas fa-bell"></i></button>
-                <button class="btn btn-light btn-sm rounded-circle shadow-sm p-2"><i class="fas fa-sign-out-alt"></i></button>
+                <a href="login.html" class="btn btn-light btn-sm rounded-circle shadow-sm p-2"><i class="fas fa-sign-out-alt"></i></a>
             </div>
         </div>
 
