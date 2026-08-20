@@ -1,0 +1,127 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'clientes' %}
+{% block titulo %}Clientes{% endblock %}
+{% block page_title %}Clientes Cadastrados{% endblock %}
+{% block page_subtitle %}Consulte e gerencie seus clientes{% endblock %}
+
+{% block content %}
+<!-- Pesquisa + Botao -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3">
+            <input type="text" id="pesquisa" class="form-control" placeholder="Pesquisar clientes por nome ou telefone...">
+            <button id="btnNovoCliente" class="btn btn-fidelidade btn-sm" onclick="mostrarFormulario()">
+                <i class="fas fa-user-plus"></i> Novo Cliente
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Formulario -->
+<div id="formCadastro" class="mb-4" style="display:none;">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header text-center"><i class="fas fa-user-plus"></i> Registrar Novo Cliente</div>
+                <div class="card-body">
+                    <form id="formNovoCliente">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nome Completo</label>
+                            <input type="text" id="nome" class="form-control" placeholder="Ex: Maria Oliveira" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Telefone / WhatsApp</label>
+                            <input type="tel" id="telefone" class="form-control" placeholder="(00) 00000-0000" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">E-mail (opcional)</label>
+                            <input type="email" id="email" class="form-control" placeholder="cliente@email.com">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-fidelidade flex-fill">Salvar Cadastro</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="fecharFormulario()">Cancelar</button>
+                        </div>
+                        <div id="msgForm" class="mt-3 small"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista -->
+<div class="card">
+    <div class="card-header"><i class="fas fa-users text-warning"></i> Lista de Clientes</div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr><th>Nome</th><th>Telefone</th><th>Pontos</th><th>Cadastro</th></tr>
+            </thead>
+            <tbody id="tbodyClientes">
+                <tr><td colspan="4" class="text-center text-muted">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let todosClientes = [];
+
+function mostrarFormulario(){
+    document.getElementById("btnNovoCliente").style.display = "none";
+    document.getElementById("formCadastro").style.display = "block";
+}
+function fecharFormulario(){
+    document.getElementById("formCadastro").style.display = "none";
+    document.getElementById("btnNovoCliente").style.display = "block";
+}
+
+function render(lista){
+    const tb = document.getElementById('tbodyClientes');
+    if(!lista.length){ tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente encontrado.</td></tr>'; return; }
+    tb.innerHTML = lista.map(c => {
+        const dt = c.data_cadastro ? new Date(c.data_cadastro).toLocaleDateString('pt-BR') : '-';
+        return `<tr><td>${c.nome}</td><td>${c.telefone}</td><td><span class="badge bg-success">${c.pontos_acumulados} pts</span></td><td>${dt}</td></tr>`;
+    }).join('');
+}
+
+async function carregar(){
+    const r = await fetch('/api/clientes/', {credentials:'include'});
+    todosClientes = r.ok ? await r.json() : [];
+    render(todosClientes);
+}
+
+document.getElementById('pesquisa').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    render(todosClientes.filter(c => c.nome.toLowerCase().includes(q) || c.telefone.includes(q)));
+});
+
+document.getElementById('formNovoCliente').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = document.getElementById('msgForm');
+    const resp = await fetch('/api/clientes/', {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({
+            nome: document.getElementById('nome').value,
+            telefone: document.getElementById('telefone').value,
+            email: document.getElementById('email').value || null,
+        })
+    });
+    const data = await resp.json();
+    if(resp.ok){
+        msg.className = 'mt-3 small text-success';
+        msg.textContent = 'Cliente cadastrado com sucesso!';
+        e.target.reset();
+        carregar();
+        setTimeout(fecharFormulario, 800);
+    } else {
+        msg.className = 'mt-3 small text-danger';
+        msg.textContent = data.erro || 'Erro ao cadastrar.';
+    }
+});
+
+carregar();
+</script>
+{% endblock %}

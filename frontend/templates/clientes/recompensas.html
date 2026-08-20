@@ -1,0 +1,83 @@
+{% extends "base_clientes.html" %}
+{% set active = 'recompensas' %}
+{% block titulo %}Recompensas{% endblock %}
+{% block page_title %}Recompensas{% endblock %}
+{% block page_subtitle %}Troque seus pontos acumulados por prêmios exclusivos{% endblock %}
+
+{% block content %}
+<div id="semTelefone" class="alert alert-warning d-none">
+    Informe seu telefone na tela <a href="{{ url_for('main.bemvindo') }}">Início</a> para resgatar.
+</div>
+
+<div class="card-welcome d-flex justify-content-between align-items-center row g-3">
+    <div class="col-12 text-sm-start">
+        <span class="text-uppercase opacity-75 small fw-bold tracking-wider">Saldo disponivel</span>
+        <h1 class="display-4 fw-black m-0 mt-1" style="font-weight: 800;">
+            <span id="saldoDisponivel">0</span> <span style="font-size: 24px;">pontos</span>
+        </h1>
+        <p class="m-0 mt-2 opacity-75 small">Escolha seu premio! Os itens disponiveis possuem o botao habilitado.</p>
+    </div>
+</div>
+
+<div class="alert alert-light border mb-4 d-flex align-items-center" style="background-color: #fffdf6; border-color: #d4a373 !important;">
+    <i class="fas fa-circle-info text-warning me-3 fs-5"></i>
+    <span class="small text-muted">Apos resgatar, apresente o cupom gerado na tela diretamente no caixa fisico.</span>
+</div>
+
+<div class="row g-4" id="vitrine"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PREMIOS = [
+    { nome:'Acessorio a Escolha', custo:40, icon:'fa-gem' },
+    { nome:'T-Shirt Basica', custo:100, icon:'fa-shirt' },
+    { nome:'Cupom de R$ 50,00 Off', custo:200, icon:'fa-tags' },
+];
+let clienteAtual = null;
+
+function render(){
+    const saldo = clienteAtual ? clienteAtual.pontos_acumulados : 0;
+    document.getElementById('saldoDisponivel').textContent = saldo;
+    document.getElementById('vitrine').innerHTML = PREMIOS.map((p,i)=>{
+        const pode = saldo >= p.custo;
+        const btn = pode
+            ? `<button onclick="resgatar(${i})" class="btn btn-fidelidade w-100 rounded-pill py-2"><i class="fas fa-gift me-2"></i>Resgatar Premio</button>`
+            : `<button class="btn btn-lock w-100 rounded-pill py-2" disabled><i class="fas fa-lock me-2"></i>Faltam ${p.custo - saldo} pts</button>`;
+        const dim = pode ? '' : 'opacity-75';
+        const bg = pode ? '' : 'style="background-color:#f8f9fa;color:#6c757d;"';
+        return `<div class="col-12 col-md-6 col-lg-4"><div class="reward-card ${dim} d-flex flex-column justify-content-between"><div>
+            <div class="reward-img-container" ${bg}><i class="fas ${p.icon}"></i><span class="badge-cost">${p.custo} pts</span></div>
+            <div class="reward-body"><h5 class="fw-bold text-dark mb-1">${p.nome}</h5></div>
+        </div><div class="p-3 pt-0">${btn}</div></div></div>`;
+    }).join('');
+}
+
+async function resgatar(i){
+    const p = PREMIOS[i];
+    if(!clienteAtual) return;
+    if(!confirm(`Confirmar o resgate de "${p.nome}" por ${p.custo} pontos?`)) return;
+    const resp = await fetch('/api/resgates/', {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({ id_cliente: clienteAtual.id_cliente, pontos_utilizados: p.custo, descricao_recompensa: p.nome })
+    });
+    const data = await resp.json();
+    if(resp.ok){
+        clienteAtual.pontos_acumulados = data.saldo_atualizado;
+        alert(`Voucher gerado!\nCodigo: FID-${Math.floor(1000+Math.random()*9000)}\nMostre a vendedora no balcao.`);
+        render();
+    } else {
+        alert(data.erro || 'Nao foi possivel resgatar.');
+    }
+}
+
+(async () => {
+    const tel = localStorage.getItem('fz_tel');
+    if(!tel){ document.getElementById('semTelefone').classList.remove('d-none'); render(); return; }
+    const r = await fetch('/api/clientes/?telefone='+encodeURIComponent(tel), {credentials:'include'});
+    if(r.ok){ clienteAtual = await r.json(); }
+    else { document.getElementById('semTelefone').classList.remove('d-none'); }
+    render();
+})();
+</script>
+{% endblock %}

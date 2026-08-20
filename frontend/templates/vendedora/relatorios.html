@@ -1,0 +1,97 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'relatorios' %}
+{% block titulo %}Relatórios{% endblock %}
+{% block page_title %}Relatórios{% endblock %}
+{% block page_subtitle %}Visão geral do programa de fidelização{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card-stats">
+            <div class="icon-circle" style="background-color:#fff1f5;color:#d85f82;"><i class="fas fa-users"></i></div>
+            <small class="text-muted d-block">Clientes</small>
+            <h4 class="fw-bold m-0 mt-1" id="kClientes">0</h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stats">
+            <div class="icon-circle" style="background-color:#e7f8ed;color:#198754;"><i class="fas fa-arrow-trend-up"></i></div>
+            <small class="text-muted d-block">Pontos distribuidos</small>
+            <h4 class="fw-bold m-0 mt-1" id="kPontosGer">0</h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stats">
+            <div class="icon-circle" style="background-color:#fff1f5;color:#d85f82;"><i class="fas fa-arrow-trend-down"></i></div>
+            <small class="text-muted d-block">Pontos resgatados</small>
+            <h4 class="fw-bold m-0 mt-1" id="kPontosUso">0</h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stats">
+            <div class="icon-circle" style="background-color:#fbf1d1;color:#e5c060;"><i class="fas fa-dollar-sign"></i></div>
+            <small class="text-muted d-block">Faturamento (compras)</small>
+            <h4 class="fw-bold m-0 mt-1" id="kFaturamento">R$ 0,00</h4>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="table-extrato">
+            <div class="p-3 fw-bold" style="color: var(--sidebar-color);"><i class="fas fa-trophy me-2"></i>Top Clientes por Pontos</div>
+            <table class="table mb-0">
+                <thead><tr><th>Cliente</th><th>Telefone</th><th class="text-end pe-3">Saldo</th></tr></thead>
+                <tbody id="tbodyTop"><tr><td colspan="3" class="text-center text-muted">Carregando...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="table-extrato">
+            <div class="p-3 fw-bold" style="color: var(--sidebar-color);"><i class="fas fa-clock-rotate-left me-2"></i>Movimentações Recentes</div>
+            <table class="table mb-0">
+                <thead><tr><th>Tipo</th><th>Cliente</th><th class="text-end pe-3">Pontos</th></tr></thead>
+                <tbody id="tbodyMov"><tr><td colspan="3" class="text-center text-muted">Carregando...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.ok?r.json():[]; }
+
+(async () => {
+    const [clientes, compras, resgates] = await Promise.all([
+        j('/api/clientes/'), j('/api/compras/'), j('/api/resgates/')
+    ]);
+    const cmap = {}; clientes.forEach(c=>cmap[c.id_cliente]=c);
+
+    document.getElementById('kClientes').textContent = clientes.length;
+    document.getElementById('kPontosGer').textContent = compras.reduce((s,c)=>s+(c.pontos_gerados||0),0);
+    document.getElementById('kPontosUso').textContent = resgates.reduce((s,r)=>s+(r.pontos_utilizados||0),0);
+    const fat = compras.reduce((s,c)=>s+(c.valor||0),0);
+    document.getElementById('kFaturamento').textContent = 'R$ ' + fat.toFixed(2).replace('.',',');
+
+    const top = [...clientes].sort((a,b)=>b.pontos_acumulados-a.pontos_acumulados).slice(0,5);
+    document.getElementById('tbodyTop').innerHTML = top.length
+        ? top.map(c=>`<tr><td>${c.nome}</td><td>${c.telefone}</td><td class="text-end pe-3"><span class="badge-ganho">${c.pontos_acumulados} pts</span></td></tr>`).join('')
+        : '<tr><td colspan="3" class="text-center text-muted">Sem dados.</td></tr>';
+
+    const mov = [
+        ...compras.map(c=>({t:'compra', cli:cmap[c.id_cliente], pts:c.pontos_gerados, data:c.data})),
+        ...resgates.map(r=>({t:'resgate', cli:cmap[r.id_cliente], pts:-r.pontos_utilizados, data:r.data})),
+    ].sort((a,b)=> new Date(b.data)-new Date(a.data)).slice(0,8);
+
+    document.getElementById('tbodyMov').innerHTML = mov.length
+        ? mov.map(m=>{
+            const nome = m.cli ? m.cli.nome : '-';
+            const badge = m.pts>=0 ? `<span class="badge-ganho">+${m.pts} pts</span>` : `<span class="badge-resgate">${m.pts} pts</span>`;
+            const ic = m.t==='compra' ? '<i class="fas fa-cart-shopping text-success me-1"></i>Compra' : '<i class="fas fa-gift text-danger me-1"></i>Resgate';
+            return `<tr><td>${ic}</td><td>${nome}</td><td class="text-end pe-3">${badge}</td></tr>`;
+        }).join('')
+        : '<tr><td colspan="3" class="text-center text-muted">Sem movimentacoes.</td></tr>';
+})();
+</script>
+{% endblock %}

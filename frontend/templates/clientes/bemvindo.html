@@ -1,0 +1,98 @@
+{% extends "base_clientes.html" %}
+{% set active = 'bemvindo' %}
+{% block titulo %}Início{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Início{% endblock %}
+
+{% block content %}
+<!-- Banner de Boas-Vindas -->
+<div class="card-welcome d-flex justify-content-between align-items-center row g-3">
+    <div class="col-12 col-md-8 text-center text-md-start">
+        <h1 class="display-6 fw-bold m-0" style="font-weight: 800;">
+            Bem-vindo de volta, <span id="nomeCliente">visitante</span>! 👋
+        </h1>
+        <p class="m-0 mt-2 opacity-90 small">Aqui esta um resumo do seu programa de fidelizacao hoje.</p>
+    </div>
+    <div class="col-12 col-md-4 text-center text-md-end">
+        <a href="{{ url_for('main.meuspontos') }}" class="btn btn-light text-dark fw-bold px-4 py-2 rounded-pill shadow-sm">
+            <i class="fas fa-coins me-2 text-warning"></i>Ver Meu Saldo
+        </a>
+    </div>
+</div>
+
+<!-- Busca por telefone (identificacao do cliente) -->
+<div class="search-card mb-4">
+    <label class="form-label fw-bold" style="color: var(--sidebar-color);">Informe seu telefone para ver seus dados</label>
+    <div class="row g-2">
+        <div class="col-md-9"><input type="tel" id="telInput" class="form-control" placeholder="Ex: 11999991111"></div>
+        <div class="col-md-3"><button class="btn btn-fidelidade w-100" onclick="identificar()">Acessar</button></div>
+    </div>
+    <div id="msgBusca" class="small mt-2 text-muted"></div>
+</div>
+
+<!-- Como Funciona -->
+<div class="mb-4">
+    <h4 class="fw-bold m-0">Como funciona o FideliZa?</h4>
+    <small class="text-muted">Acumule vantagens e troque por premios em apenas 3 passos</small>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-12 col-md-4">
+        <div class="card-stats step-card d-flex flex-column justify-content-between"><div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="icon-box"><i class="fas fa-basket-shopping"></i></div><div class="step-number">1</div>
+            </div>
+            <h5 class="fw-bold text-dark">Compre na Loja</h5>
+            <p class="text-muted small m-0">Cada R$ 1,00 gasto vira 1 ponto direto na sua conta.</p>
+        </div></div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card-stats step-card d-flex flex-column justify-content-between"><div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="icon-box"><i class="fas fa-star text-warning"></i></div><div class="step-number">2</div>
+            </div>
+            <h5 class="fw-bold text-dark">Acumule Pontos</h5>
+            <p class="text-muted small m-0">Acompanhe seus pontos em tempo real pelo painel.</p>
+        </div></div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card-stats step-card d-flex flex-column justify-content-between"><div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="icon-box"><i class="fas fa-gifts text-danger"></i></div><div class="step-number">3</div>
+            </div>
+            <h5 class="fw-bold text-dark">Resgate Premios</h5>
+            <p class="text-muted small m-0">Troque o saldo acumulado por recompensas.</p>
+        </div></div>
+    </div>
+</div>
+
+<div class="row"><div class="col-12">
+    <a href="{{ url_for('main.recompensas') }}" class="quick-link-card text-center text-md-start">
+        <div class="row align-items-center g-3">
+            <div class="col-12 col-md-9">
+                <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-fire me-2"></i>Pronto para resgatar?</h6>
+                <p class="small text-muted m-0 mt-1">Confira as recompensas disponiveis!</p>
+            </div>
+            <div class="col-12 col-md-3 text-md-end">
+                <span class="btn btn-warning btn-sm fw-bold px-3 rounded-pill">Ver Catalogo <i class="fas fa-arrow-right ms-1"></i></span>
+            </div>
+        </div>
+    </a>
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function identificar(){
+    const tel = document.getElementById('telInput').value.trim();
+    if(tel){ localStorage.setItem('fz_tel', tel); window.location.href = "{{ url_for('main.meuspontos') }}"; }
+}
+(async () => {
+    const tel = localStorage.getItem('fz_tel');
+    if(!tel) return;
+    const r = await fetch('/api/clientes/?telefone='+encodeURIComponent(tel), {credentials:'include'});
+    if(r.ok){ const c = await r.json(); document.getElementById('nomeCliente').textContent = c.nome;
+        document.getElementById('telInput').value = tel; }
+})();
+</script>
+{% endblock %}

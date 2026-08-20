@@ -1,0 +1,626 @@
+/* ===========================================
+   FIDELIZA - STYLE.CSS
+   =========================================== */
+
+/* ========= VARIÁVEIS ========= */
+:root {
+    --bg-sistema: #fff9fa;
+    --sidebar-color: #fcaec7;
+    --sidebar-hover: #f896b5;
+
+    --rosa-pastel: #fecddb;
+    --rosa-claro: #fff1f5;
+
+    --dourado-claro: #fbf1d1;
+    --dourado-botao: #e5c060;
+
+    --texto-escuro: #5c3a43;
+
+    --gradiente-banner: linear-gradient(
+        90deg,
+        #f3839f 0%,
+        #a83a59 50%,
+        #5c1630 100%
+    );
+
+    --sombra-card: 0 8px 20px rgba(92, 58, 67, 0.08);
+}
+
+/* ========= GERAL ========= */
+
+body{
+    margin:0;
+    background:var(--bg-sistema);
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color:var(--texto-escuro);
+    overflow-x:hidden;
+}
+
+/* ========= LAYOUT ========= */
+
+.wrapper{
+    display:flex;
+    min-height:100vh;
+}
+
+#sidebar{
+    width:260px;
+    background:var(--sidebar-color);
+    flex-shrink:0;
+    padding:20px 0;
+}
+
+#content{
+    flex:1;
+    padding:30px;
+}
+
+/* ========= SIDEBAR ========= */
+
+.sidebar-heading{
+    padding:10px 25px;
+    font-size:30px;
+    font-weight:700;
+    color:var(--texto-escuro);
+}
+
+.sidebar-section-title{
+    padding:18px 25px 8px;
+    text-transform:uppercase;
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--texto-escuro);
+}
+
+.nav-link-sidebar{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    text-decoration:none;
+    color:var(--texto-escuro);
+    padding:13px 25px;
+    transition:.3s;
+    font-size:15px;
+}
+
+.nav-link-sidebar i{
+    width:18px;
+    text-align:center;
+}
+
+.nav-link-sidebar:hover,
+.nav-link-sidebar.active{
+    background:var(--sidebar-hover);
+    color:#fff;
+}
+
+/* ========= BANNERS ========= */
+
+.banner-welcome,
+.card-balance,
+.card-welcome,
+.client-banner{
+    background:var(--gradiente-banner);
+    color:#fff;
+    border-radius:18px;
+    padding:30px;
+    margin-bottom:25px;
+    box-shadow:var(--sombra-card);
+}
+
+.banner-welcome h3,
+.card-welcome h3,
+.client-banner h3,
+.card-balance h1{
+    margin:0;
+    font-weight:700;
+}
+
+.banner-welcome p,
+.client-banner p{
+    margin-top:8px;
+    opacity:.9;
+}
+
+/* ========= CARDS ========= */
+
+.card-indicator,
+.card-client,
+.card-stats{
+    background:#fff;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:var(--sombra-card);
+    border:1px solid rgba(0,0,0,.05);
+}
+
+.card-client{
+    border-left:4px solid var(--rosa-pastel);
+}
+
+/* ========= ÍCONES ========= */
+
+.icon-box,
+.reward-icon,
+.icon-circle{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border-radius:14px;
+}
+
+.icon-box{
+    width:55px;
+    height:55px;
+    background:var(--rosa-claro);
+    color:#d85f82;
+    font-size:22px;
+}
+
+.reward-icon{
+    width:50px;
+    height:50px;
+    background:var(--dourado-claro);
+    color:var(--dourado-botao);
+    font-size:20px;
+}
+
+.icon-circle{
+    width:45px;
+    height:45px;
+    border-radius:50%;
+    font-size:18px;
+}
+
+/* ========= BOTÕES ========= */
+
+.btn-fidelidade{
+    background:linear-gradient(135deg,#e5c158,var(--dourado-botao));
+    border:none;
+    color:#4a3300;
+    font-weight:600;
+    border-radius:10px;
+    padding:10px 22px;
+    transition:.3s;
+}
+
+.btn-fidelidade:hover{
+    background:#aa8413;
+    color:#fff;
+}
+
+.btn-reward{
+    background:#d85f82;
+    color:#fff;
+    border:none;
+}
+
+.btn-reward:hover{
+    background:#c64d70;
+    color:#fff;
+}
+
+.btn-reward:disabled{
+    background:#d6d6d6;
+    color:#fff;
+}
+
+/* ========= PROGRESS ========= */
+
+.progress{
+    height:14px;
+    border-radius:20px;
+    background:#f3dce3;
+}
+
+.progress-bar{
+    background:#d85f82;
+    border-radius:20px;
+}
+
+/* ========= RECOMPENSAS ========= */
+
+.reward-card{
+    background:#fff;
+    border-radius:14px;
+    border:1px solid #f0d8df;
+    padding:18px;
+    display:flex;
+    align-items:center;
+    gap:15px;
+    height:100%;
+}
+
+/* ========= HISTÓRICO ========= */
+
+.history-item{
+    background:#fff;
+    border:1px solid #eeeeee;
+    border-radius:12px;
+    padding:16px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.history-points{
+    font-weight:700;
+    color:#198754;
+}
+
+/* ========= TABELAS ========= */
+
+.table-extrato{
+    background:#fff;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:var(--sombra-card);
+}
+
+.table-extrato th{
+    background:var(--rosa-claro);
+    color:var(--texto-escuro);
+    border:none;
+    padding:16px;
+    font-weight:700;
+}
+
+.table-extrato td{
+    padding:16px;
+    vertical-align:middle;
+}
+
+/* ========= BADGES ========= */
+
+.badge-ganho{
+    background:#e7f8ed;
+    color:#198754;
+    padding:6px 12px;
+    border-radius:8px;
+    font-weight:700;
+}
+
+.badge-resgate{
+    background:#fff1f5;
+    color:#d85f82;
+    padding:6px 12px;
+    border-radius:8px;
+    font-weight:700;
+}
+
+/* ========= COMO PONTUAR ========= */
+
+.how-to-earn{
+    background:#fffdf6;
+    border:1px dashed #d4a373;
+    border-radius:16px;
+    padding:20px;
+}
+
+/* ========= RESPONSIVO ========= */
+
+@media(max-width:768px){
+
+    #sidebar{
+        width:220px;
+    }
+
+    #content{
+        padding:20px;
+    }
+
+    .banner-welcome,
+    .client-banner,
+    .card-balance{
+        padding:22px;
+    }
+
+    .history-item{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+    }
+
+    .reward-card{
+        flex-direction:column;
+        text-align:center;
+    }
+}
+
+/* CSS PARTE CLIENTE */
+
+        body {
+            background: #f8f8fb;
+        }
+
+        .page-title {
+            font-weight: 700;
+            color: #5c3a43;
+        }
+
+        .search-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, .05);
+        }
+
+        .history-card {
+
+            background: white;
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 15px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            transition: .3s;
+
+            border-left: 5px solid #d85f82;
+
+        }
+
+        .history-card:hover {
+
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, .08);
+
+        }
+
+        .icon-history {
+
+            width: 55px;
+            height: 55px;
+
+            border-radius: 50%;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            font-size: 22px;
+
+            margin-right: 15px;
+
+        }
+
+        .icon-compra {
+
+            background: #e7f8ed;
+            color: #198754;
+
+        }
+
+        .icon-resgate {
+
+            background: #fff1f5;
+            color: #d85f82;
+
+        }
+
+        .icon-bonus {
+
+            background: #fff7d6;
+            color: #e6a700;
+
+        }
+
+        .points-positive {
+
+            color: #198754;
+            font-size: 22px;
+            font-weight: bold;
+
+        }
+
+        .points-negative {
+
+            color: #dc3545;
+            font-size: 22px;
+            font-weight: bold;
+
+        }
+
+        .date-title {
+
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 30px;
+            margin-bottom: 15px;
+
+            color: #5c3a43;
+
+        }
+
+  /* Reutilizando e refinando o padrão visual do seu app */
+    .card-balance {
+      background: linear-gradient(135deg, #5c3a43, #8a5865);
+      border-radius: 18px;
+      padding: 30px;
+      color: #ffffff;
+      box-shadow: 0 10px 25px rgba(92, 58, 67, 0.15);
+      margin-bottom: 24px;
+    }
+
+    .card-stats {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #f0d8df;
+      box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+      height: 100%;
+    }
+
+    .icon-circle {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    /* Estilo para a tabela de extrato */
+    .table-extrato {
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+      border: 1px solid #eeeeee;
+    }
+
+    .table-extrato th {
+      background-color: #fff1f5;
+      color: #5c3a43;
+      font-weight: 700;
+      border: none;
+      padding: 16px;
+    }
+
+    .table-extrato td {
+      padding: 16px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f8f9fa;
+    }
+
+    .badge-ganho {
+      background-color: #e7f8ed;
+      color: #198754;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .badge-resgate {
+      background-color: #fff1f5;
+      color: #d85f82;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .how-to-earn {
+      background-color: #fffdf6;
+      border: 1px dashed #d4a373;
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    /* Estilos específicos para a vitrine de recompensas de moda */
+        .reward-card {
+            background: #ffffff;
+            border: 1px solid #f0d8df;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(92, 58, 67, 0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+        }
+
+        .reward-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(92, 58, 67, 0.08);
+        }
+
+        .reward-img-container {
+            background-color: #fff1f5;
+            height: 170px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 52px;
+            color: #a83a59;
+            position: relative;
+        }
+
+        .badge-cost {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background-color: #5c1630;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .reward-body {
+            padding: 20px;
+        }
+
+        .btn-lock {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #ced4da;
+            cursor: not-allowed;
+        }
+
+/* Estilos específicos adicionais para a organização dos passos da Home */
+    .step-card {
+      height: 100%;
+      transition: transform 0.2s ease;
+    }
+
+    .step-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      background-color: #fff1f5;
+      color: #5c3a43;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .icon-box {
+      font-size: 32px;
+      color: #8a5865;
+    }
+
+    .quick-link-card {
+      background-color: #fffdf6;
+      border: 1px dashed #d4a373;
+      border-radius: 16px;
+      padding: 20px;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+/* ========= COMPLEMENTOS LOGIN (integracao) ========= */
+.brand-logo{
+    width:70px;height:70px;margin:0 auto 12px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--gradiente-banner);color:#fff;font-size:32px;
+}
+.brand-name{font-weight:800;color:var(--texto-escuro);margin:0;}
+.brand-name span{color:var(--sidebar-color);}
+.brand-tagline{color:#9a7d86;font-size:14px;margin-top:4px;}
+.btn-login,.btn-primary{
+    background:var(--sidebar-color)!important;border:none!important;font-weight:600;border-radius:10px;
+}
+.btn-login:hover,.btn-primary:hover{background:var(--sidebar-hover)!important;}
+.divider{
+    text-align:center;color:#b9a3aa;font-size:12px;text-transform:uppercase;
+    letter-spacing:1px;position:relative;
+}
+.divider::before,.divider::after{
+    content:"";position:absolute;top:50%;width:30%;height:1px;background:#eeddE3;
+}
+.divider::before{left:0;} .divider::after{right:0;}
+.badge-demo{
+    background:var(--rosa-claro);border:1px dashed var(--rosa-pastel);
+    border-radius:10px;padding:10px;font-size:13px;color:var(--texto-escuro);
+}

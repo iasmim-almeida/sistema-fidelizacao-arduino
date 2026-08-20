@@ -1,0 +1,116 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'pontuar' %}
+{% block titulo %}Fidelização{% endblock %}
+{% block page_title %}Fidelização{% endblock %}
+{% block page_subtitle %}Identificação por Telefone e Pontuação{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <!-- Formulario de pontuacao -->
+        <div class="card mb-4">
+            <div class="card-header"><i class="fas fa-mobile-alt text-warning"></i> Identificar Cliente e Pontuar</div>
+            <div class="card-body p-4">
+                <form id="formPontuar">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Telefone do cliente</label>
+                            <input type="tel" id="telefone" class="form-control form-control-lg" placeholder="11999991111" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Valor da compra (R$)</label>
+                            <input type="number" step="0.01" id="valor" class="form-control form-control-lg" placeholder="0,00" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-fidelidade w-100 py-2"><i class="fas fa-coins"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Resultado da pontuacao -->
+        <div id="resultado" class="p-4 rounded shadow-sm text-center border mb-4 d-none"
+             style="background: linear-gradient(135deg, var(--dourado-claro) 0%, #fff 100%); border-color: var(--rosa-pastel) !important;">
+            <h3 class="fw-bold m-0" style="color: var(--sidebar-color);">Pontuacao Computada!</h3>
+            <div class="row my-4 align-items-center">
+                <div class="col-4 border-end">
+                    <span class="text-muted small d-block">TELEFONE</span>
+                    <strong class="fs-5" id="rTelefone">-</strong>
+                </div>
+                <div class="col-4 border-end">
+                    <span class="text-muted small d-block">CLIENTE</span>
+                    <strong class="fs-5" id="rCliente">-</strong>
+                </div>
+                <div class="col-4">
+                    <span class="text-muted small d-block">NOVO SALDO</span>
+                    <strong class="fs-4 text-success" id="rSaldo">-</strong>
+                </div>
+            </div>
+            <small class="text-muted"><i class="fas fa-check-circle text-success"></i> Sinal visual enviado: LED Verde e som emitidos no Arduino.</small>
+        </div>
+
+        <div id="erroBox" class="alert alert-danger d-none"></div>
+
+        <!-- Historico -->
+        <div class="card">
+            <div class="card-header"><i class="fas fa-history"></i> Últimas Compras Pontuadas</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr><th>Data</th><th>Cliente (ID)</th><th>Valor</th><th>Pontos</th></tr>
+                    </thead>
+                    <tbody id="tbodyCompras">
+                        <tr><td colspan="4" class="text-center text-muted">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function carregarCompras(){
+    const r = await fetch('/api/compras/', {credentials:'include'});
+    const compras = r.ok ? await r.json() : [];
+    const tb = document.getElementById('tbodyCompras');
+    if(!compras.length){ tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma compra ainda.</td></tr>'; return; }
+    tb.innerHTML = compras.slice(0,10).map(c=>{
+        const dt = c.data ? new Date(c.data).toLocaleString('pt-BR') : '-';
+        return `<tr><td>${dt}</td><td>#${c.id_cliente}</td><td>R$ ${c.valor.toFixed(2)}</td><td><span class="badge bg-success">+${c.pontos_gerados} pts</span></td></tr>`;
+    }).join('');
+}
+
+document.getElementById('formPontuar').addEventListener('submit', async e => {
+    e.preventDefault();
+    const resultado = document.getElementById('resultado');
+    const erroBox = document.getElementById('erroBox');
+    resultado.classList.add('d-none'); erroBox.classList.add('d-none');
+
+    const telefone = document.getElementById('telefone').value.trim();
+    const valor = parseFloat(document.getElementById('valor').value);
+
+    const resp = await fetch('/api/compras/', {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({ telefone, valor })
+    });
+    const data = await resp.json();
+
+    if(resp.ok){
+        document.getElementById('rTelefone').textContent = data.cliente.telefone;
+        document.getElementById('rCliente').textContent = data.cliente.nome;
+        document.getElementById('rSaldo').textContent = data.saldo_atualizado + ' pts';
+        resultado.classList.remove('d-none');
+        e.target.reset();
+        carregarCompras();
+    } else {
+        erroBox.textContent = data.erro || 'Erro ao pontuar. Verifique o telefone.';
+        erroBox.classList.remove('d-none');
+    }
+});
+
+carregarCompras();
+</script>
+{% endblock %}

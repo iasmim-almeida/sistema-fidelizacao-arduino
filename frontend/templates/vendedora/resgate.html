@@ -1,0 +1,121 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'resgate' %}
+{% block titulo %}Recompensas{% endblock %}
+{% block page_title %}Recompensas{% endblock %}
+{% block page_subtitle %}Validar e Entregar Recompensas{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-gift text-warning"></i> Validar e Entregar Recompensas</div>
+            <div class="card-body p-4">
+                <form id="formResgate">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold" style="color: var(--sidebar-color);">1. Quem esta resgatando?</label>
+                        <select id="clienteId" class="form-select form-select-lg" required>
+                            <option value="">Carregando clientes...</option>
+                        </select>
+                        <div class="form-text">O saldo atual do cliente aparece ao lado do nome.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold" style="color: var(--sidebar-color);">2. Selecione o Premio Escolhido</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="border p-3 rounded d-flex align-items-center justify-content-between bg-white shadow-sm" style="border-color: var(--rosa-pastel) !important;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="p-3 rounded me-3 text-danger" style="background-color: #fff5f7;"><i class="fas fa-cookie-bite fa-lg"></i></div>
+                                        <div><h6 class="fw-bold m-0">Brinde Simples</h6><small class="text-muted">Custo: 50 pontos</small></div>
+                                    </div>
+                                    <input type="radio" name="premio" data-nome="Brinde Simples" value="50" class="form-check-input ms-2" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border p-3 rounded d-flex align-items-center justify-content-between bg-white shadow-sm" style="border-color: var(--rosa-pastel) !important;">
+                                    <div class="d-flex align-items-center">
+                                        <div class="p-3 rounded me-3 text-warning" style="background-color: var(--dourado-claro);"><i class="fas fa-percentage fa-lg"></i></div>
+                                        <div><h6 class="fw-bold m-0">15% de Desconto</h6><small class="text-muted">Custo: 100 pontos</small></div>
+                                    </div>
+                                    <input type="radio" name="premio" data-nome="15% de Desconto" value="100" class="form-check-input ms-2">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-fidelidade w-100 py-2 fs-6"><i class="fas fa-check-circle"></i> Confirmar Entrega e Deduzir Pontos</button>
+                    </div>
+                    <div id="msgResgate" class="mt-3"></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header text-muted bg-light" style="font-size: 0.9rem;"><i class="fas fa-history"></i> Ultimos Premios Entregues</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                    <tbody id="tbodyResgates">
+                        <tr><td colspan="4" class="text-center text-muted">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let clientesMap = {};
+
+async function carregarClientes(){
+    const r = await fetch('/api/clientes/', {credentials:'include'});
+    const cs = r.ok ? await r.json() : [];
+    const sel = document.getElementById('clienteId');
+    sel.innerHTML = '<option value="">Selecione o cliente (Nome - Telefone)...</option>' +
+        cs.map(c=>{ clientesMap[c.id_cliente]=c; return `<option value="${c.id_cliente}">${c.nome} — ${c.telefone} [Saldo: ${c.pontos_acumulados} pts]</option>`; }).join('');
+}
+
+async function carregarResgates(){
+    const r = await fetch('/api/resgates/', {credentials:'include'});
+    const rs = r.ok ? await r.json() : [];
+    const tb = document.getElementById('tbodyResgates');
+    if(!rs.length){ tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum resgate ainda.</td></tr>'; return; }
+    tb.innerHTML = rs.slice(0,10).map(x=>{
+        const dt = x.data ? new Date(x.data).toLocaleString('pt-BR') : '-';
+        const nome = clientesMap[x.id_cliente] ? clientesMap[x.id_cliente].nome : ('#'+x.id_cliente);
+        return `<tr><td class="ps-4">${dt}</td><td><strong>${nome}</strong></td><td>${x.descricao_recompensa}</td><td class="text-danger fw-bold text-end pe-4">-${x.pontos_utilizados} pts</td></tr>`;
+    }).join('');
+}
+
+document.getElementById('formResgate').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = document.getElementById('msgResgate');
+    const id = parseInt(document.getElementById('clienteId').value);
+    const premio = document.querySelector('input[name="premio"]:checked');
+    if(!id || !premio){ msg.className='mt-3 text-danger'; msg.textContent='Selecione cliente e premio.'; return; }
+
+    const resp = await fetch('/api/resgates/', {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+        body: JSON.stringify({
+            id_cliente: id,
+            pontos_utilizados: parseInt(premio.value),
+            descricao_recompensa: premio.dataset.nome
+        })
+    });
+    const data = await resp.json();
+    if(resp.ok){
+        msg.className = 'mt-3 alert alert-success';
+        msg.textContent = `Resgate confirmado! Novo saldo: ${data.saldo_atualizado} pts.`;
+        e.target.reset();
+        await carregarClientes(); carregarResgates();
+    } else {
+        msg.className = 'mt-3 alert alert-danger';
+        msg.textContent = data.erro + (data.saldo_atual!==undefined ? ` (saldo: ${data.saldo_atual} pts)` : '');
+    }
+});
+
+(async ()=>{ await carregarClientes(); carregarResgates(); })();
+</script>
+{% endblock %}
