@@ -5,38 +5,74 @@
 {% block page_subtitle %}Visão geral do programa de fidelização{% endblock %}
 
 {% block content %}
+<!-- Seção de Cartões com as Métricas Oficiais do TCC -->
 <div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card-stats">
-            <div class="icon-circle" style="background-color:#fff1f5;color:#d85f82;"><i class="fas fa-users"></i></div>
-            <small class="text-muted d-block">Clientes</small>
-            <h4 class="fw-bold m-0 mt-1" id="kClientes">0</h4>
+    <!-- Card 1: Taxa de Recorrência (Equação 1) -->
+    <div class="col-md-4">
+        <div class="card-stats h-100 shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <small class="text-muted fw-bold">Taxa de Recorrência</small>
+                <div class="icon-circle" style="background-color:#e8f0fe;color:#0d6efd;"><i class="fas fa-users"></i></div>
+            </div>
+            <h4 class="fw-bold m-0 mt-1" id="kRecorrencia">0.0 <span class="fs-6 text-muted fw-normal">compras/cli</span></h4>
+            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Média aritmética de visitas por cliente cadastrado na base.</small>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card-stats">
-            <div class="icon-circle" style="background-color:#e7f8ed;color:#198754;"><i class="fas fa-arrow-trend-up"></i></div>
-            <small class="text-muted d-block">Pontos distribuidos</small>
-            <h4 class="fw-bold m-0 mt-1" id="kPontosGer">0</h4>
+    
+    <!-- Card 2: Taxa de Rotatividade / Churn (Equação 2) -->
+    <div class="col-md-4">
+        <div class="card-stats h-100 shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <small class="text-muted fw-bold">Rotatividade (Churn)</small>
+                <div class="icon-circle" style="background-color:#fff1f5;color:#dc3545;"><i class="fas fa-arrow-trend-down"></i></div>
+            </div>
+            <h4 class="fw-bold m-0 mt-1 text-danger" id="kRotatividade">0.0%</h4>
+            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Percentual de usuários sem registros de pontuação nos últimos 30 dias.</small>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card-stats">
-            <div class="icon-circle" style="background-color:#fff1f5;color:#d85f82;"><i class="fas fa-arrow-trend-down"></i></div>
-            <small class="text-muted d-block">Pontos resgatados</small>
-            <h4 class="fw-bold m-0 mt-1" id="kPontosUso">0</h4>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card-stats">
-            <div class="icon-circle" style="background-color:#fbf1d1;color:#e5c060;"><i class="fas fa-dollar-sign"></i></div>
-            <small class="text-muted d-block">Faturamento (compras)</small>
-            <h4 class="fw-bold m-0 mt-1" id="kFaturamento">R$ 0,00</h4>
+
+    <!-- Card 3: Taxa de Resgate de Prêmios (Equação 3) -->
+    <div class="col-md-4">
+        <div class="card-stats h-100 shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <small class="text-muted fw-bold">Resgate de Prêmios</small>
+                <div class="icon-circle" style="background-color:#e7f8ed;color:#198754;"><i class="fas fa-gift"></i></div>
+            </div>
+            <h4 class="fw-bold m-0 mt-1 text-success" id="kResgate">0.0%</h4>
+            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Proporção de pontos emitidos convertidos em recompensas físicas.</small>
         </div>
     </div>
 </div>
 
-<div class="row g-4">
+<!-- Seção de Gráficos Analíticos Dinâmicos (Chart.js) -->
+<div class="row g-4 mb-4">
+    <!-- Gráfico 1: Proporção da Base de Clientes (Rosca) -->
+    <div class="col-md-5">
+        <div class="table-extrato p-3" style="background: white; border-radius: 8px;">
+            <div class="fw-bold mb-3" style="color: var(--sidebar-color); font-size: 0.9rem;">
+                <i class="fas fa-chart-pie me-2"></i>Saúde da Base (Últimos 30 dias)
+            </div>
+            <div style="position: relative; height: 220px; width: 100%;">
+                <canvas id="graficoRosca"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico 2: Movimentação de Volumes de Pontos (Barras) -->
+    <div class="col-md-7">
+        <div class="table-extrato p-3" style="background: white; border-radius: 8px;">
+            <div class="fw-bold mb-3" style="color: var(--sidebar-color); font-size: 0.9rem;">
+                <i class="fas fa-chart-column me-2"></i>Fluxo de Pontuação Geral
+            </div>
+            <div style="position: relative; height: 220px; width: 100%;">
+                <canvas id="graficoBarras"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Seção de Dados e Históricos Complementares -->
+<div class="row g-4 mb-4">
     <div class="col-md-6">
         <div class="table-extrato">
             <div class="p-3 fw-bold" style="color: var(--sidebar-color);"><i class="fas fa-trophy me-2"></i>Top Clientes por Pontos</div>
@@ -51,32 +87,124 @@
             <div class="p-3 fw-bold" style="color: var(--sidebar-color);"><i class="fas fa-clock-rotate-left me-2"></i>Movimentações Recentes</div>
             <table class="table mb-0">
                 <thead><tr><th>Tipo</th><th>Cliente</th><th class="text-end pe-3">Pontos</th></tr></thead>
-                <tbody id="tbodyMov"><tr><td colspan="3" class="text-center text-muted">Carregando...</td></tr></tbody>
+                <tbody id="tbodyNav"><tr><td colspan="3" class="text-center text-muted">Carregando...</td></tr></tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Rodapé Técnico Oculto para manter a contagem de faturamento -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="p-2 text-end text-muted font-monospace" style="font-size: 0.8rem;">
+            <i class="fas fa-wallet me-1"></i>Faturamento Bruto Acumulado: <span id="kFaturamento" class="fw-bold">R$ 1,00</span>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<!-- Inclusão da Biblioteca Chart.js diretamente no cliente -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+
 <script>
 async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.ok?r.json():[]; }
 
 (async () => {
+    // 1. Busca os dados brutos das APIs nativas do seu back-end
     const [clientes, compras, resgates] = await Promise.all([
         j('/api/clientes/'), j('/api/compras/'), j('/api/resgates/')
     ]);
     const cmap = {}; clientes.forEach(c=>cmap[c.id_cliente]=c);
 
-    document.getElementById('kClientes').textContent = clientes.length;
-    document.getElementById('kPontosGer').textContent = compras.reduce((s,c)=>s+(c.pontos_gerados||0),0);
-    document.getElementById('kPontosUso').textContent = resgates.reduce((s,r)=>s+(r.pontos_utilizados||0),0);
+    // 2. Cálculos Gerais e Faturamento do seu código original
+    const totalClientes = clientes.length;
+    const totalCompras = compras.length;
+    const pontosEmitidos = compras.reduce((s,c)=>s+(c.pontos_gerados||0),0);
+    const pontosResgatados = resgates.reduce((s,r)=>s+(r.pontos_utilizados||0),0);
     const fat = compras.reduce((s,c)=>s+(c.valor||0),0);
-    document.getElementById('kFaturamento').textContent = 'R$ ' + fat.toFixed(2).replace('.',',');
+    document.getElementById('kFaturamento').textContent = 'R$ ' + fat.toFixed(2).replace('.',','); 
 
+    // ====================================================
+    // CÁLCULO DAS TRÊS EQUAÇÕES ACADÊMICAS DO TCC (Meili, 2022)
+    // ====================================================
+    
+    // Métrica 1: Taxa de Recorrência (Frequência Média de Visitas)
+    const recorrencia = totalClientes > 0 ? (totalCompras / totalClientes).toFixed(1) : "0.0";
+    document.getElementById('kRecorrencia').innerHTML = `${recorrencia} <span class="fs-6 text-muted fw-normal">compras/cli</span>`;
+
+    // Métrica 2: Taxa de Rotatividade (Churn Adaptativo de 30 dias)
+    const hoje = new Date();
+    const limite30Dias = new Date(hoje.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    // Filtra IDs únicos de clientes que efetuaram compras nos últimos 30 dias
+    const idsClientesAtivos = new Set(
+        compras
+            .filter(c => new Date(c.data) >= limite30Dias)
+            .map(c => c.id_cliente)
+    );
+    
+    const qtdAtivos = idsClientesAtivos.size;
+    const qtdInativos = totalClientes - qtdAtivos;
+    const rotatividade = totalClientes > 0 ? ((qtdInativos / totalClientes) * 100).toFixed(1) : "0.0";
+    document.getElementById('kRotatividade').textContent = rotatividade + "%";
+
+    // Métrica 3: Taxa de Resgate de Prêmios (Redemption Rate)
+    const resgate = pontosEmitidos > 0 ? ((pontosResgatados / pontosEmitidos) * 100).toFixed(1) : "0.0";
+    document.getElementById('kResgate').textContent = resgate + "%";
+
+
+    // ====================================================
+    // RENDERIZAÇÃO GRÁFICA DOS COMPONENTES (Chart.js)
+    // ====================================================
+
+    // Gráfico 1: Rosca (Proporção de Clientes Ativos vs Inativos)
+    const ctxRosca = document.getElementById('graficoRosca').getContext('2d');
+    new Chart(ctxRosca, {
+        type: 'doughnut',
+        data: {
+            labels: ['Ativos', 'Inativos (Churn)'],
+            datasets: [{
+                data: [qtdAtivos, qtdInativos],
+                backgroundColor: ['#198754', '#dc3545'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+        }
+    });
+
+    // Gráfico 2: Barras (Comparativo de Volumes de Pontos Emitidos e Usados)
+    const ctxBarras = document.getElementById('graficoBarras').getContext('2d');
+    new Chart(ctxBarras, {
+        type: 'bar',
+        data: {
+            labels: ['Pontos Gerados', 'Pontos Resgatados'],
+            datasets: [{
+                data: [pontosEmitidos, pontosResgatados],
+                backgroundColor: ['#0d6efd', '#ffc107'],
+                borderRadius: 4,
+                barThickness: 45
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { display: true } }, x: { grid: { display: false } } }
+        }
+    });
+
+
+    // ====================================================
+    // MONTAGEM DAS TABELAS ORIGINAIS (Mantendo sua lógica intacta)
+    // ====================================================
     const top = [...clientes].sort((a,b)=>b.pontos_acumulados-a.pontos_acumulados).slice(0,5);
     document.getElementById('tbodyTop').innerHTML = top.length
-        ? top.map(c=>`<tr><td>${c.nome}</td><td>${c.telefone}</td><td class="text-end pe-3"><span class="badge-ganho">${c.pontos_acumulados} pts</span></td></tr>`).join('')
+        ? top.map(c=>`<tr><td>${c.nome}</td><td>${c.telefone}</td><td class="text-end pe-3"><span class="badge-ganho" style="background-color:#e7f8ed;color:#198754;padding:3px 8px;border-radius:12px;font-size:0.85rem;">${c.pontos_acumulados} pts</span></td></tr>`).join('')
         : '<tr><td colspan="3" class="text-center text-muted">Sem dados.</td></tr>';
 
     const mov = [
@@ -84,14 +212,15 @@ async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.
         ...resgates.map(r=>({t:'resgate', cli:cmap[r.id_cliente], pts:-r.pontos_utilizados, data:r.data})),
     ].sort((a,b)=> new Date(b.data)-new Date(a.data)).slice(0,8);
 
-    document.getElementById('tbodyMov').innerHTML = mov.length
+    document.getElementById('tbodyNav').innerHTML = mov.length
         ? mov.map(m=>{
             const nome = m.cli ? m.cli.nome : '-';
-            const badge = m.pts>=0 ? `<span class="badge-ganho">+${m.pts} pts</span>` : `<span class="badge-resgate">${m.pts} pts</span>`;
+            const badge = m.pts>=0 ? `<span class="badge-ganho" style="background-color:#e7f8ed;color:#198754;padding:3px 8px;border-radius:12px;font-size:0.85rem;">+${m.pts} pts</span>` : `<span class="badge-resgate" style="background-color:#fff1f5;color:#d85f82;padding:3px 8px;border-radius:12px;font-size:0.85rem;">${m.pts} pts</span>`;
             const ic = m.t==='compra' ? '<i class="fas fa-cart-shopping text-success me-1"></i>Compra' : '<i class="fas fa-gift text-danger me-1"></i>Resgate';
             return `<tr><td>${ic}</td><td>${nome}</td><td class="text-end pe-3">${badge}</td></tr>`;
         }).join('')
         : '<tr><td colspan="3" class="text-center text-muted">Sem movimentacoes.</td></tr>';
 })();
+
 </script>
 {% endblock %}

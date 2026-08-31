@@ -57,6 +57,29 @@ body{
 
 /* ========= SIDEBAR ========= */
 
+/* Garante transições suaves nos elementos */
+#sidebar {
+    transition: all 0.3s ease-in-out;
+}
+
+#content {
+    transition: all 0.3s ease-in-out;
+    width: 100%;
+}
+
+/* Classe injetada pelo script para esconder a barra rosa */
+#sidebar.sidebar-escondida {
+    margin-left: -260px; 
+}
+
+/* Classe injetada pelo script para expandir o conteúdo quando o menu some */
+#content.content-expandido {
+    width: 100%;
+    margin-left: 0;
+}
+
+
+
 .sidebar-heading{
     padding:10px 25px;
     font-size:30px;
