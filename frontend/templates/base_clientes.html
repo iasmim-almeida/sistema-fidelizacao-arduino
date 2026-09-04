@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FideliZa - {% block titulo %}Painel{% endblock %}</title>
+    <title>FideliZa - {% block titulo %}Portal do Cliente{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -16,21 +16,27 @@
             <i class="fas fa-sparkles text-warning"></i> FideliZa
         </div>
 
-        <div class="sidebar-section-title">Principal</div>
-        <a href="{{ url_for('main.bemvindo') }}" class="nav-link-sidebar {% if active=='bemvindo' %}active{% endif %}"><i class="fas fa-home"></i> Início</a>
-        <a href="{{ url_for('main.meuspontos') }}" class="nav-link-sidebar {% if active=='meuspontos' %}active{% endif %}"><i class="fas fa-users"></i> Meus pontos</a>
-        <a href="{{ url_for('main.recompensas') }}" class="nav-link-sidebar {% if active=='recompensas' %}active{% endif %}"><i class="fas fa-gift"></i> Recompensas</a>
-        <a href="{{ url_for('main.historico') }}" class="nav-link-sidebar {% if active=='historico' %}active{% endif %}"><i class="fas fa-chart-bar"></i> Historico</a>
+        <div class="sidebar-section-title">Meu Programa</div>
+        <a href="{{ url_for('main.bemvindo') }}" class="nav-link-sidebar {% if active=='bemvindo' %}active{% endif %}"><i class="fas fa-house-chimney"></i> Início & Saldo</a>
+        <a href="{{ url_for('main.meuspontos') }}" class="nav-link-sidebar {% if active=='meuspontos' %}active{% endif %}"><i class="fas fa-coins"></i> Meus Pontos</a>
+        <a href="{{ url_for('main.recompensas') }}" class="nav-link-sidebar {% if active=='recompensas' %}active{% endif %}"><i class="fas fa-gift"></i> Catálogo de Prêmios</a>
+        <a href="{{ url_for('main.historico') }}" class="nav-link-sidebar {% if active=='historico' %}active{% endif %}"><i class="fas fa-clock-rotate-left"></i> Extrato de Compras</a>
     </nav>
 
     <div id="content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
             <div>
                 <h4 class="fw-bold m-0">{% block page_title %}{% endblock %}</h4>
                 <small class="text-muted">{% block page_subtitle %}{% endblock %}</small>
             </div>
-            <div>
-                <a href="{{ url_for('main.index') }}" class="btn btn-light btn-sm rounded-circle shadow-sm p-2" title="Sair"><i class="fas fa-sign-out-alt"></i></a>
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-none d-md-flex align-items-center bg-white px-3 py-1 rounded-pill border shadow-sm">
+                    <span class="badge bg-success me-2"><i class="fas fa-coins me-1"></i><span id="topbarSaldo">{{ current_user.pontos_acumulados if current_user.is_authenticated else 0 }}</span> pts</span>
+                    <span class="fw-semibold text-dark small">{{ current_user.nome if current_user.is_authenticated else 'Cliente' }}</span>
+                </div>
+                <button onclick="realizarLogout()" class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm" title="Encerrar Sessão">
+                    <i class="fas fa-sign-out-alt me-1"></i>Sair
+                </button>
             </div>
         </div>
 
@@ -39,6 +45,16 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+async function realizarLogout() {
+    try {
+        localStorage.removeItem('fz_tel');
+        await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+    } finally {
+        window.location.href = '/';
+    }
+}
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

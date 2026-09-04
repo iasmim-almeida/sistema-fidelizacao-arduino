@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, redirect
 from app.config import config_by_name
-from app.extensions import db, login_manager, migrate
+from app.extensions import db, login_manager, migrate, csrf, limiter
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
@@ -13,11 +13,13 @@ def create_app(config_name: str = "development") -> Flask:
         template_folder=os.path.join(FRONTEND_DIR, "templates"),
         static_folder=os.path.join(FRONTEND_DIR, "static"),
     )
-    app.config.from_object(config_by_name[config_name])
+    app.config.from_object(config_by_name.get(config_name, config_by_name["development"]))
 
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+    csrf.init_app(app)
+    limiter.init_app(app)
 
     # Se rota /api nao autenticada -> 401 JSON; senao redireciona ao login
     @login_manager.unauthorized_handler
@@ -33,6 +35,10 @@ def create_app(config_name: str = "development") -> Flask:
     from app.routes.clientes import clientes_bp
     from app.routes.compras import compras_bp
     from app.routes.resgates import resgates_bp
+
+    csrf.exempt(clientes_bp)
+    csrf.exempt(compras_bp)
+    csrf.exempt(resgates_bp)
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")

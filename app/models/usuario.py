@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.extensions import db, login_manager
+from app.extensions import db
 
 
 class Usuario(UserMixin, db.Model):
@@ -9,17 +9,24 @@ class Usuario(UserMixin, db.Model):
     id_usuario = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(120), nullable=False)
     login = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=True)  # add: login por e-mail
+    email = db.Column(db.String(120), unique=True, nullable=True)
     senha_hash = db.Column(db.String(255), nullable=False)
     nivel_acesso = db.Column(db.String(20), default="gestor", nullable=False)
 
+    # Identificadores de Perfil / Role
+    tipo = "vendedora"
+    is_vendedora = True
+    is_cliente = False
+
     def get_id(self):
-        return str(self.id_usuario)
+        return f"u_{self.id_usuario}"
 
     def set_senha(self, senha: str) -> None:
         self.senha_hash = generate_password_hash(senha)
 
     def verificar_senha(self, senha: str) -> bool:
+        if not self.senha_hash:
+            return False
         return check_password_hash(self.senha_hash, senha)
 
     def to_dict(self):
@@ -29,9 +36,5 @@ class Usuario(UserMixin, db.Model):
             "login": self.login,
             "email": self.email,
             "nivel_acesso": self.nivel_acesso,
+            "tipo": self.tipo,
         }
-
-
-@login_manager.user_loader
-def load_user(user_id: str):
-    return Usuario.query.get(int(user_id))

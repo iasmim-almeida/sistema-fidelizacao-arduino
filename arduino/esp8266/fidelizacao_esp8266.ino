@@ -25,6 +25,7 @@ void pontuar(String telefone, float valor) {
   WiFiClient client; HTTPClient http;
   http.begin(client, SERVIDOR);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Key", "fideliza-iot-key-padrao");
   String corpo = "{\"telefone\":\"" + telefone + "\",\"valor\":" + String(valor, 2) + "}";
   int codigo = http.POST(corpo);
   Serial.printf("HTTP %d -> %s\n", codigo, http.getString().c_str());

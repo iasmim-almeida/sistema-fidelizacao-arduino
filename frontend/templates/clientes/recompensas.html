@@ -1,83 +1,130 @@
 {% extends "base_clientes.html" %}
 {% set active = 'recompensas' %}
-{% block titulo %}Recompensas{% endblock %}
-{% block page_title %}Recompensas{% endblock %}
-{% block page_subtitle %}Troque seus pontos acumulados por prêmios exclusivos{% endblock %}
+{% block titulo %}Catálogo de Prêmios{% endblock %}
+{% block page_title %}Vitrine de Recompensas{% endblock %}
+{% block page_subtitle %}Troque seus pontos acumulados por vantagens e prêmios na loja{% endblock %}
 
 {% block content %}
-<div id="semTelefone" class="alert alert-warning d-none">
-    Informe seu telefone na tela <a href="{{ url_for('main.bemvindo') }}">Início</a> para resgatar.
-</div>
-
 <div class="card-welcome d-flex justify-content-between align-items-center row g-3">
     <div class="col-12 text-sm-start">
-        <span class="text-uppercase opacity-75 small fw-bold tracking-wider">Saldo disponivel</span>
+        <span class="text-uppercase opacity-75 small fw-bold tracking-wider">Saldo disponível para resgate</span>
         <h1 class="display-4 fw-black m-0 mt-1" style="font-weight: 800;">
-            <span id="saldoDisponivel">0</span> <span style="font-size: 24px;">pontos</span>
+            <span id="saldoDisponivel">{{ current_user.pontos_acumulados if current_user.is_authenticated else 0 }}</span> <span style="font-size: 24px;">pontos</span>
         </h1>
-        <p class="m-0 mt-2 opacity-75 small">Escolha seu premio! Os itens disponiveis possuem o botao habilitado.</p>
+        <p class="m-0 mt-2 opacity-75 small">Escolha seu prêmio! Ao resgatar, você recebe um voucher instantâneo para apresentar no caixa.</p>
     </div>
 </div>
 
-<div class="alert alert-light border mb-4 d-flex align-items-center" style="background-color: #fffdf6; border-color: #d4a373 !important;">
+<div class="alert alert-light border mb-4 d-flex align-items-center shadow-sm" style="background-color: #fffdf6; border-color: #d4a373 !important;">
     <i class="fas fa-circle-info text-warning me-3 fs-5"></i>
-    <span class="small text-muted">Apos resgatar, apresente o cupom gerado na tela diretamente no caixa fisico.</span>
+    <span class="small text-muted">Após confirmar o resgate, apresente o voucher para a vendedora no balcão da loja.</span>
 </div>
 
-<div class="row g-4" id="vitrine"></div>
+<div id="voucherAlerta" class="alert alert-success d-none mb-4 shadow-sm">
+    <h5 class="fw-bold m-0"><i class="fas fa-ticket-simple me-2"></i>Voucher Gerado com Sucesso!</h5>
+    <p class="mb-1 mt-1" id="voucherTexto"></p>
+    <small class="text-muted">Apresente este código à vendedora no caixa para retirar seu prêmio.</small>
+</div>
+
+<div class="row g-4" id="vitrine">
+    <div class="col-12 text-center py-4 text-muted">Carregando catálogo de prêmios...</div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 const PREMIOS = [
-    { nome:'Acessorio a Escolha', custo:40, icon:'fa-gem' },
-    { nome:'T-Shirt Basica', custo:100, icon:'fa-shirt' },
-    { nome:'Cupom de R$ 50,00 Off', custo:200, icon:'fa-tags' },
+    { nome: 'Acessório à Escolha', custo: 40, icon: 'fa-gem', desc: 'Brinco, colar ou pulseira selecionada' },
+    { nome: 'T-Shirt Básica FideliZa', custo: 100, icon: 'fa-shirt', desc: 'Camiseta 100% algodão da coleção' },
+    { nome: 'Cupom de R$ 50,00 OFF', custo: 200, icon: 'fa-tags', desc: 'Desconto imediato em compras na loja' },
 ];
-let clienteAtual = null;
 
-function render(){
+let clienteAtual = {
+    id_cliente: {{ current_user.id_cliente if current_user.is_authenticated else 0 }},
+    nome: "{{ current_user.nome if current_user.is_authenticated else 'Cliente' }}",
+    pontos_acumulados: {{ current_user.pontos_acumulados if current_user.is_authenticated else 0 }}
+};
+
+function renderVitrine() {
     const saldo = clienteAtual ? clienteAtual.pontos_acumulados : 0;
     document.getElementById('saldoDisponivel').textContent = saldo;
-    document.getElementById('vitrine').innerHTML = PREMIOS.map((p,i)=>{
+    const topbar = document.getElementById('topbarSaldo');
+    if (topbar) topbar.textContent = saldo;
+
+    document.getElementById('vitrine').innerHTML = PREMIOS.map((p, i) => {
         const pode = saldo >= p.custo;
         const btn = pode
-            ? `<button onclick="resgatar(${i})" class="btn btn-fidelidade w-100 rounded-pill py-2"><i class="fas fa-gift me-2"></i>Resgatar Premio</button>`
+            ? `<button onclick="resgatarPremio(${i})" class="btn btn-fidelidade w-100 rounded-pill py-2 fw-bold"><i class="fas fa-gift me-2"></i>Resgatar Prêmio</button>`
             : `<button class="btn btn-lock w-100 rounded-pill py-2" disabled><i class="fas fa-lock me-2"></i>Faltam ${p.custo - saldo} pts</button>`;
         const dim = pode ? '' : 'opacity-75';
         const bg = pode ? '' : 'style="background-color:#f8f9fa;color:#6c757d;"';
-        return `<div class="col-12 col-md-6 col-lg-4"><div class="reward-card ${dim} d-flex flex-column justify-content-between"><div>
-            <div class="reward-img-container" ${bg}><i class="fas ${p.icon}"></i><span class="badge-cost">${p.custo} pts</span></div>
-            <div class="reward-body"><h5 class="fw-bold text-dark mb-1">${p.nome}</h5></div>
-        </div><div class="p-3 pt-0">${btn}</div></div></div>`;
+
+        return `
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="reward-card ${dim} d-flex flex-column justify-content-between h-100">
+                <div>
+                    <div class="reward-img-container" ${bg}>
+                        <i class="fas ${p.icon}"></i>
+                        <span class="badge-cost">${p.custo} pts</span>
+                    </div>
+                    <div class="reward-body">
+                        <h5 class="fw-bold text-dark mb-1">${p.nome}</h5>
+                        <p class="small text-muted mb-0">${p.desc}</p>
+                    </div>
+                </div>
+                <div class="p-3 pt-0">${btn}</div>
+            </div>
+        </div>`;
     }).join('');
 }
 
-async function resgatar(i){
-    const p = PREMIOS[i];
-    if(!clienteAtual) return;
-    if(!confirm(`Confirmar o resgate de "${p.nome}" por ${p.custo} pontos?`)) return;
-    const resp = await fetch('/api/resgates/', {
-        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-        body: JSON.stringify({ id_cliente: clienteAtual.id_cliente, pontos_utilizados: p.custo, descricao_recompensa: p.nome })
-    });
-    const data = await resp.json();
-    if(resp.ok){
-        clienteAtual.pontos_acumulados = data.saldo_atualizado;
-        alert(`Voucher gerado!\nCodigo: FID-${Math.floor(1000+Math.random()*9000)}\nMostre a vendedora no balcao.`);
-        render();
-    } else {
-        alert(data.erro || 'Nao foi possivel resgatar.');
+async function resgatarPremio(index) {
+    const p = PREMIOS[index];
+    if (!clienteAtual) return;
+
+    if (!confirm(`Confirmar o resgate de "${p.nome}" por ${p.custo} pontos?`)) {
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/resgates/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                id_cliente: clienteAtual.id_cliente,
+                pontos_utilizados: p.custo,
+                descricao_recompensa: p.nome
+            })
+        });
+        const data = await resp.json();
+
+        if (resp.ok) {
+            clienteAtual.pontos_acumulados = data.saldo_atualizado;
+            const codigoVoucher = `FID-${Math.floor(1000 + Math.random() * 9000)}`;
+            const alertaBox = document.getElementById('voucherAlerta');
+            document.getElementById('voucherTexto').innerHTML = `Prêmio: <strong>${p.nome}</strong> &bull; Código: <code class="fs-5">${codigoVoucher}</code> &bull; Novo Saldo: <strong>${data.saldo_atualizado} pts</strong>`;
+            alertaBox.classList.remove('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            renderVitrine();
+        } else {
+            alert(data.erro || 'Não foi possível efetuar o resgate.');
+        }
+    } catch (e) {
+        alert('Erro ao conectar com o servidor para resgatar.');
     }
 }
 
 (async () => {
-    const tel = localStorage.getItem('fz_tel');
-    if(!tel){ document.getElementById('semTelefone').classList.remove('d-none'); render(); return; }
-    const r = await fetch('/api/clientes/?telefone='+encodeURIComponent(tel), {credentials:'include'});
-    if(r.ok){ clienteAtual = await r.json(); }
-    else { document.getElementById('semTelefone').classList.remove('d-none'); }
-    render();
+    try {
+        const r = await fetch('/api/clientes/me', { credentials: 'include' });
+        if (r.ok) {
+            clienteAtual = await r.json();
+        }
+    } catch (e) {
+        console.error('Erro ao buscar dados do cliente:', e);
+    }
+    renderVitrine();
 })();
 </script>
 {% endblock %}

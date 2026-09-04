@@ -1,76 +1,103 @@
 {% extends "base_clientes.html" %}
 {% set active = 'historico' %}
-{% block titulo %}Histórico{% endblock %}
-{% block page_title %}Histórico{% endblock %}
-{% block page_subtitle %}Veja todas as movimentações da sua conta{% endblock %}
+{% block titulo %}Histórico de Movimentações{% endblock %}
+{% block page_title %}Extrato de Compras & Resgates{% endblock %}
+{% block page_subtitle %}Veja todas as movimentações de pontos da sua conta{% endblock %}
 
 {% block content %}
-<div id="semTelefone" class="alert alert-warning d-none">
-    Informe seu telefone na tela <a href="{{ url_for('main.bemvindo') }}">Início</a> para ver seu historico.
-</div>
-
 <div class="search-card mb-4">
-    <div class="row">
-        <div class="col-md-8"><input id="filtroTexto" class="form-control" placeholder="Pesquisar movimentacao..."></div>
+    <div class="row g-3">
+        <div class="col-md-8">
+            <input id="filtroTexto" class="form-control" placeholder="Pesquisar por compra ou prêmio...">
+        </div>
         <div class="col-md-4">
             <select id="filtroTipo" class="form-select">
-                <option value="todas">Todas</option>
-                <option value="compra">Compras</option>
-                <option value="resgate">Resgates</option>
+                <option value="todas">Todas as Movimentações</option>
+                <option value="compra">Apenas Compras (Ganhos)</option>
+                <option value="resgate">Apenas Resgates (Utilizados)</option>
             </select>
         </div>
     </div>
 </div>
 
-<div id="listaHistorico"><p class="text-muted">Carregando...</p></div>
+<div id="listaHistorico">
+    <div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Carregando histórico...</div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 let movimentos = [];
 
-function render(){
-    const q = document.getElementById('filtroTexto').value.toLowerCase();
+function renderHistorico(){
+    const q = (document.getElementById('filtroTexto').value || '').toLowerCase();
     const tipo = document.getElementById('filtroTipo').value;
     const lista = movimentos.filter(m =>
-        (tipo==='todas' || m.tipo===tipo) &&
+        (tipo === 'todas' || m.tipo === tipo) &&
         (m.titulo.toLowerCase().includes(q) || m.sub.toLowerCase().includes(q))
     );
     const box = document.getElementById('listaHistorico');
-    if(!lista.length){ box.innerHTML = '<p class="text-muted">Nenhuma movimentacao encontrada.</p>'; return; }
-    box.innerHTML = lista.map(m=>{
-        const cor = m.pts>=0 ? 'points-positive' : 'points-negative';
-        const sinal = m.pts>=0 ? '+' : '';
-        const ic = m.tipo==='compra' ? 'icon-compra fa-cart-shopping' : 'icon-resgate fa-gift';
+
+    if (!lista.length) {
+        box.innerHTML = `
+        <div class="card p-4 text-center text-muted shadow-sm">
+            <i class="fas fa-receipt fa-2x mb-2 opacity-50"></i>
+            <p class="m-0">Nenhuma movimentação encontrada para este filtro.</p>
+        </div>`;
+        return;
+    }
+
+    box.innerHTML = lista.map(m => {
+        const cor = m.pts >= 0 ? 'points-positive' : 'points-negative';
+        const sinal = m.pts >= 0 ? '+' : '';
+        const ic = m.tipo === 'compra' ? 'icon-compra fa-cart-shopping' : 'icon-resgate fa-gift';
         const dt = m.data ? new Date(m.data).toLocaleString('pt-BR') : '-';
-        return `<div class="history-card"><div class="d-flex align-items-center">
-            <div class="icon-history ${ic.split(' ')[0]}"><i class="fas ${ic.split(' ')[1]}"></i></div>
-            <div><h5 class="mb-1">${m.titulo}</h5><small class="text-muted">${m.sub}</small><br><small class="text-muted">${dt}</small></div>
-        </div><div class="${cor}">${sinal}${m.pts} pts</div></div>`;
+        return `
+        <div class="history-card shadow-sm">
+            <div class="d-flex align-items-center">
+                <div class="icon-history ${ic.split(' ')[0]}"><i class="fas ${ic.split(' ')[1]}"></i></div>
+                <div>
+                    <h5 class="mb-1 fw-bold text-dark">${m.titulo}</h5>
+                    <small class="text-muted fw-semibold">${m.sub}</small><br>
+                    <small class="text-muted"><i class="fas fa-calendar-day me-1"></i>${dt}</small>
+                </div>
+            </div>
+            <div class="${cor}">${sinal}${m.pts} pts</div>
+        </div>`;
     }).join('');
 }
 
-document.getElementById('filtroTexto').addEventListener('input', render);
-document.getElementById('filtroTipo').addEventListener('change', render);
+document.getElementById('filtroTexto').addEventListener('input', renderHistorico);
+document.getElementById('filtroTipo').addEventListener('change', renderHistorico);
 
 (async () => {
-    const tel = localStorage.getItem('fz_tel');
-    if(!tel){ document.getElementById('semTelefone').classList.remove('d-none'); document.getElementById('listaHistorico').innerHTML=''; return; }
-    const r = await fetch('/api/clientes/?telefone='+encodeURIComponent(tel), {credentials:'include'});
-    if(!r.ok){ document.getElementById('semTelefone').classList.remove('d-none'); document.getElementById('listaHistorico').innerHTML=''; return; }
-    const c = await r.json();
+    try {
+        const [compras, resgates] = await Promise.all([
+            fetch('/api/compras/', { credentials: 'include' }).then(x => x.ok ? x.json() : []),
+            fetch('/api/resgates/', { credentials: 'include' }).then(x => x.ok ? x.json() : []),
+        ]);
 
-    const [compras, resgates] = await Promise.all([
-        fetch('/api/compras/?id_cliente='+c.id_cliente,{credentials:'include'}).then(x=>x.ok?x.json():[]),
-        fetch('/api/resgates/?id_cliente='+c.id_cliente,{credentials:'include'}).then(x=>x.ok?x.json():[]),
-    ]);
+        movimentos = [
+            ...compras.map(x => ({
+                tipo: 'compra',
+                titulo: 'Compra no PDV',
+                sub: 'Loja Física FideliZa - Valor: R$ ' + parseFloat(x.valor).toFixed(2),
+                pts: x.pontos_gerados,
+                data: x.data
+            })),
+            ...resgates.map(x => ({
+                tipo: 'resgate',
+                titulo: 'Resgate de Recompensa',
+                sub: x.descricao_recompensa,
+                pts: -x.pontos_utilizados,
+                data: x.data
+            })),
+        ].sort((a, b) => new Date(b.data) - new Date(a.data));
 
-    movimentos = [
-        ...compras.map(x=>({tipo:'compra', titulo:'Compra realizada', sub:'Loja FideliZa - R$ '+x.valor.toFixed(2), pts:x.pontos_gerados, data:x.data})),
-        ...resgates.map(x=>({tipo:'resgate', titulo:'Resgate de recompensa', sub:x.descricao_recompensa, pts:-x.pontos_utilizados, data:x.data})),
-    ].sort((a,b)=> new Date(b.data)-new Date(a.data));
-
-    render();
+        renderHistorico();
+    } catch (e) {
+        document.getElementById('listaHistorico').innerHTML = '<p class="text-danger">Erro ao carregar movimentações.</p>';
+    }
 })();
 </script>
 {% endblock %}

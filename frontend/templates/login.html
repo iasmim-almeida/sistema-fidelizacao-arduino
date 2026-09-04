@@ -3,18 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FideliZa - Login</title>
+  <title>FideliZa - Acesso ao Sistema</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
   <style>
-    body { background-color: var(--bg-sistema); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .login-card { border: 2px solid var(--rosa-pastel); border-radius: 20px; background: #ffffff; box-shadow: 0 10px 25px rgba(92, 58, 67, 0.05); padding: 30px; max-width: 400px; width: 100%; }
-    .alert-error { background: #ffe5e5; color: #9b1c1c; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
-    .alert-success { background: #e7f8ed; color: #166534; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
-    .link-cadastro { cursor: pointer; text-decoration: none; font-weight: 600; color: var(--sidebar-color); }
+    body {
+      background-color: var(--bg-sistema);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 25px 15px;
+    }
+    .login-card {
+      border: 2px solid var(--rosa-pastel);
+      border-radius: 24px;
+      background: #ffffff;
+      box-shadow: 0 15px 35px rgba(92, 58, 67, 0.08);
+      padding: 35px;
+      max-width: 480px;
+      width: 100%;
+    }
+    .nav-pills-custom .nav-link {
+      color: var(--texto-escuro);
+      font-weight: 600;
+      border-radius: 12px;
+      padding: 10px 16px;
+      border: 1px solid var(--rosa-pastel);
+      background-color: #fff;
+      transition: all 0.3s ease;
+      font-size: 0.95rem;
+    }
+    .nav-pills-custom .nav-link.active {
+      background: var(--gradiente-banner);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(216, 95, 130, 0.3);
+    }
+    .alert-error {
+      background: #ffe5e5;
+      color: #9b1c1c;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      border: 1px solid #f8b4b4;
+    }
+    .alert-success {
+      background: #e7f8ed;
+      color: #166534;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      border: 1px solid #bbf7d0;
+    }
+    .badge-demo-box {
+      background: var(--rosa-claro);
+      border: 1px dashed var(--sidebar-color);
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 13px;
+      color: var(--texto-escuro);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .badge-demo-box:hover {
+      transform: translateY(-2px);
+      background: #fff;
+    }
+    .btn-quick-fill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
   </style>
 </head>
 
@@ -23,36 +86,114 @@
     <div class="text-center mb-4">
       <div class="brand-logo"><i class="bi bi-stars"></i></div>
       <h1 class="brand-name">Fideli<span>Za</span></h1>
-      <p class="brand-tagline">Sistema de fidelizacao de clientes</p>
+      <p class="brand-tagline">Sistema Integrado de Fidelização & Pontuação</p>
     </div>
+
+    <!-- SELETOR DE PERFIL DE ACESSO -->
+    <ul class="nav nav-pills nav-fill nav-pills-custom mb-4" id="pills-tab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pills-vendedora-tab" data-bs-toggle="pill" data-bs-target="#pills-vendedora" type="button" role="tab">
+          <i class="bi bi-person-badge me-1"></i> Vendedora
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pills-cliente-tab" data-bs-toggle="pill" data-bs-target="#pills-cliente" type="button" role="tab">
+          <i class="bi bi-person-heart me-1"></i> Cliente
+        </button>
+      </li>
+    </ul>
 
     <div id="alertaErro" class="alert-error mb-3 d-none">
-      <i class="bi bi-exclamation-circle me-1"></i> E-mail ou senha incorretos.
+      <i class="bi bi-exclamation-circle me-1"></i> <span id="erroTexto">Credenciais inválidas.</span>
     </div>
     <div id="alertaSucesso" class="alert-success mb-3 d-none">
-      <i class="bi bi-check-circle me-1"></i> Login realizado! Redirecionando...
+      <i class="bi bi-check-circle me-1"></i> <span id="sucessoTexto">Login realizado! Redirecionando...</span>
     </div>
 
-    <!-- LOGIN -->
-    <form id="formLogin" novalidate>
-      <div class="mb-3">
-        <label for="email" class="form-label">E-mail</label>
-        <input type="email" class="form-control" id="email" placeholder="seu@email.com" required autocomplete="email" />
+    <div class="tab-content" id="pills-tabContent">
+      <!-- FORMULÁRIO 1: VENDEDORA / ADMIN -->
+      <div class="tab-pane fade show active" id="pills-vendedora" role="tabpanel">
+        <form id="formLoginVendedora" novalidate>
+          <div class="mb-3">
+            <label for="emailVendedora" class="form-label fw-semibold">E-mail ou Usuário</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+              <input type="text" class="form-control" id="emailVendedora" placeholder="admin@loja.com" required autocomplete="username" />
+            </div>
+          </div>
+          <div class="mb-4">
+            <label for="senhaVendedora" class="form-label fw-semibold">Senha</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-lock"></i></span>
+              <input type="password" class="form-control" id="senhaVendedora" placeholder="••••••••" required autocomplete="current-password" />
+              <button class="btn btn-outline-secondary" type="button" onclick="toggleSenha('senhaVendedora', 'iconeVendedora')">
+                <i class="bi bi-eye" id="iconeVendedora"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-login btn-primary w-100 text-white py-2 fw-bold shadow-sm">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Entrar como Vendedora (Admin)
+          </button>
+        </form>
       </div>
-      <div class="mb-4">
-        <label for="senha" class="form-label">Senha</label>
-        <div class="input-group">
-          <input type="password" class="form-control" id="senha" placeholder="********" required autocomplete="current-password" />
-          <span class="input-group-text" id="toggleSenha" style="cursor: pointer;"><i class="bi bi-eye" id="iconeSenha"></i></span>
-        </div>
-      </div>
-      <button type="submit" class="btn btn-login btn-primary w-100 text-white mb-3"><i class="bi bi-box-arrow-in-right me-2"></i>Entrar</button>
-    </form>
 
-    <div id="demoArea">
-      <div class="divider mb-3 mt-3">acesso de demonstracao</div>
-      <div class="badge-demo text-center">
-        E-mail: <code>admin@loja.com</code> &nbsp;|&nbsp; Senha: <code>1234</code>
+      <!-- FORMULÁRIO 2: CLIENTE FINAL -->
+      <div class="tab-pane fade" id="pills-cliente" role="tabpanel">
+        <form id="formLoginCliente" novalidate>
+          <div class="mb-3">
+            <label for="telCliente" class="form-label fw-semibold">Telefone / WhatsApp</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-phone"></i></span>
+              <input type="tel" class="form-control" id="telCliente" placeholder="11999991111" required autocomplete="tel" />
+            </div>
+            <div class="form-text">Informe o telefone cadastrado na loja.</div>
+          </div>
+          <div class="mb-4">
+            <label for="senhaCliente" class="form-label fw-semibold">Senha ou PIN</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+              <input type="password" class="form-control" id="senhaCliente" placeholder="••••••••" required autocomplete="current-password" />
+              <button class="btn btn-outline-secondary" type="button" onclick="toggleSenha('senhaCliente', 'iconeCliente')">
+                <i class="bi bi-eye" id="iconeCliente"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-fidelidade w-100 py-2 fw-bold shadow-sm">
+            <i class="bi bi-stars me-2"></i>Consultar Meus Pontos & Resgates
+          </button>
+          <div class="text-center mt-3">
+            <span class="small text-muted">Ainda nao tem conta?</span>
+            <a href="{{ url_for('auth.cadastrar_cliente_web') }}" class="small fw-semibold text-decoration-none" style="color: #c43d67;">
+              Cadastre-se aqui
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ÁREA DE DEMONSTRAÇÃO COM 1-CLIQUE -->
+    <div class="mt-4 pt-3 border-top">
+      <div class="divider mb-3">Acessos Rápidos de Demonstração</div>
+      
+      <div class="row g-2">
+        <div class="col-12">
+          <div class="badge-demo-box d-flex justify-content-between align-items-center" onclick="preencherVendedora()">
+            <div>
+              <strong>👩‍💼 Vendedora (Admin):</strong><br>
+              <code>admin@loja.com</code> &bull; Senha: <code>1234</code>
+            </div>
+            <button class="btn btn-sm btn-dark btn-quick-fill">Preencher</button>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="badge-demo-box d-flex justify-content-between align-items-center" onclick="preencherCliente()">
+            <div>
+              <strong>🛍️ Cliente (Ana Silva - 280 pts):</strong><br>
+              <code>11999991111</code> &bull; Senha: <code>1234</code>
+            </div>
+            <button class="btn btn-sm btn-warning btn-quick-fill">Preencher</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -61,36 +202,104 @@
   <script>
     const alertaErro = document.getElementById('alertaErro');
     const alertaSucesso = document.getElementById('alertaSucesso');
+    const erroTexto = document.getElementById('erroTexto');
+    const sucessoTexto = document.getElementById('sucessoTexto');
 
-    document.getElementById('toggleSenha').addEventListener('click', function () {
-      const input = document.getElementById('senha');
-      const icone = document.getElementById('iconeSenha');
-      if (input.type === 'password') { input.type = 'text'; icone.className = 'bi bi-eye-slash'; }
-      else { input.type = 'password'; icone.className = 'bi bi-eye'; }
-    });
-
-    // INTEGRACAO REAL: chama POST /auth/login no backend Flask
-    document.getElementById('formLogin').addEventListener('submit', async function (event) {
-      event.preventDefault();
+    function limparAlertas() {
       alertaErro.classList.add('d-none');
       alertaSucesso.classList.add('d-none');
+    }
 
-      const email = document.getElementById('email').value.trim();
-      const senha = document.getElementById('senha').value;
-
-      const resp = await fetch('/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email: email, senha: senha })
-      });
-
-      if (resp.ok) {
-        alertaSucesso.classList.remove('d-none');
-        setTimeout(() => { window.location.href = '/dashboard'; }, 600);
+    function toggleSenha(inputId, iconeId) {
+      const input = document.getElementById(inputId);
+      const icone = document.getElementById(iconeId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icone.className = 'bi bi-eye-slash';
       } else {
-        const data = await resp.json().catch(() => ({}));
-        alertaErro.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i> ' + (data.erro || 'Credenciais invalidas.');
+        input.type = 'password';
+        icone.className = 'bi bi-eye';
+      }
+    }
+
+    function preencherVendedora() {
+      const tabTrigger = new bootstrap.Tab(document.getElementById('pills-vendedora-tab'));
+      tabTrigger.show();
+      document.getElementById('emailVendedora').value = 'admin@loja.com';
+      document.getElementById('senhaVendedora').value = '1234';
+      limparAlertas();
+    }
+
+    function preencherCliente() {
+      const tabTrigger = new bootstrap.Tab(document.getElementById('pills-cliente-tab'));
+      tabTrigger.show();
+      document.getElementById('telCliente').value = '11999991111';
+      document.getElementById('senhaCliente').value = '1234';
+      limparAlertas();
+    }
+
+    // LOGIN VENDEDORA
+    document.getElementById('formLoginVendedora').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      limparAlertas();
+
+      const identificador = document.getElementById('emailVendedora').value.trim();
+      const senha = document.getElementById('senhaVendedora').value;
+
+      try {
+        const resp = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email: identificador, senha: senha })
+        });
+        const data = await resp.json();
+
+        if (resp.ok) {
+          sucessoTexto.textContent = 'Login de Vendedora realizado! Carregando Painel Administrativo...';
+          alertaSucesso.classList.remove('d-none');
+          setTimeout(() => { window.location.href = data.redirect || '/dashboard'; }, 600);
+        } else {
+          erroTexto.textContent = data.erro || 'Credenciais de vendedora inválidas.';
+          alertaErro.classList.remove('d-none');
+        }
+      } catch (err) {
+        erroTexto.textContent = 'Erro de conexão com o servidor.';
+        alertaErro.classList.remove('d-none');
+      }
+    });
+
+    // LOGIN CLIENTE
+    document.getElementById('formLoginCliente').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      limparAlertas();
+
+      const telefone = document.getElementById('telCliente').value.trim();
+      const senha = document.getElementById('senhaCliente').value;
+
+      try {
+        const resp = await fetch('/auth/cliente/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ telefone: telefone, senha: senha })
+        });
+        const data = await resp.json();
+
+        if (resp.ok) {
+          sucessoTexto.textContent = 'Bem-vindo(a), ' + (data.cliente?.nome || 'Cliente') + '! Carregando seus pontos...';
+          alertaSucesso.classList.remove('d-none');
+          // Salva telefone para conveniência
+          if (data.cliente?.telefone) {
+            localStorage.setItem('fz_tel', data.cliente.telefone);
+          }
+          setTimeout(() => { window.location.href = data.redirect || '/bemvindo'; }, 600);
+        } else {
+          erroTexto.textContent = data.erro || 'Erro ao autenticar cliente.';
+          alertaErro.classList.remove('d-none');
+        }
+      } catch (err) {
+        erroTexto.textContent = 'Erro de conexão com o servidor.';
         alertaErro.classList.remove('d-none');
       }
     });

@@ -1,21 +1,17 @@
 {% extends "base_clientes.html" %}
 {% set active = 'meuspontos' %}
 {% block titulo %}Meus Pontos{% endblock %}
-{% block page_title %}Pontuação{% endblock %}
-{% block page_subtitle %}Gerencie e acompanhe a evolução dos seus pontos{% endblock %}
+{% block page_title %}Extrato e Saldo de Pontos{% endblock %}
+{% block page_subtitle %}Acompanhe o saldo consolidado e a pontuação da sua conta{% endblock %}
 
 {% block content %}
-<div id="semTelefone" class="alert alert-warning d-none">
-    Informe seu telefone na tela <a href="{{ url_for('main.bemvindo') }}">Início</a> para carregar seus pontos.
-</div>
-
 <div class="card-welcome d-flex justify-content-between align-items-center row g-3">
     <div class="col-12 col-sm-7">
-        <span class="text-uppercase opacity-75 small fw-bold tracking-wider">Seu saldo atual</span>
+        <span class="text-uppercase opacity-75 small fw-bold tracking-wider">Seu saldo atual disponível</span>
         <h1 class="display-4 fw-black m-0 mt-1" style="font-weight: 800;">
-            <span id="saldoAtual">0</span> <span style="font-size: 24px;">pontos</span>
+            <span id="saldoAtual">{{ current_user.pontos_acumulados if current_user.is_authenticated else 0 }}</span> <span style="font-size: 24px;">pontos</span>
         </h1>
-        <p class="m-0 mt-2 opacity-75 small" id="nomeInfo">—</p>
+        <p class="m-0 mt-2 opacity-75 small" id="nomeInfo">{{ current_user.nome if current_user.is_authenticated else 'Cliente' }} &bull; {{ current_user.telefone if current_user.is_authenticated else '' }}</p>
     </div>
     <div class="col-12 col-sm-5 text-sm-end">
         <a href="{{ url_for('main.recompensas') }}" class="btn btn-light text-dark fw-bold px-4 py-2 rounded-pill shadow-sm">
@@ -28,22 +24,22 @@
     <div class="col-12 col-md-4">
         <div class="card-stats">
             <div class="icon-circle" style="background-color: #e7f8ed; color: #198754;"><i class="fas fa-arrow-trend-up"></i></div>
-            <small class="text-muted d-block">Total acumulado</small>
+            <small class="text-muted d-block">Total acumulado em compras</small>
             <h4 class="fw-bold m-0 mt-1" id="totalAcumulado">0 pts</h4>
         </div>
     </div>
     <div class="col-12 col-md-4">
         <div class="card-stats">
             <div class="icon-circle" style="background-color: #fff1f5; color: #d85f82;"><i class="fas fa-arrow-trend-down"></i></div>
-            <small class="text-muted d-block">Total utilizados</small>
+            <small class="text-muted d-block">Total utilizado em prêmios</small>
             <h4 class="fw-bold m-0 mt-1" id="totalUtilizado">0 pts</h4>
         </div>
     </div>
     <div class="col-12 col-md-4">
         <div class="card-stats">
             <div class="how-to-earn">
-                <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-circle-info me-2"></i>Como pontuar?</h6>
-                <p class="small text-muted m-0 mt-1">A cada <strong>R$ 1,00</strong> gasto, voce ganha <strong>1 ponto</strong>!</p>
+                <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-circle-info me-2"></i>Regra de Pontuação</h6>
+                <p class="small text-muted m-0 mt-1">A cada <strong>R$ 1,00</strong> gasto na loja, você ganha <strong>1 ponto</strong> automaticamente!</p>
             </div>
         </div>
     </div>
@@ -53,24 +49,28 @@
 {% block scripts %}
 <script>
 (async () => {
-    const tel = localStorage.getItem('fz_tel');
-    if(!tel){ document.getElementById('semTelefone').classList.remove('d-none'); return; }
+    try {
+        const [resMe, resCompras, resResgates] = await Promise.all([
+            fetch('/api/clientes/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
+            fetch('/api/compras/', { credentials: 'include' }).then(r => r.ok ? r.json() : []),
+            fetch('/api/resgates/', { credentials: 'include' }).then(r => r.ok ? r.json() : [])
+        ]);
 
-    const r = await fetch('/api/clientes/?telefone='+encodeURIComponent(tel), {credentials:'include'});
-    if(!r.ok){ document.getElementById('semTelefone').classList.remove('d-none'); return; }
-    const c = await r.json();
+        if (resMe) {
+            document.getElementById('saldoAtual').textContent = resMe.pontos_acumulados;
+            document.getElementById('nomeInfo').textContent = `${resMe.nome} • ${resMe.telefone}`;
+            const topbar = document.getElementById('topbarSaldo');
+            if (topbar) topbar.textContent = resMe.pontos_acumulados;
+        }
 
-    const [compras, resgates] = await Promise.all([
-        fetch('/api/compras/?id_cliente='+c.id_cliente,{credentials:'include'}).then(x=>x.ok?x.json():[]),
-        fetch('/api/resgates/?id_cliente='+c.id_cliente,{credentials:'include'}).then(x=>x.ok?x.json():[]),
-    ]);
-    const acumulado = compras.reduce((s,x)=>s+(x.pontos_gerados||0),0);
-    const utilizado = resgates.reduce((s,x)=>s+(x.pontos_utilizados||0),0);
+        const acumulado = Array.isArray(resCompras) ? resCompras.reduce((s, x) => s + (x.pontos_gerados || 0), 0) : 0;
+        const utilizado = Array.isArray(resResgates) ? resResgates.reduce((s, x) => s + (x.pontos_utilizados || 0), 0) : 0;
 
-    document.getElementById('saldoAtual').textContent = c.pontos_acumulados;
-    document.getElementById('nomeInfo').textContent = c.nome + ' — ' + c.telefone;
-    document.getElementById('totalAcumulado').textContent = acumulado + ' pts';
-    document.getElementById('totalUtilizado').textContent = utilizado + ' pts';
+        document.getElementById('totalAcumulado').textContent = acumulado + ' pts';
+        document.getElementById('totalUtilizado').textContent = utilizado + ' pts';
+    } catch (e) {
+        console.error('Erro ao carregar dados de pontos:', e);
+    }
 })();
 </script>
 {% endblock %}

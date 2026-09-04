@@ -1,13 +1,25 @@
 {% extends "base_vendedora.html" %}
 {% set active = 'dashboard' %}
-{% block titulo %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
-{% block page_subtitle %}Início{% endblock %}
+{% block titulo %}Dashboard Geral{% endblock %}
+{% block page_title %}Painel Administrativo da Loja{% endblock %}
+{% block page_subtitle %}Métricas globais e controle operacional do programa de fidelidade{% endblock %}
 
 {% block content %}
 <div class="banner-welcome shadow-sm">
-    <h3 class="fw-bold m-0">Bem-vindo de volta! 👋</h3>
-    <p class="m-0 opacity-75 mt-2">Aqui esta um resumo do seu programa de fidelizacao</p>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h3 class="fw-bold m-0">Bem-vinda de volta, {{ current_user.nome.split(' ')[0] if current_user.is_authenticated else 'Vendedora' }}! 👋</h3>
+            <p class="m-0 opacity-90 mt-1">Resumo gerencial em tempo real de clientes, pontos distribuídos e faturamento.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('main.pontuar') }}" class="btn btn-warning text-dark fw-bold btn-sm rounded-pill px-3 shadow-sm">
+                <i class="fas fa-coins me-1"></i>Pontuar PDV
+            </a>
+            <a href="{{ url_for('main.resgate') }}" class="btn btn-light text-dark fw-bold btn-sm rounded-pill px-3 shadow-sm">
+                <i class="fas fa-gift me-1"></i>Entregar Prêmio
+            </a>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4 mb-4">
@@ -16,7 +28,7 @@
             <div class="p-3 rounded bg-light text-primary me-3"><i class="fas fa-users fa-lg"></i></div>
             <div>
                 <h4 class="fw-bold m-0" id="totClientes">0</h4>
-                <small class="text-muted">Clientes cadastrados</small>
+                <small class="text-muted">Total de Clientes</small>
             </div>
         </div>
     </div>
@@ -25,7 +37,7 @@
             <div class="p-3 rounded me-3 text-warning" style="background-color: #fffdf6;"><i class="fas fa-coins fa-lg"></i></div>
             <div>
                 <h4 class="fw-bold m-0" id="totPontos">0</h4>
-                <small class="text-muted">Pontos distribuidos</small>
+                <small class="text-muted">Pontos Distribuídos</small>
             </div>
         </div>
     </div>
@@ -34,16 +46,16 @@
             <div class="p-3 rounded bg-light text-success me-3"><i class="fas fa-gift fa-lg"></i></div>
             <div>
                 <h4 class="fw-bold m-0" id="totResgates">0</h4>
-                <small class="text-muted">Recompensas resgatadas</small>
+                <small class="text-muted">Prêmios Resgatados</small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card-indicator d-flex align-items-center">
-            <div class="p-3 rounded bg-light text-danger me-3"><i class="fas fa-percentage fa-lg"></i></div>
+            <div class="p-3 rounded bg-light text-danger me-3"><i class="fas fa-dollar-sign fa-lg"></i></div>
             <div>
-                <h4 class="fw-bold m-0">—</h4>
-                <small class="text-muted">Taxa de retencao</small>
+                <h4 class="fw-bold m-0" id="totFaturamento">R$ 0,00</h4>
+                <small class="text-muted">Faturamento Pontuado</small>
             </div>
         </div>
     </div>
@@ -51,17 +63,21 @@
 
 <div class="row g-4">
     <div class="col-md-6">
-        <div class="card p-4" style="min-height: 250px;">
-            <h6 class="fw-bold mb-3"><i class="fas fa-users text-warning me-2"></i>Clientes recentes</h6>
+        <div class="card p-4 h-100 shadow-sm border-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold m-0"><i class="fas fa-users text-warning me-2"></i>Clientes Cadastrados</h6>
+                <a href="{{ url_for('main.v_clientes') }}" class="small text-decoration-none fw-bold" style="color: var(--sidebar-color);">Ver todos &rarr;</a>
+            </div>
             <div id="listaClientesDash" class="text-muted">Carregando...</div>
-            <a href="{{ url_for('main.v_clientes') }}" class="text-decoration-none mt-2" style="color: var(--sidebar-color); font-weight: 600;">Gerenciar clientes &rarr;</a>
         </div>
     </div>
     <div class="col-md-6">
-        <div class="card p-4" style="min-height: 250px;">
-            <h6 class="fw-bold mb-3"><i class="fas fa-clock text-warning me-2"></i>Atividade recente</h6>
+        <div class="card p-4 h-100 shadow-sm border-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold m-0"><i class="fas fa-clock text-warning me-2"></i>Últimas Compras no PDV</h6>
+                <a href="{{ url_for('main.relatorios') }}" class="small text-decoration-none fw-bold" style="color: var(--sidebar-color);">Relatórios &rarr;</a>
+            </div>
             <div id="listaAtividade" class="text-muted">Carregando...</div>
-            <small class="text-muted mt-2">As acoes aparecem aqui conforme as compras sao registradas.</small>
         </div>
     </div>
 </div>
@@ -69,25 +85,60 @@
 
 {% block scripts %}
 <script>
-async function j(u){ const r = await fetch(u, {credentials:'include'}); return r.ok ? r.json() : []; }
+async function j(u){
+    try {
+        const r = await fetch(u, { credentials: 'include' });
+        return r.ok ? await r.json() : [];
+    } catch(e) {
+        return [];
+    }
+}
 
 (async () => {
-    const clientes = await j('/api/clientes/');
-    const compras  = await j('/api/compras/');
-    const resgates = await j('/api/resgates/');
+    const [clientes, compras, resgates] = await Promise.all([
+        j('/api/clientes/'),
+        j('/api/compras/'),
+        j('/api/resgates/')
+    ]);
 
-    document.getElementById('totClientes').textContent = clientes.length;
-    document.getElementById('totPontos').textContent = compras.reduce((s,c)=>s+(c.pontos_gerados||0),0);
+    const fat = compras.reduce((s,c) => s + (parseFloat(c.valor)||0), 0);
+
+    document.getElementById('totClientes').textContent = Array.isArray(clientes) ? clientes.length : 0;
+    document.getElementById('totPontos').textContent = compras.reduce((s,c) => s + (c.pontos_gerados||0), 0);
     document.getElementById('totResgates').textContent = resgates.length;
+    document.getElementById('totFaturamento').textContent = 'R$ ' + fat.toFixed(2).replace('.', ',');
 
     const ld = document.getElementById('listaClientesDash');
-    ld.innerHTML = clientes.length
-        ? clientes.slice(0,5).map(c=>`<div class="d-flex justify-content-between border-bottom py-2"><span>${c.nome}</span><span class="badge bg-success">${c.pontos_acumulados} pts</span></div>`).join('')
-        : '<p class="m-0">Nenhum cliente cadastrado ainda.</p>';
+    if (Array.isArray(clientes) && clientes.length) {
+        ld.innerHTML = clientes.slice(0, 5).map(c => `
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                    <strong>${c.nome}</strong><br>
+                    <small class="text-muted">${c.telefone}</small>
+                </div>
+                <span class="badge bg-success">${c.pontos_acumulados} pts</span>
+            </div>
+        `).join('');
+    } else {
+        ld.innerHTML = '<p class="m-0 py-3 text-center text-muted">Nenhum cliente cadastrado ainda.</p>';
+    }
 
     const la = document.getElementById('listaAtividade');
-    const ativ = compras.slice(0,5).map(c=>`<div class="d-flex justify-content-between border-bottom py-2"><span><i class="fas fa-cart-shopping text-success me-1"></i>Compra R$ ${c.valor.toFixed(2)}</span><span class="text-success fw-bold">+${c.pontos_gerados} pts</span></div>`);
-    la.innerHTML = ativ.length ? ativ.join('') : '<p class="m-0">Nenhuma atividade registrada.</p>';
+    if (compras.length) {
+        la.innerHTML = compras.slice(0, 5).map(c => {
+            const dt = c.data ? new Date(c.data).toLocaleDateString('pt-BR') : '-';
+            return `
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                    <span><i class="fas fa-cart-shopping text-success me-1"></i>Compra R$ ${parseFloat(c.valor).toFixed(2)}</span><br>
+                    <small class="text-muted">Cliente #${c.id_cliente} &bull; ${dt}</small>
+                </div>
+                <span class="text-success fw-bold">+${c.pontos_gerados} pts</span>
+            </div>`;
+        }).join('');
+    } else {
+        la.innerHTML = '<p class="m-0 py-3 text-center text-muted">Nenhuma compra registrada.</p>';
+    }
 })();
 </script>
 {% endblock %}

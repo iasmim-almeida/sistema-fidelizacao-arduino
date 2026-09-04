@@ -1,71 +1,86 @@
-# 💳 FideliZa — Sistema de Fidelização (Back + Front + DB + Arduino)
+# 💳 FideliZa — Sistema de Fidelização Integrado (Back + Front + DB + Arduino)
 
-Sistema integrado de fidelização: a **vendedora** identifica o cliente pelo
-**telefone** no PDV, registra a compra (que gera pontos) e valida resgates de
-recompensas. O **cliente** consulta saldo, histórico e resgata prêmios. Um
-módulo **ESP8266** confirma a pontuação com LED verde.
+Sistema integrado de fidelização completo:
+- **Área da Vendedora (Admin):** Gerencia a loja, visualiza indicadores gerenciais (faturamento, clientes cadastrados, pontos distribuídos), pontua compras no PDV e valida resgates de recompensas.
+- **Área do Cliente (Portal Exclusivo):** Painel do cliente para acompanhamento do saldo individual de pontos, extrato de compras e resgate de vouchers no catálogo de prêmios.
+- **Módulo ESP8266 (IoT):** Terminal físico conectado à rede Wi-Fi que envia compras via REST API (`POST /api/compras/`) e confirma o crédito com feedback visual no LED verde.
 
-## 🧱 Stack
-- **Back-end:** Flask (application factory + blueprints)
-- **ORM:** SQLAlchemy + Flask-Migrate
-- **Auth:** Flask-Login (sessão/cookie, senha com hash) — **login por e-mail**
-- **Front-end:** Bootstrap 5 + Font Awesome, templates Jinja (tema FideliZa 💗)
-- **Banco:** SQLite (dev) → PostgreSQL (produção)
+---
 
-## 🚀 Como rodar (SQLite / desenvolvimento)
+## 🧱 Stack Tecnológica
+- **Back-end:** Python 3 + Flask (Application Factory + Blueprints)
+- **ORM & Banco:** SQLAlchemy + SQLite (desenvolvimento) / PostgreSQL (produção)
+- **Autenticação & Sessões:** Flask-Login com autenticação dupla independente (Vendedora/Admin e Cliente)
+- **Front-end:** HTML5, Bootstrap 5, Font Awesome, Bootstrap Icons e Jinja2 SSR
+- **Hardware/IoT:** ESP8266 (C++ / Arduino IDE)
+
+---
+
+## 🚀 Como Rodar o Projeto
+
 ```bash
-python -m venv .venv
-.venv\Scripts\Activate.ps1        # Windows
+# 1. Ativar o ambiente virtual (Windows PowerShell)
+.venv\Scripts\Activate.ps1
+
+# 2. Instalar dependências
 pip install -r requirements.txt
-python seed.py                     # cria banco + admin + clientes exemplo
+
+# 3. Criar e popular o banco de dados com usuários de demonstração
+python seed.py
+
+# 4. Iniciar o servidor
 python run.py
 ```
-Acesse **http://127.0.0.1:5000** → login: **admin@loja.com** / senha: **1234**
 
-## 🗺️ Rotas (páginas)
-| Rota | Área | Descrição |
-|---|---|---|
-| `/` | — | Login (chama `POST /auth/login`) |
-| `/dashboard` | Vendedora | Indicadores + atividade |
-| `/clientes` | Vendedora | Lista + cadastro de clientes |
-| `/pontuar` | Vendedora | Identifica por telefone e pontua |
-| `/resgate` | Vendedora | Valida e entrega recompensas |
-| `/relatorios` | Vendedora | Totais, top clientes, movimentações |
-| `/bemvindo` | Cliente | Identificação por telefone + onboarding |
-| `/meuspontos` | Cliente | Saldo e estatísticas |
-| `/recompensas` | Cliente | Vitrine de prêmios (resgate real) |
-| `/historico` | Cliente | Extrato de compras e resgates |
+Acesse **http://127.0.0.1:5000** no navegador.
 
-## 🔌 API (JSON)
-| Método | Rota | Descrição |
-|---|---|---|
-| POST | `/auth/login` | `{email, senha}` ou `{login, senha}` |
-| POST | `/auth/logout` | encerra sessão |
-| GET | `/auth/me` | usuário logado |
-| GET/POST | `/api/clientes/` | lista/cadastra (`?telefone=` busca) |
-| GET | `/api/clientes/<id>` | detalhe |
-| GET/POST | `/api/compras/` | lista/registra (aceita `telefone` ou `id_cliente`) |
-| GET/POST | `/api/resgates/` | lista/registra (valida saldo) |
+---
 
-### Regra de pontuação
-Cada **R$ 1,00** gera **`PONTOS_POR_REAL`** pontos (padrão 1). Configurável no `.env`.
+## 🔑 Acessos de Demonstração (Disponíveis na Tela Inicial)
 
-## 🐘 Migração para PostgreSQL
-1. Crie o banco: `CREATE DATABASE fidelizacao_db;`
-2. No `.env`, troque `DATABASE_URL` para:
-   `postgresql://postgres:senha@localhost:5432/fidelizacao_db`
-3. `pip install psycopg2-binary`
-4. `python seed.py` (ou use Flask-Migrate). Referência: `database/scripts_sql/schema_postgresql.sql`
+A tela inicial (`/`) possui um seletor com as duas opções de login e botões de preenchimento em 1-clique:
 
-> Como usamos SQLAlchemy, **o código dos models não muda** na migração.
+| Perfil | Identificador | Senha | Dashboard de Destino |
+|---|---|---|---|
+| **👩‍💼 Vendedora (Admin)** | `admin@loja.com` | `1234` | `/dashboard` |
+| **🛍️ Cliente (Ana Silva)** | `11999991111` | `1234` | `/bemvindo` |
+| **🛍️ Cliente (Carlos Oliveira)** | `11988882222` | `1234` | `/bemvindo` |
 
-## 🔩 ESP8266
-`arduino/esp8266/fidelizacao_esp8266.ino` faz `POST /api/compras/` com
-`{telefone, valor}` e acende LED verde no HTTP 201. Requer `host=0.0.0.0`
-(já configurado no `run.py`) para ser alcançável na rede local.
+---
 
-## 📝 Notas / próximos passos
-- As rotas `/api/*` estão públicas (para facilitar dev). Para produção, adicione
-  `@login_required` nelas.
-- O front do cliente identifica o usuário por telefone (guardado em `localStorage`),
-  já que o back não possui login de cliente final.
+## 🗺️ Rotas e Separação de Dashboards
+
+### Área da Vendedora (Requer perfil de Vendedora)
+| Rota | Descrição |
+|---|---|
+| `/dashboard` | Visão geral da loja: total de clientes, pontos distribuídos, faturamento e compras recentes |
+| `/clientes` | Cadastro e listagem de todos os clientes |
+| `/pontuar` | Identificação de cliente por telefone e cálculo automático de pontos |
+| `/resgate` | Entrega de brindes e validação de cupons |
+| `/relatorios` | Relatórios consolidados de vendas, top clientes e fluxo de pontos |
+
+### Área do Cliente (Requer perfil de Cliente)
+| Rota | Descrição |
+|---|---|
+| `/bemvindo` | Dashboard individual do cliente com saldo atual e resumo de vantagens |
+| `/meuspontos` | Extrato detalhado de saldo, total ganho e total utilizado |
+| `/recompensas` | Vitrine de prêmios com resgate de voucher em tempo real |
+| `/historico` | Extrato das compras e resgates do próprio cliente logado |
+
+---
+
+## 🔌 API REST (JSON)
+
+| Método | Endpoint | Proteção | Descrição |
+|---|---|---|---|
+| POST | `/auth/login` | Público | Autenticação de Vendedora (retorna redirecionamento `/dashboard`) |
+| POST | `/auth/cliente/login` | Público | Autenticação de Cliente (retorna redirecionamento `/bemvindo`) |
+| POST | `/auth/logout` | Autenticado | Encerra a sessão atual de qualquer perfil |
+| GET | `/auth/me` | Autenticado | Retorna os dados e perfil (`vendedora` ou `cliente`) do usuário logado |
+| GET | `/api/clientes/me` | Cliente | Retorna os dados e saldo atualizados do cliente logado |
+| GET | `/api/clientes/` | RBAC | Lista todos (vendedora) ou busca por telefone |
+| POST | `/api/clientes/` | Vendedora | Cadastra novo cliente com senha padrão `1234` |
+| GET | `/api/compras/` | RBAC | Retorna todas as compras (vendedora) ou apenas compras do cliente autenticado |
+| POST | `/api/compras/` | PDV/IoT | Registra compra, credita pontos e atualiza saldo |
+| GET | `/api/resgates/` | RBAC | Retorna todos os resgates (vendedora) ou apenas os resgates do cliente autenticado |
+| POST | `/api/resgates/` | RBAC | Efetua resgate e deduz pontos com validação de saldo |
