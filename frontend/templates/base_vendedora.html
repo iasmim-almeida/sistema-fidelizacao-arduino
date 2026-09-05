@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>FideliZa - {% block titulo %}Painel Administrativo{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -25,6 +26,20 @@
         <div class="sidebar-section-title">Administração</div>
         <a href="{{ url_for('main.dashboard') }}" class="nav-link-sidebar {% if active=='dashboard' %}active{% endif %}"><i class="fas fa-chart-pie"></i> Visão Geral</a>
         <a href="{{ url_for('main.v_clientes') }}" class="nav-link-sidebar {% if active=='clientes' %}active{% endif %}"><i class="fas fa-users"></i> Gerenciar Clientes</a>
+        
+        {% if current_user.tem_permissao('funcionarios.visualizar') %}
+        <a href="{{ url_for('main.funcionarios') }}" class="nav-link-sidebar {% if active=='funcionarios' %}active{% endif %}"><i class="fas fa-user-shield"></i> Funcionários</a>
+        {% endif %}
+
+        {% if current_user.tem_permissao('recompensas.visualizar') %}
+        <a href="{{ url_for('main.gestao_recompensas') }}" class="nav-link-sidebar {% if active=='gestao_recompensas' %}active{% endif %}"><i class="fas fa-tags"></i> Gerenciar Recompensas</a>
+        {% endif %}
+
+        {% if current_user.tem_permissao('auditoria.visualizar') %}
+        <a href="{{ url_for('main.auditoria') }}" class="nav-link-sidebar {% if active=='auditoria' %}active{% endif %}"><i class="fas fa-history"></i> Auditoria</a>
+        {% endif %}
+
+        <a href="{{ url_for('main.alterar_senha') }}" class="nav-link-sidebar {% if active=='alterar_senha' %}active{% endif %}"><i class="fas fa-key"></i> Alterar Senha</a>
 
         <div class="sidebar-section-title">Operação PDV</div>
         <a href="{{ url_for('main.pontuar') }}" class="nav-link-sidebar {% if active=='pontuar' %}active{% endif %}"><i class="fas fa-coins"></i> Pontuar Compra</a>
@@ -33,7 +48,7 @@
     </nav>
 
     <div id="content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
 
             <div class="d-flex align-items-center gap-3">
                 <button id="btnAbrirSidebar" class="btn btn-light shadow-sm p-2 rounded-circle d-none" style="color: #d85f82; border: 1px solid #ffccd8;">
@@ -44,9 +59,17 @@
                     <small class="text-muted">{% block page_subtitle %}{% endblock %}</small>
                 </div>
             </div>
-            <div>
-                <a href="{{ url_for('main.bemvindo') }}" class="btn btn-light btn-sm rounded-circle shadow-sm p-2" title="Area do cliente"><i class="fas fa-home"></i></a>
-                <a href="{{ url_for('main.index') }}" class="btn btn-light btn-sm rounded-circle shadow-sm p-2" title="Sair"><i class="fas fa-sign-out-alt"></i></a>
+            <div class="d-flex align-items-center gap-2">
+                {% if current_user.is_authenticated %}
+                <span class="badge bg-light text-dark border px-2 py-2 me-1">
+                    <i class="fas fa-user-circle text-primary me-1"></i>
+                    <strong>{{ current_user.nome.split(' ')[0] }}</strong> 
+                    <span class="text-muted">({{ current_user.cargo | capitalize }})</span>
+                </span>
+                {% endif %}
+                <a href="{{ url_for('main.alterar_senha') }}" class="btn btn-light btn-sm rounded-circle shadow-sm p-2 me-1" title="Alterar Senha do Administrador"><i class="fas fa-key"></i></a>
+                <a href="{{ url_for('main.bemvindo') }}" class="btn btn-light btn-sm rounded-circle shadow-sm p-2 me-1" title="Área do cliente"><i class="fas fa-home"></i></a>
+                <button type="button" onclick="realizarLogout()" class="btn btn-light btn-sm rounded-circle shadow-sm p-2" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
 
@@ -56,6 +79,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
 async function realizarLogout() {
     try {
         await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
@@ -74,10 +112,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const conteudo = document.getElementById('content');
 
     function alternarMenu() {
-        // Altera o estado de visibilidade da barra rosa
         sidebar.classList.toggle('sidebar-escondida');
         conteudo.classList.toggle('content-expandido');
-
         btnAbrir.classList.toggle('d-none');
     }
 

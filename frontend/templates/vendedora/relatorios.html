@@ -204,7 +204,7 @@ async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.
     // ====================================================
     const top = [...clientes].sort((a,b)=>b.pontos_acumulados-a.pontos_acumulados).slice(0,5);
     document.getElementById('tbodyTop').innerHTML = top.length
-        ? top.map(c=>`<tr><td>${c.nome}</td><td>${c.telefone}</td><td class="text-end pe-3"><span class="badge-ganho" style="background-color:#e7f8ed;color:#198754;padding:3px 8px;border-radius:12px;font-size:0.85rem;">${c.pontos_acumulados} pts</span></td></tr>`).join('')
+        ? top.map(c=>`<tr><td>${escapeHtml(c.nome)}</td><td>${escapeHtml(c.telefone)}</td><td class="text-end pe-3"><span class="badge-ganho" style="background-color:#e7f8ed;color:#198754;padding:3px 8px;border-radius:12px;font-size:0.85rem;">${c.pontos_acumulados} pts</span></td></tr>`).join('')
         : '<tr><td colspan="3" class="text-center text-muted">Sem dados.</td></tr>';
 
     const mov = [
@@ -217,7 +217,7 @@ async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.
             const nome = m.cli ? m.cli.nome : '-';
             const badge = m.pts>=0 ? `<span class="badge-ganho" style="background-color:#e7f8ed;color:#198754;padding:3px 8px;border-radius:12px;font-size:0.85rem;">+${m.pts} pts</span>` : `<span class="badge-resgate" style="background-color:#fff1f5;color:#d85f82;padding:3px 8px;border-radius:12px;font-size:0.85rem;">${m.pts} pts</span>`;
             const ic = m.t==='compra' ? '<i class="fas fa-cart-shopping text-success me-1"></i>Compra' : '<i class="fas fa-gift text-danger me-1"></i>Resgate';
-            return `<tr><td>${ic}</td><td>${nome}</td><td class="text-end pe-3">${badge}</td></tr>`;
+            return `<tr><td>${ic}</td><td>${escapeHtml(nome)}</td><td class="text-end pe-3">${badge}</td></tr>`;
         }).join('')
         : '<tr><td colspan="3" class="text-center text-muted">Sem movimentacoes.</td></tr>';
 })();

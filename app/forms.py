@@ -67,3 +67,67 @@ class CadastroClienteForm(FlaskForm):
         ).first()
         if cliente_existente:
             raise ValidationError("Este telefone ja esta cadastrado no sistema.")
+
+
+SENHAS_COMUNS_BLACKLIST = {
+    "1234", "123456", "12345678", "123456789", "password", "senha123",
+    "admin123", "fideliza2026", "administrador", "admin@loja.com",
+    "fideliza", "mudar123", "trocar123", "qwerty", "111111", "000000",
+    "admin", "root", "master", "gestor"
+}
+
+
+def validar_politica_senha_admin(nova_senha: str) -> tuple[bool, str | None]:
+    """
+    Valida a política mínima de segurança de senha para administradores:
+    - Mínimo de 8 e máximo de 128 caracteres;
+    - Ao menos uma letra minúscula;
+    - Ao menos uma letra maiúscula;
+    - Ao menos um dígito numérico;
+    - Ao menos um caractere especial (!@#$%...);
+    - Não constar na blacklist de senhas fracas/comuns.
+    """
+    if not nova_senha or len(nova_senha) < 8:
+        return False, "A nova senha deve possuir no minimo 8 caracteres."
+    if len(nova_senha) > 128:
+        return False, "A nova senha deve possuir no maximo 128 caracteres."
+    if nova_senha.strip().lower() in SENHAS_COMUNS_BLACKLIST:
+        return False, "Esta senha e muito comum e insegura. Escolha outra senha."
+    if not re.search(r"[a-z]", nova_senha):
+        return False, "A nova senha deve conter ao menos uma letra minuscula."
+    if not re.search(r"[A-Z]", nova_senha):
+        return False, "A nova senha deve conter ao menos uma letra maiuscula."
+    if not re.search(r"\d", nova_senha):
+        return False, "A nova senha deve conter ao menos um numero."
+    if not re.search(r"[^A-Za-z0-9]", nova_senha):
+        return False, "A nova senha deve conter ao menos um caractere especial (ex: !@#$%&*)."
+    return True, None
+
+
+class AlterarSenhaAdminForm(FlaskForm):
+    """Formulário para alteração de senha de administradores/vendedoras."""
+    senha_atual = PasswordField(
+        "Senha Atual",
+        validators=[DataRequired(message="A senha atual e obrigatoria.")]
+    )
+    nova_senha = PasswordField(
+        "Nova Senha",
+        validators=[
+            DataRequired(message="A nova senha e obrigatoria."),
+            Length(min=8, max=128, message="A nova senha deve possuir entre 8 e 128 caracteres."),
+        ]
+    )
+    confirmar_nova_senha = PasswordField(
+        "Confirmar Nova Senha",
+        validators=[
+            DataRequired(message="A confirmacao da nova senha e obrigatoria."),
+            EqualTo("nova_senha", message="As senhas informadas nao conferem.")
+        ]
+    )
+    submit = SubmitField("Salvar Nova Senha")
+
+    def validate_nova_senha(self, field):
+        valida, motivo = validar_politica_senha_admin(field.data)
+        if not valida:
+            raise ValidationError(motivo)
+

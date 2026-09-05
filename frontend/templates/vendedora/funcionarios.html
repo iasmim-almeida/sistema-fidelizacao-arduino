@@ -1,0 +1,397 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'funcionarios' %}
+{% block titulo %}Funcionários{% endblock %}
+{% block page_title %}Gestão de Funcionários{% endblock %}
+{% block page_subtitle %}Controle de colaboradores, cargos e acessos ao sistema{% endblock %}
+
+{% block content %}
+<div class="card mb-4 shadow-sm border-0">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex gap-2 flex-wrap">
+                <select id="filtroCargo" class="form-select form-select-sm" style="width: auto;" onchange="carregarFuncionarios()">
+                    <option value="">Todos os Cargos</option>
+                    <option value="proprietario">Proprietário / Admin</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="vendedor">Vendedor / PDV</option>
+                </select>
+                <select id="filtroStatus" class="form-select form-select-sm" style="width: auto;" onchange="carregarFuncionarios()">
+                    <option value="">Todos os Status</option>
+                    <option value="ativo">Ativos</option>
+                    <option value="inativo">Inativos</option>
+                </select>
+            </div>
+            {% if current_user.tem_permissao('funcionarios.criar') %}
+            <button class="btn btn-fidelidade btn-sm" onclick="abrirModalNovo()">
+                <i class="fas fa-user-plus me-1"></i> Novo Colaborador
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3">
+        <h6 class="fw-bold m-0"><i class="fas fa-users-cog text-warning me-2"></i>Equipe da Loja</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nome</th>
+                    <th>Login</th>
+                    <th>E-mail</th>
+                    <th>Cargo</th>
+                    <th>Status</th>
+                    <th>Último Login</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyFuncionarios">
+                <tr><td colspan="7" class="text-center text-muted py-4">Carregando colaboradores...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Novo Funcionário -->
+<div class="modal fade" id="modalNovoFuncionario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-plus text-warning me-2"></i>Cadastrar Colaborador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formNovoFuncionario">
+                <div class="modal-body">
+                    <div id="alertaModalNovo" class="alert alert-danger d-none py-2 small"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome Completo</label>
+                        <input type="text" id="novoNome" class="form-control" required placeholder="Ex: Camila Silva">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Usuário / Login</label>
+                        <input type="text" id="novoLogin" class="form-control" required placeholder="Ex: camila.silva">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">E-mail (opcional)</label>
+                        <input type="email" id="novoEmail" class="form-control" placeholder="colaborador@loja.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cargo / Papel</label>
+                        <select id="novoCargo" class="form-select" required>
+                            <option value="vendedor">Vendedor (Operação PDV & Clientes)</option>
+                            <option value="gerente">Gerente (Gestão & Recompensas)</option>
+                            {% if current_user.is_proprietario %}
+                            <option value="proprietario">Proprietário / Admin (Acesso Total)</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Senha Inicial</label>
+                        <input type="password" id="novaSenha" class="form-control" required placeholder="Mínimo 8 caracteres, maiúscula, número e símbolo">
+                        <small class="text-muted">Exemplo seguro: <code>Loj@2026!Fideliza</code></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-fidelidade">Salvar Colaborador</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Funcionário -->
+<div class="modal fade" id="modalEditarFuncionario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit text-warning me-2"></i>Editar Colaborador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarFuncionario">
+                <input type="hidden" id="editId">
+                <div class="modal-body">
+                    <div id="alertaModalEditar" class="alert alert-danger d-none py-2 small"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome Completo</label>
+                        <input type="text" id="editNome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">E-mail</label>
+                        <input type="email" id="editEmail" class="form-control">
+                    </div>
+                    {% if current_user.tem_permissao('funcionarios.alterar_permissao') %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cargo / Papel</label>
+                        <select id="editCargo" class="form-select" required>
+                            <option value="vendedor">Vendedor</option>
+                            <option value="gerente">Gerente</option>
+                            {% if current_user.is_proprietario %}
+                            <option value="proprietario">Proprietário / Admin</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-fidelidade">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Redefinir Senha -->
+<div class="modal fade" id="modalResetSenha" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-key text-warning me-2"></i>Redefinir Senha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formResetSenha">
+                <input type="hidden" id="resetId">
+                <div class="modal-body">
+                    <div id="alertaModalReset" class="alert alert-danger d-none py-2 small"></div>
+                    <p class="small text-muted mb-3">Defina uma nova senha temporária para o colaborador <strong id="resetNome"></strong>.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nova Senha</label>
+                        <input type="password" id="resetNovaSenha" class="form-control" required placeholder="Mínimo 8 caracteres, maiúscula, número e símbolo">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Redefinir Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let funcionariosLista = [];
+let modalNovo, modalEditar, modalReset;
+
+document.addEventListener('DOMContentLoaded', () => {
+    modalNovo = new bootstrap.Modal(document.getElementById('modalNovoFuncionario'));
+    modalEditar = new bootstrap.Modal(document.getElementById('modalEditarFuncionario'));
+    modalReset = new bootstrap.Modal(document.getElementById('modalResetSenha'));
+    carregarFuncionarios();
+});
+
+async function carregarFuncionarios() {
+    const cargo = document.getElementById('filtroCargo').value;
+    const status = document.getElementById('filtroStatus').value;
+    const params = new URLSearchParams();
+    if (cargo) params.append('cargo', cargo);
+    if (status) params.append('status', status);
+
+    const resp = await fetch(`/api/funcionarios/?${params.toString()}`, { credentials: 'include' });
+    if (!resp.ok) {
+        document.getElementById('tbodyFuncionarios').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Falha ao carregar colaboradores.</td></tr>';
+        return;
+    }
+    funcionariosLista = await resp.json();
+    renderFuncionarios(funcionariosLista);
+}
+
+function renderFuncionarios(lista) {
+    const tb = document.getElementById('tbodyFuncionarios');
+    if (!lista.length) {
+        tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Nenhum colaborador encontrado com os filtros selecionados.</td></tr>';
+        return;
+    }
+
+    const currentUserId = {{ current_user.id_usuario }};
+    const podeEditar = {{ 'true' if current_user.tem_permissao('funcionarios.editar') else 'false' }};
+    const podeDesativar = {{ 'true' if current_user.tem_permissao('funcionarios.desativar') else 'false' }};
+
+    tb.innerHTML = lista.map(f => {
+        const dtLogin = f.ultimo_login ? new Date(f.ultimo_login).toLocaleString('pt-BR') : '<span class="text-muted">Nunca acessou</span>';
+        const badgeCargo = {
+            'proprietario': '<span class="badge bg-danger">Proprietário</span>',
+            'gerente': '<span class="badge bg-primary">Gerente</span>',
+            'vendedor': '<span class="badge bg-info text-dark">Vendedor</span>'
+        }[f.cargo] || `<span class="badge bg-secondary">${f.cargo}</span>`;
+
+        const badgeStatus = f.ativo 
+            ? '<span class="badge bg-success">Ativo</span>' 
+            : '<span class="badge bg-secondary">Inativo</span>';
+
+        const isSelf = f.id_usuario === currentUserId;
+
+        return `
+        <tr>
+            <td class="fw-bold">${escapeHtml(f.nome)} ${isSelf ? '<span class="badge bg-light text-dark border">Você</span>' : ''}</td>
+            <td><code>${escapeHtml(f.login)}</code></td>
+            <td>${f.email ? escapeHtml(f.email) : '<span class="text-muted">-</span>'}</td>
+            <td>${badgeCargo}</td>
+            <td>${badgeStatus}</td>
+            <td class="small">${dtLogin}</td>
+            <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                    ${podeEditar ? `
+                        <button class="btn btn-light" title="Editar" onclick="abrirEditar(${f.id_usuario})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-light text-warning" title="Redefinir Senha" onclick="abrirReset(${f.id_usuario})"><i class="fas fa-key"></i></button>
+                    ` : ''}
+                    ${podeDesativar && !isSelf ? `
+                        <button class="btn btn-light ${f.ativo ? 'text-danger' : 'text-success'}" title="${f.ativo ? 'Desativar' : 'Ativar'}" onclick="alternarStatus(${f.id_usuario}, ${!f.ativo})">
+                            <i class="fas ${f.ativo ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function abrirModalNovo() {
+    document.getElementById('formNovoFuncionario').reset();
+    document.getElementById('alertaModalNovo').classList.add('d-none');
+    modalNovo.show();
+}
+
+document.getElementById('formNovoFuncionario').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alerta = document.getElementById('alertaModalNovo');
+    alerta.classList.add('d-none');
+
+    const payload = {
+        nome: document.getElementById('novoNome').value,
+        login: document.getElementById('novoLogin').value,
+        email: document.getElementById('novoEmail').value || null,
+        cargo: document.getElementById('novoCargo').value,
+        senha: document.getElementById('novaSenha').value,
+    };
+
+    const resp = await fetch('/api/funcionarios/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+        modalNovo.hide();
+        carregarFuncionarios();
+    } else {
+        alerta.textContent = data.erro || 'Falha ao cadastrar colaborador.';
+        alerta.classList.remove('d-none');
+    }
+});
+
+function abrirEditar(id) {
+    const f = funcionariosLista.find(item => item.id_usuario === id);
+    if (!f) return;
+
+    document.getElementById('editId').value = f.id_usuario;
+    document.getElementById('editNome').value = f.nome;
+    document.getElementById('editEmail').value = f.email || '';
+    const selCargo = document.getElementById('editCargo');
+    if (selCargo) selCargo.value = f.cargo;
+
+    document.getElementById('alertaModalEditar').classList.add('d-none');
+    modalEditar.show();
+}
+
+document.getElementById('formEditarFuncionario').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alerta = document.getElementById('alertaModalEditar');
+    alerta.classList.add('d-none');
+
+    const id = document.getElementById('editId').value;
+    const payload = {
+        nome: document.getElementById('editNome').value,
+        email: document.getElementById('editEmail').value || null,
+    };
+    const selCargo = document.getElementById('editCargo');
+    if (selCargo) payload.cargo = selCargo.value;
+
+    const resp = await fetch(`/api/funcionarios/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+        modalEditar.hide();
+        carregarFuncionarios();
+    } else {
+        alerta.textContent = data.erro || 'Falha ao salvar colaborador.';
+        alerta.classList.remove('d-none');
+    }
+});
+
+function abrirReset(id) {
+    const f = funcionariosLista.find(item => item.id_usuario === id);
+    if (!f) return;
+    document.getElementById('resetId').value = f.id_usuario;
+    document.getElementById('resetNome').textContent = f.nome;
+    document.getElementById('resetNovaSenha').value = '';
+    document.getElementById('alertaModalReset').classList.add('d-none');
+    modalReset.show();
+}
+
+document.getElementById('formResetSenha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alerta = document.getElementById('alertaModalReset');
+    alerta.classList.add('d-none');
+    const id = document.getElementById('resetId').value;
+
+    const resp = await fetch(`/api/funcionarios/${id}/reset-senha`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        credentials: 'include',
+        body: JSON.stringify({ nova_senha: document.getElementById('resetNovaSenha').value })
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+        modalReset.hide();
+        alert('Senha redefinida com sucesso.');
+    } else {
+        alerta.textContent = data.erro || 'Falha ao redefinir senha.';
+        alerta.classList.remove('d-none');
+    }
+});
+
+async function alternarStatus(id, novoStatus) {
+    const acao = novoStatus ? 'ativar' : 'desativar';
+    if (!confirm(`Tem certeza que deseja ${acao} este colaborador?`)) return;
+
+    const resp = await fetch(`/api/funcionarios/${id}/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        credentials: 'include',
+        body: JSON.stringify({ ativo: novoStatus })
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+        carregarFuncionarios();
+    } else {
+        alert(data.erro || 'Erro ao alterar status.');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,306 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'gestao_recompensas' %}
+{% block titulo %}Gerenciar Recompensas{% endblock %}
+{% block page_title %}Cupons e Recompensas{% endblock %}
+{% block page_subtitle %}Cadastre benefícios, acompanhe estoque e controle a disponibilidade{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+        <span class="badge bg-light text-dark border"><i class="fas fa-shield-halved me-1"></i>Catálogo da gestora autenticada</span>
+    </div>
+    <button id="btnNovaRecompensa" class="btn btn-fidelidade">
+        <i class="fas fa-plus me-1"></i>Nova recompensa
+    </button>
+</div>
+
+<div id="mensagemPagina" class="alert d-none" role="alert"></div>
+
+<section id="painelFormulario" class="card shadow-sm border-0 mb-4 d-none" aria-labelledby="tituloFormulario">
+    <div class="card-header bg-white py-3">
+        <h5 id="tituloFormulario" class="m-0 fw-bold">Cadastrar recompensa</h5>
+    </div>
+    <div class="card-body p-4">
+        <form id="formRecompensa" novalidate>
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <label for="nome" class="form-label fw-semibold">Nome</label>
+                    <input id="nome" class="form-control" maxlength="120" required placeholder="Ex.: 10% de desconto na próxima compra">
+                    <div class="invalid-feedback">Informe um nome de até 120 caracteres.</div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label for="custoPontos" class="form-label fw-semibold">Custo em pontos</label>
+                    <input id="custoPontos" type="number" class="form-control" min="1" max="1000000000" step="1" required>
+                    <div class="invalid-feedback">Informe um inteiro maior que zero.</div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label for="status" class="form-label fw-semibold">Status</label>
+                    <select id="status" class="form-select" required>
+                        <option value="ativa">Ativa</option>
+                        <option value="pausada">Pausada</option>
+                    </select>
+                </div>
+                <div class="col-12 col-lg-5">
+                    <label for="tipo" class="form-label fw-semibold">Tipo</label>
+                    <select id="tipo" class="form-select" required>
+                        <option value="produto_fisico">Produto Físico</option>
+                        <option value="desconto_percentual">Desconto em Porcentagem (%)</option>
+                        <option value="desconto_valor_fixo">Desconto em Valor Fixo (R$)</option>
+                    </select>
+                </div>
+                <div id="grupoValorBeneficio" class="col-12 col-sm-6 col-lg-3 d-none">
+                    <label for="valorBeneficio" class="form-label fw-semibold">Valor do benefício</label>
+                    <div class="input-group">
+                        <span id="prefixoBeneficio" class="input-group-text">%</span>
+                        <input id="valorBeneficio" type="number" class="form-control" min="0.01" step="0.01">
+                    </div>
+                    <div class="form-text">Percentual até 100 ou valor monetário positivo.</div>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-2">
+                    <label for="validade" class="form-label fw-semibold">Válida até</label>
+                    <input id="validade" type="date" class="form-control" required>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-2">
+                    <label for="quantidadeTotal" class="form-label fw-semibold">Estoque total</label>
+                    <input id="quantidadeTotal" type="number" class="form-control" min="0" max="1000000000" step="1" required>
+                    <div id="ajudaEstoque" class="form-text">Na criação, todo o estoque fica disponível.</div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <button id="btnCancelar" type="button" class="btn btn-outline-secondary">Cancelar</button>
+                <button id="btnSalvar" type="submit" class="btn btn-fidelidade">
+                    <span class="texto-botao"><i class="fas fa-floppy-disk me-1"></i>Salvar recompensa</span>
+                    <span class="carregando d-none"><i class="fas fa-spinner fa-spin me-1"></i>Salvando...</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="m-0 fw-bold"><i class="fas fa-gifts text-warning me-2"></i>Recompensas cadastradas</h5>
+        <span id="contadorRecompensas" class="badge bg-secondary">0</span>
+    </div>
+    <div id="estadoLista" class="text-center text-muted py-5">
+        <i class="fas fa-spinner fa-spin me-2"></i>Carregando recompensas...
+    </div>
+    <div id="tabelaRecompensas" class="table-responsive d-none">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Recompensa</th>
+                    <th>Custo</th>
+                    <th>Validade</th>
+                    <th>Estoque</th>
+                    <th>Situação</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="corpoRecompensas"></tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const estadoLabels = {disponivel: 'Ativa', pausada: 'Pausada', expirada: 'Expirada', esgotada: 'Esgotada'};
+const estadoClasses = {disponivel: 'bg-success', pausada: 'bg-secondary', expirada: 'bg-danger', esgotada: 'bg-warning text-dark'};
+const tipoLabels = {produto_fisico: 'Produto Físico', desconto_percentual: 'Desconto em Porcentagem', desconto_valor_fixo: 'Desconto em Valor Fixo'};
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+let recompensas = [];
+let idEmEdicao = null;
+
+const form = document.getElementById('formRecompensa');
+const painel = document.getElementById('painelFormulario');
+const btnSalvar = document.getElementById('btnSalvar');
+
+function elemento(tag, classes, texto) {
+    const el = document.createElement(tag);
+    if (classes) el.className = classes;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+}
+
+function mostrarMensagem(texto, tipo) {
+    const box = document.getElementById('mensagemPagina');
+    box.className = `alert alert-${tipo}`;
+    box.textContent = texto;
+    box.classList.remove('d-none');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function ajustarCampoBeneficio() {
+    const tipo = document.getElementById('tipo').value;
+    const grupo = document.getElementById('grupoValorBeneficio');
+    const input = document.getElementById('valorBeneficio');
+    const usaValor = tipo !== 'produto_fisico';
+    grupo.classList.toggle('d-none', !usaValor);
+    input.required = usaValor;
+    input.max = tipo === 'desconto_percentual' ? '100' : '99999999.99';
+    document.getElementById('prefixoBeneficio').textContent = tipo === 'desconto_percentual' ? '%' : 'R$';
+    if (!usaValor) input.value = '';
+}
+
+function abrirFormulario(recompensa = null) {
+    idEmEdicao = recompensa ? recompensa.id_recompensa : null;
+    form.reset();
+    form.classList.remove('was-validated');
+    document.getElementById('tituloFormulario').textContent = recompensa ? 'Editar recompensa' : 'Cadastrar recompensa';
+    const agora = new Date();
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+    document.getElementById('validade').min = hoje;
+    if (recompensa) {
+        document.getElementById('nome').value = recompensa.nome;
+        document.getElementById('custoPontos').value = recompensa.custo_pontos;
+        document.getElementById('tipo').value = recompensa.tipo;
+        document.getElementById('valorBeneficio').value = recompensa.valor_beneficio || '';
+        document.getElementById('validade').value = recompensa.validade;
+        document.getElementById('quantidadeTotal').value = recompensa.quantidade_total;
+        document.getElementById('status').value = recompensa.status;
+        const utilizados = recompensa.quantidade_total - recompensa.quantidade_disponivel;
+        document.getElementById('ajudaEstoque').textContent = `${utilizados} unidade(s) já resgatada(s); esse histórico será preservado.`;
+    } else {
+        document.getElementById('status').value = 'ativa';
+        document.getElementById('validade').value = hoje;
+        document.getElementById('ajudaEstoque').textContent = 'Na criação, todo o estoque fica disponível.';
+    }
+    ajustarCampoBeneficio();
+    painel.classList.remove('d-none');
+    painel.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function fecharFormulario() {
+    idEmEdicao = null;
+    painel.classList.add('d-none');
+    form.reset();
+}
+
+function renderizarLista() {
+    const estado = document.getElementById('estadoLista');
+    const tabela = document.getElementById('tabelaRecompensas');
+    const corpo = document.getElementById('corpoRecompensas');
+    document.getElementById('contadorRecompensas').textContent = recompensas.length;
+    corpo.replaceChildren();
+
+    if (!recompensas.length) {
+        tabela.classList.add('d-none');
+        estado.classList.remove('d-none');
+        estado.replaceChildren(
+            elemento('i', 'fas fa-gift fa-2x opacity-50 mb-2'),
+            elemento('p', 'm-0', 'Nenhuma recompensa cadastrada. Crie a primeira para disponibilizá-la no catálogo.')
+        );
+        return;
+    }
+
+    estado.classList.add('d-none');
+    tabela.classList.remove('d-none');
+    recompensas.forEach(r => {
+        const tr = document.createElement('tr');
+        const tdNome = document.createElement('td');
+        tdNome.append(elemento('strong', 'd-block text-dark', r.nome), elemento('small', 'text-muted d-block', tipoLabels[r.tipo] || r.tipo), elemento('small', 'text-muted', r.beneficio_formatado));
+        tr.appendChild(tdNome);
+        tr.appendChild(elemento('td', 'fw-bold', `${r.custo_pontos} pts`));
+        tr.appendChild(elemento('td', '', new Date(`${r.validade}T12:00:00`).toLocaleDateString('pt-BR')));
+        tr.appendChild(elemento('td', '', `${r.quantidade_disponivel} / ${r.quantidade_total}`));
+        const tdEstado = document.createElement('td');
+        tdEstado.appendChild(elemento('span', `badge ${estadoClasses[r.estado] || 'bg-secondary'}`, estadoLabels[r.estado] || r.estado));
+        tdEstado.appendChild(elemento('small', 'text-muted d-block mt-1', `Status: ${r.status === 'ativa' ? 'Ativa' : 'Pausada'}`));
+        tr.appendChild(tdEstado);
+        const tdAcoes = elemento('td', 'text-end');
+        const editar = elemento('button', 'btn btn-sm btn-outline-primary me-1', 'Editar');
+        editar.type = 'button';
+        editar.addEventListener('click', () => abrirFormulario(r));
+        const alternar = elemento('button', `btn btn-sm ${r.status === 'ativa' ? 'btn-outline-secondary' : 'btn-outline-success'}`, r.status === 'ativa' ? 'Pausar' : 'Reativar');
+        alternar.type = 'button';
+        alternar.addEventListener('click', () => alternarStatus(r, alternar));
+        tdAcoes.append(editar, alternar);
+        tr.appendChild(tdAcoes);
+        corpo.appendChild(tr);
+    });
+}
+
+async function carregarRecompensas() {
+    const estado = document.getElementById('estadoLista');
+    estado.classList.remove('d-none');
+    estado.textContent = 'Carregando recompensas...';
+    try {
+        const resposta = await fetch('/api/recompensas/', {credentials: 'include'});
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro || 'Falha ao carregar recompensas.');
+        recompensas = dados;
+        renderizarLista();
+    } catch (erro) {
+        document.getElementById('tabelaRecompensas').classList.add('d-none');
+        estado.classList.remove('d-none');
+        estado.textContent = erro.message;
+        estado.classList.add('text-danger');
+    }
+}
+
+async function alternarStatus(recompensa, botao) {
+    const novoStatus = recompensa.status === 'ativa' ? 'pausada' : 'ativa';
+    botao.disabled = true;
+    try {
+        const resposta = await fetch(`/api/recompensas/${recompensa.id_recompensa}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            credentials: 'include',
+            body: JSON.stringify({status: novoStatus})
+        });
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro || 'Não foi possível alterar o status.');
+        mostrarMensagem(novoStatus === 'ativa' ? 'Recompensa reativada.' : 'Recompensa pausada.', 'success');
+        await carregarRecompensas();
+    } catch (erro) {
+        mostrarMensagem(erro.message, 'danger');
+        botao.disabled = false;
+    }
+}
+
+form.addEventListener('submit', async event => {
+    event.preventDefault();
+    form.classList.add('was-validated');
+    if (!form.checkValidity()) return;
+
+    const payload = {
+        nome: document.getElementById('nome').value.trim(),
+        custo_pontos: Number(document.getElementById('custoPontos').value),
+        tipo: document.getElementById('tipo').value,
+        valor_beneficio: document.getElementById('tipo').value === 'produto_fisico' ? null : document.getElementById('valorBeneficio').value,
+        validade: document.getElementById('validade').value,
+        quantidade_total: Number(document.getElementById('quantidadeTotal').value),
+        status: document.getElementById('status').value
+    };
+    btnSalvar.disabled = true;
+    btnSalvar.querySelector('.texto-botao').classList.add('d-none');
+    btnSalvar.querySelector('.carregando').classList.remove('d-none');
+    try {
+        const url = idEmEdicao ? `/api/recompensas/${idEmEdicao}` : '/api/recompensas/';
+        const resposta = await fetch(url, {
+            method: idEmEdicao ? 'PATCH' : 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro || 'Não foi possível salvar a recompensa.');
+        mostrarMensagem(idEmEdicao ? 'Recompensa atualizada com sucesso.' : 'Recompensa criada com sucesso.', 'success');
+        fecharFormulario();
+        await carregarRecompensas();
+    } catch (erro) {
+        mostrarMensagem(erro.message, 'danger');
+    } finally {
+        btnSalvar.disabled = false;
+        btnSalvar.querySelector('.texto-botao').classList.remove('d-none');
+        btnSalvar.querySelector('.carregando').classList.add('d-none');
+    }
+});
+
+document.getElementById('tipo').addEventListener('change', ajustarCampoBeneficio);
+document.getElementById('btnNovaRecompensa').addEventListener('click', () => abrirFormulario());
+document.getElementById('btnCancelar').addEventListener('click', fecharFormulario);
+carregarRecompensas();
+</script>
+{% endblock %}

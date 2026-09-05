@@ -15,11 +15,22 @@ def run_tests():
     print("🔒 INICIANDO SUÍTE DE TESTES DE SEGURANÇA - FIDELIZA")
     print("=" * 70)
 
-    app = create_app('development')
+    app = create_app('testing')
+    app.config['WTF_CSRF_ENABLED'] = True
+    app.config['IOT_DEVICE_KEY'] = 'fideliza-iot-key-padrao'
     client = app.test_client()
 
     with app.app_context():
         db.create_all()
+        if not Cliente.query.filter_by(telefone='11999991111').first():
+            c = Cliente(nome='Cliente Teste', telefone='11999991111')
+            c.set_senha('SenhaTeste123!')
+            db.session.add(c)
+        if not Usuario.query.filter_by(id_usuario=1).first():
+            u = Usuario(nome='Admin Teste', login='admin', email='admin@teste.com')
+            u.set_senha('AdminTeste123!')
+            db.session.add(u)
+        db.session.commit()
 
     # -------------------------------------------------------------
     # TESTE 1: Fechamento de Endpoints da API (VULN-01 - BOLA / BFLA)
@@ -43,7 +54,7 @@ def run_tests():
     r_iot = client.post(
         '/api/compras/',
         json={'telefone': '11999991111', 'valor': 25.00},
-        headers={'X-Device-Key': 'fideliza-iot-key-padrao'}
+        headers={'X-Device-Key': app.config.get('IOT_DEVICE_KEY', 'fideliza-iot-key-padrao')}
     )
     assert r_iot.status_code == 201, f"Falha: ESP8266 com chave válida retornou {r_iot.status_code}, esperado 201"
     

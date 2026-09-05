@@ -1,127 +1,578 @@
 {% extends "base_vendedora.html" %}
 {% set active = 'clientes' %}
 {% block titulo %}Clientes{% endblock %}
-{% block page_title %}Clientes Cadastrados{% endblock %}
-{% block page_subtitle %}Consulte e gerencie seus clientes{% endblock %}
+{% block page_title %}Gestão de Clientes{% endblock %}
+{% block page_subtitle %}Consulte, edite, gerencie saldo e audite o histórico dos seus clientes{% endblock %}
 
 {% block content %}
-<!-- Pesquisa + Botao -->
-<div class="card mb-4">
+<!-- Barra de Pesquisa e Filtros -->
+<div class="card mb-4 shadow-sm border-0">
     <div class="card-body">
-        <div class="d-flex align-items-center gap-3">
-            <input type="text" id="pesquisa" class="form-control" placeholder="Pesquisar clientes por nome ou telefone...">
-            <button id="btnNovoCliente" class="btn btn-fidelidade btn-sm" onclick="mostrarFormulario()">
-                <i class="fas fa-user-plus"></i> Novo Cliente
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Formulario -->
-<div id="formCadastro" class="mb-4" style="display:none;">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header text-center"><i class="fas fa-user-plus"></i> Registrar Novo Cliente</div>
-                <div class="card-body">
-                    <form id="formNovoCliente">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nome Completo</label>
-                            <input type="text" id="nome" class="form-control" placeholder="Ex: Maria Oliveira" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Telefone / WhatsApp</label>
-                            <input type="tel" id="telefone" class="form-control" placeholder="(00) 00000-0000" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">E-mail (opcional)</label>
-                            <input type="email" id="email" class="form-control" placeholder="cliente@email.com">
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-fidelidade flex-fill">Salvar Cadastro</button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="fecharFormulario()">Cancelar</button>
-                        </div>
-                        <div id="msgForm" class="mt-3 small"></div>
-                    </form>
+        <div class="row g-3 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="pesquisa" class="form-control border-start-0" placeholder="Pesquisar por nome, telefone ou e-mail...">
                 </div>
+            </div>
+            <div class="col-md-2">
+                <select id="filtroStatus" class="form-select">
+                    <option value="">Todos os Status</option>
+                    <option value="ativo" selected>Somente Ativos</option>
+                    <option value="inativo">Inativos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="filtroOrdenacao" class="form-select">
+                    <option value="nome_asc">Nome (A-Z)</option>
+                    <option value="nome_desc">Nome (Z-A)</option>
+                    <option value="pontos_desc">Mais Pontos</option>
+                    <option value="pontos_asc">Menos Pontos</option>
+                    <option value="data_desc">Mais Recentes</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-md-end">
+                {% if current_user.tem_permissao('clientes.criar') %}
+                <button class="btn btn-fidelidade w-100 w-md-auto" onclick="abrirModalNovo()">
+                    <i class="fas fa-user-plus me-1"></i> Novo Cliente
+                </button>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Lista -->
-<div class="card">
-    <div class="card-header"><i class="fas fa-users text-warning"></i> Lista de Clientes</div>
+<!-- Tabela de Clientes -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold m-0"><i class="fas fa-users text-warning me-2"></i>Base de Clientes</h6>
+        <span class="badge bg-light text-dark border" id="badgeTotalClientes">0 clientes</span>
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
-                <tr><th>Nome</th><th>Telefone</th><th>Pontos</th><th>Cadastro</th></tr>
+                <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Saldo de Pontos</th>
+                    <th>Status</th>
+                    <th>Cadastro</th>
+                    <th class="text-end">Ações</th>
+                </tr>
             </thead>
             <tbody id="tbodyClientes">
-                <tr><td colspan="4" class="text-center text-muted">Carregando...</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Carregando clientes...</td></tr>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Modal Novo Cliente -->
+<div class="modal fade" id="modalNovoCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-plus text-warning me-2"></i>Cadastrar Cliente no PDV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formNovoCliente">
+                <div class="modal-body">
+                    <div id="alertaModalNovo" class="alert alert-danger d-none py-2 small"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome Completo</label>
+                        <input type="text" id="novoNome" class="form-control" placeholder="Ex: Maria Oliveira" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Telefone / WhatsApp (com DDD)</label>
+                        <input type="tel" id="novoTelefone" class="form-control" placeholder="(11) 99999-8888" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">E-mail (opcional)</label>
+                        <input type="email" id="novoEmail" class="form-control" placeholder="cliente@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Endereço (opcional)</label>
+                        <input type="text" id="novoEndereco" class="form-control" placeholder="Rua das Flores, 123">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-fidelidade">Salvar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Cliente -->
+<div class="modal fade" id="modalEditarCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-edit text-warning me-2"></i>Editar Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarCliente">
+                <input type="hidden" id="editId">
+                <div class="modal-body">
+                    <div id="alertaModalEditar" class="alert alert-danger d-none py-2 small"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome Completo</label>
+                        <input type="text" id="editNome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Telefone</label>
+                        <input type="tel" id="editTelefone" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">E-mail</label>
+                        <input type="email" id="editEmail" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Endereço</label>
+                        <input type="text" id="editEndereco" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-fidelidade">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalhes / Perfil Completo do Cliente -->
+<div class="modal fade" id="modalDetalhesCliente" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-id-card text-warning me-2"></i>Perfil e Histórico do Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded">
+                            <h6 class="fw-bold mb-1" id="detNome">-</h6>
+                            <p class="mb-1 text-muted small"><i class="fas fa-phone me-1"></i> <span id="detTelefone">-</span></p>
+                            <p class="mb-1 text-muted small"><i class="fas fa-envelope me-1"></i> <span id="detEmail">-</span></p>
+                            <p class="mb-0 text-muted small"><i class="fas fa-map-marker-alt me-1"></i> <span id="detEndereco">-</span></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded text-center">
+                            <span class="text-muted small">Saldo de Pontos Disponíveis</span>
+                            <h3 class="fw-bold text-success my-1" id="detPontos">0 pts</h3>
+                            <span id="detStatusBadge"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="nav nav-tabs mb-3" id="detTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabExtrato">Extrato de Pontos (Ledger)</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabExtrato">
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Data/Hora</th>
+                                        <th>Operação</th>
+                                        <th>Qtd</th>
+                                        <th>Saldo Resultante</th>
+                                        <th>Motivo / Origem</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyExtratoCliente">
+                                    <tr><td colspan="5" class="text-center text-muted">Carregando extrato...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajustar Pontos Manualmente -->
+<div class="modal fade" id="modalAjustarPontos" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-coins text-warning me-2"></i>Ajuste Manual de Pontos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAjustarPontos">
+                <input type="hidden" id="ajusteIdCliente">
+                <div class="modal-body">
+                    <div id="alertaModalAjuste" class="alert alert-danger d-none py-2 small"></div>
+                    
+                    <div class="p-3 bg-light rounded mb-3">
+                        <div>Cliente: <strong id="ajusteNomeCliente">-</strong></div>
+                        <div>Saldo Atual: <span class="badge bg-success" id="ajusteSaldoAtual">0 pts</span></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tipo de Operação</label>
+                        <select id="ajusteOperacao" class="form-select" required onchange="atualizarPrevisaoSaldo()">
+                            <option value="adicionar">Adicionar Pontos (Crédito)</option>
+                            <option value="remover">Remover Pontos (Débito / Estorno)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Quantidade de Pontos</label>
+                        <input type="number" id="ajusteQuantidade" class="form-control" min="1" required placeholder="Ex: 50" oninput="atualizarPrevisaoSaldo()">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Motivo do Ajuste (Obrigatório para Auditoria)</label>
+                        <textarea id="ajusteMotivo" class="form-control" rows="2" required placeholder="Ex: Correção de lançamento duplicado no PDV conforme chamado #12"></textarea>
+                    </div>
+
+                    <div class="p-2 border rounded bg-white text-muted small" id="ajustePrevisaoBox">
+                        Novo Saldo Previsto: <strong id="ajusteNovoSaldo" class="text-dark">0 pts</strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold">Confirmar Ajuste</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-let todosClientes = [];
+let clientesLista = [];
+let modalNovo, modalEditar, modalDetalhes, modalAjuste;
+let clienteAtualAjuste = null;
 
-function mostrarFormulario(){
-    document.getElementById("btnNovoCliente").style.display = "none";
-    document.getElementById("formCadastro").style.display = "block";
-}
-function fecharFormulario(){
-    document.getElementById("formCadastro").style.display = "none";
-    document.getElementById("btnNovoCliente").style.display = "block";
+document.addEventListener('DOMContentLoaded', () => {
+    modalNovo = new bootstrap.Modal(document.getElementById('modalNovoCliente'));
+    modalEditar = new bootstrap.Modal(document.getElementById('modalEditarCliente'));
+    modalDetalhes = new bootstrap.Modal(document.getElementById('modalDetalhesCliente'));
+    modalAjuste = new bootstrap.Modal(document.getElementById('modalAjustarPontos'));
+    carregarClientes();
+
+    document.getElementById('pesquisa').addEventListener('input', filtrarClientesLocal);
+    document.getElementById('filtroStatus').addEventListener('change', carregarClientes);
+    document.getElementById('filtroOrdenacao').addEventListener('change', filtrarClientesLocal);
+});
+
+async function carregarClientes() {
+    const status = document.getElementById('filtroStatus').value;
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+
+    const resp = await fetch(`/api/clientes/?${params.toString()}`, { credentials: 'include' });
+    if (!resp.ok) {
+        document.getElementById('tbodyClientes').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Erro ao carregar clientes.</td></tr>';
+        return;
+    }
+    clientesLista = await resp.json();
+    filtrarClientesLocal();
 }
 
-function render(lista){
+function filtrarClientesLocal() {
+    const termo = document.getElementById('pesquisa').value.toLowerCase().trim();
+    const ordenacao = document.getElementById('filtroOrdenacao').value;
+
+    let filtrados = clientesLista.filter(c => {
+        const nome = (c.nome || '').toLowerCase();
+        const tel = (c.telefone || '').toLowerCase();
+        const email = (c.email || '').toLowerCase();
+        return nome.includes(termo) || tel.includes(termo) || email.includes(termo);
+    });
+
+    if (ordenacao === 'nome_asc') {
+        filtrados.sort((a, b) => a.nome.localeCompare(b.nome));
+    } else if (ordenacao === 'nome_desc') {
+        filtrados.sort((a, b) => b.nome.localeCompare(a.nome));
+    } else if (ordenacao === 'pontos_desc') {
+        filtrados.sort((a, b) => b.pontos_acumulados - a.pontos_acumulados);
+    } else if (ordenacao === 'pontos_asc') {
+        filtrados.sort((a, b) => a.pontos_acumulados - b.pontos_acumulados);
+    } else if (ordenacao === 'data_desc') {
+        filtrados.sort((a, b) => new Date(b.data_cadastro || 0) - new Date(a.data_cadastro || 0));
+    }
+
+    document.getElementById('badgeTotalClientes').textContent = `${filtrados.length} clientes`;
+    renderClientes(filtrados);
+}
+
+function renderClientes(lista) {
     const tb = document.getElementById('tbodyClientes');
-    if(!lista.length){ tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente encontrado.</td></tr>'; return; }
+    if (!lista.length) {
+        tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Nenhum cliente encontrado.</td></tr>';
+        return;
+    }
+
+    const podeEditar = {{ 'true' if current_user.tem_permissao('clientes.editar') else 'false' }};
+    const podeDesativar = {{ 'true' if current_user.tem_permissao('clientes.desativar') else 'false' }};
+    const podePontos = {{ 'true' if current_user.tem_permissao('pontos.adicionar') or current_user.tem_permissao('pontos.remover') else 'false' }};
+
     tb.innerHTML = lista.map(c => {
         const dt = c.data_cadastro ? new Date(c.data_cadastro).toLocaleDateString('pt-BR') : '-';
-        return `<tr><td>${c.nome}</td><td>${c.telefone}</td><td><span class="badge bg-success">${c.pontos_acumulados} pts</span></td><td>${dt}</td></tr>`;
+        const badgeStatus = c.ativo !== false 
+            ? '<span class="badge bg-success">Ativo</span>' 
+            : '<span class="badge bg-secondary">Inativo</span>';
+
+        return `
+        <tr>
+            <td class="fw-bold">${escapeHtml(c.nome)}</td>
+            <td>${escapeHtml(c.telefone)}</td>
+            <td><span class="badge bg-warning text-dark px-2 py-1">${c.pontos_acumulados} pts</span></td>
+            <td>${badgeStatus}</td>
+            <td class="small text-muted">${dt}</td>
+            <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-light" title="Ver Perfil e Histórico" onclick="abrirDetalhes(${c.id_cliente})">
+                        <i class="fas fa-eye text-primary"></i>
+                    </button>
+                    ${podePontos ? `
+                        <button class="btn btn-light" title="Ajustar Pontos" onclick="abrirAjuste(${c.id_cliente})">
+                            <i class="fas fa-coins text-warning"></i>
+                        </button>
+                    ` : ''}
+                    ${podeEditar ? `
+                        <button class="btn btn-light" title="Editar Dados" onclick="abrirEditar(${c.id_cliente})">
+                            <i class="fas fa-edit text-secondary"></i>
+                        </button>
+                    ` : ''}
+                    ${podeDesativar ? `
+                        <button class="btn btn-light ${c.ativo !== false ? 'text-danger' : 'text-success'}" title="${c.ativo !== false ? 'Desativar Cliente' : 'Ativar Cliente'}" onclick="alternarStatus(${c.id_cliente}, ${c.ativo === false})">
+                            <i class="fas ${c.ativo !== false ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </td>
+        </tr>`;
     }).join('');
 }
 
-async function carregar(){
-    const r = await fetch('/api/clientes/', {credentials:'include'});
-    todosClientes = r.ok ? await r.json() : [];
-    render(todosClientes);
+function abrirModalNovo() {
+    document.getElementById('formNovoCliente').reset();
+    document.getElementById('alertaModalNovo').classList.add('d-none');
+    modalNovo.show();
 }
 
-document.getElementById('pesquisa').addEventListener('input', e => {
-    const q = e.target.value.toLowerCase();
-    render(todosClientes.filter(c => c.nome.toLowerCase().includes(q) || c.telefone.includes(q)));
-});
-
-document.getElementById('formNovoCliente').addEventListener('submit', async e => {
+document.getElementById('formNovoCliente').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const msg = document.getElementById('msgForm');
+    const alerta = document.getElementById('alertaModalNovo');
+    alerta.classList.add('d-none');
+
+    const payload = {
+        nome: document.getElementById('novoNome').value,
+        telefone: document.getElementById('novoTelefone').value,
+        email: document.getElementById('novoEmail').value || null,
+        endereco: document.getElementById('novoEndereco').value || null,
+    };
+
     const resp = await fetch('/api/clientes/', {
-        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-        body: JSON.stringify({
-            nome: document.getElementById('nome').value,
-            telefone: document.getElementById('telefone').value,
-            email: document.getElementById('email').value || null,
-        })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        credentials: 'include',
+        body: JSON.stringify(payload)
     });
+
     const data = await resp.json();
-    if(resp.ok){
-        msg.className = 'mt-3 small text-success';
-        msg.textContent = 'Cliente cadastrado com sucesso!';
-        e.target.reset();
-        carregar();
-        setTimeout(fecharFormulario, 800);
+    if (resp.ok) {
+        modalNovo.hide();
+        carregarClientes();
     } else {
-        msg.className = 'mt-3 small text-danger';
-        msg.textContent = data.erro || 'Erro ao cadastrar.';
+        alerta.textContent = data.erro || 'Erro ao cadastrar cliente.';
+        alerta.classList.remove('d-none');
     }
 });
 
-carregar();
+function abrirEditar(id) {
+    const c = clientesLista.find(item => item.id_cliente === id);
+    if (!c) return;
+
+    document.getElementById('editId').value = c.id_cliente;
+    document.getElementById('editNome').value = c.nome;
+    document.getElementById('editTelefone').value = c.telefone;
+    document.getElementById('editEmail').value = c.email || '';
+    document.getElementById('editEndereco').value = c.endereco || '';
+    document.getElementById('alertaModalEditar').classList.add('d-none');
+    modalEditar.show();
+}
+
+document.getElementById('formEditarCliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alerta = document.getElementById('alertaModalEditar');
+    alerta.classList.add('d-none');
+    const id = document.getElementById('editId').value;
+
+    const payload = {
+        nome: document.getElementById('editNome').value,
+        telefone: document.getElementById('editTelefone').value,
+        email: document.getElementById('editEmail').value || null,
+        endereco: document.getElementById('editEndereco').value || null,
+    };
+
+    const resp = await fetch(`/api/clientes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+        modalEditar.hide();
+        carregarClientes();
+    } else {
+        alerta.textContent = data.erro || 'Erro ao atualizar dados.';
+        alerta.classList.remove('d-none');
+    }
+});
+
+async function abrirDetalhes(id) {
+    const resp = await fetch(`/api/clientes/${id}`, { credentials: 'include' });
+    if (!resp.ok) return;
+    const c = await resp.json();
+
+    document.getElementById('detNome').textContent = c.nome;
+    document.getElementById('detTelefone').textContent = c.telefone;
+    document.getElementById('detEmail').textContent = c.email || 'Não informado';
+    document.getElementById('detEndereco').textContent = c.endereco || 'Não informado';
+    document.getElementById('detPontos').textContent = `${c.pontos_acumulados} pts`;
+    document.getElementById('detStatusBadge').innerHTML = c.ativo !== false 
+        ? '<span class="badge bg-success">Conta Ativa</span>' 
+        : '<span class="badge bg-secondary">Conta Desativada</span>';
+
+    // Carrega extrato
+    carregarExtratoCliente(id);
+    modalDetalhes.show();
+}
+
+async function carregarExtratoCliente(id) {
+    const tb = document.getElementById('tbodyExtratoCliente');
+    tb.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Carregando extrato...</td></tr>';
+
+    const resp = await fetch(`/api/clientes/${id}/extrato`, { credentials: 'include' });
+    if (!resp.ok) {
+        tb.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Falha ao obter extrato.</td></tr>';
+        return;
+    }
+    const data = await resp.json();
+    const items = data.extrato || [];
+    if (!items.length) {
+        tb.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhuma movimentação de pontos até o momento.</td></tr>';
+        return;
+    }
+
+    tb.innerHTML = items.map(m => {
+        const dt = m.data_hora ? new Date(m.data_hora).toLocaleString('pt-BR') : '-';
+        const sinal = m.quantidade > 0 ? `+${m.quantidade}` : `${m.quantidade}`;
+        const badgeClasse = m.quantidade > 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+        return `
+        <tr>
+            <td class="small">${dt}</td>
+            <td><span class="badge bg-light text-dark border">${escapeHtml(m.tipo)}</span></td>
+            <td class="${badgeClasse}">${sinal} pts</td>
+            <td><strong>${m.saldo_posterior} pts</strong></td>
+            <td class="small">${escapeHtml(m.motivo || m.origem || '-')}</td>
+        </tr>`;
+    }).join('');
+}
+
+function abrirAjuste(id) {
+    const c = clientesLista.find(item => item.id_cliente === id);
+    if (!c) return;
+    clienteAtualAjuste = c;
+
+    document.getElementById('ajusteIdCliente').value = c.id_cliente;
+    document.getElementById('ajusteNomeCliente').textContent = c.nome;
+    document.getElementById('ajusteSaldoAtual').textContent = `${c.pontos_acumulados} pts`;
+    document.getElementById('ajusteQuantidade').value = '';
+    document.getElementById('ajusteMotivo').value = '';
+    document.getElementById('alertaModalAjuste').classList.add('d-none');
+    atualizarPrevisaoSaldo();
+    modalAjuste.show();
+}
+
+function atualizarPrevisaoSaldo() {
+    if (!clienteAtualAjuste) return;
+    const op = document.getElementById('ajusteOperacao').value;
+    const qtd = parseInt(document.getElementById('ajusteQuantidade').value || 0, 10);
+    const atual = parseInt(clienteAtualAjuste.pontos_acumulados || 0, 10);
+
+    let novo = op === 'adicionar' ? atual + qtd : atual - qtd;
+    const box = document.getElementById('ajusteNovoSaldo');
+    box.textContent = `${novo} pts`;
+    if (novo < 0) {
+        box.className = 'text-danger fw-bold';
+    } else {
+        box.className = 'text-success fw-bold';
+    }
+}
+
+document.getElementById('formAjustarPontos').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alerta = document.getElementById('alertaModalAjuste');
+    alerta.classList.add('d-none');
+    const id = document.getElementById('ajusteIdCliente').value;
+
+    const payload = {
+        operacao: document.getElementById('ajusteOperacao').value,
+        quantidade: parseInt(document.getElementById('ajusteQuantidade').value, 10),
+        motivo: document.getElementById('ajusteMotivo').value.trim(),
+    };
+
+    const resp = await fetch(`/api/clientes/${id}/pontos/ajuste`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+        modalAjuste.hide();
+        alert('Ajuste de pontos processado com sucesso!');
+        carregarClientes();
+    } else {
+        alerta.textContent = data.erro || 'Falha ao ajustar pontos.';
+        alerta.classList.remove('d-none');
+    }
+});
+
+async function alternarStatus(id, novoStatus) {
+    const acao = novoStatus ? 'ativar' : 'desativar';
+    const c = clientesLista.find(item => item.id_cliente === id);
+    const nome = c ? c.nome : 'o cliente';
+
+    if (!confirm(`Tem certeza que deseja ${acao} ${nome}?`)) return;
+
+    const motivo = prompt(`Informe o motivo para ${acao} ${nome}:`) || '';
+
+    const resp = await fetch(`/api/clientes/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        credentials: 'include',
+        body: JSON.stringify({ ativo: novoStatus, motivo: motivo })
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+        carregarClientes();
+    } else {
+        alert(data.erro || 'Falha ao alterar status.');
+    }
+}
 </script>
 {% endblock %}

@@ -1,62 +1,49 @@
 {% extends "base_vendedora.html" %}
 {% set active = 'resgate' %}
-{% block titulo %}Recompensas{% endblock %}
-{% block page_title %}Recompensas{% endblock %}
-{% block page_subtitle %}Validar e Entregar Recompensas{% endblock %}
+{% block titulo %}Entregar Recompensa{% endblock %}
+{% block page_title %}Entrega de Recompensas{% endblock %}
+{% block page_subtitle %}Selecione cliente e recompensa; custo e estoque são validados pelo servidor{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-9">
-        <div class="card">
-            <div class="card-header"><i class="fas fa-gift text-warning"></i> Validar e Entregar Recompensas</div>
+    <div class="col-xl-10">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3"><i class="fas fa-gift text-warning me-2"></i>Validar e entregar recompensa</div>
             <div class="card-body p-4">
                 <form id="formResgate">
                     <div class="mb-4">
-                        <label class="form-label fw-bold" style="color: var(--sidebar-color);">1. Quem esta resgatando?</label>
+                        <label for="clienteId" class="form-label fw-bold" style="color: var(--sidebar-color);">1. Quem está resgatando?</label>
                         <select id="clienteId" class="form-select form-select-lg" required>
                             <option value="">Carregando clientes...</option>
                         </select>
-                        <div class="form-text">O saldo atual do cliente aparece ao lado do nome.</div>
+                        <div class="form-text">O saldo atual aparece ao lado do nome e determina quais opções podem ser escolhidas.</div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label fw-bold" style="color: var(--sidebar-color);">2. Selecione o Premio Escolhido</label>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="border p-3 rounded d-flex align-items-center justify-content-between bg-white shadow-sm" style="border-color: var(--rosa-pastel) !important;">
-                                    <div class="d-flex align-items-center">
-                                        <div class="p-3 rounded me-3 text-danger" style="background-color: #fff5f7;"><i class="fas fa-cookie-bite fa-lg"></i></div>
-                                        <div><h6 class="fw-bold m-0">Brinde Simples</h6><small class="text-muted">Custo: 50 pontos</small></div>
-                                    </div>
-                                    <input type="radio" name="premio" data-nome="Brinde Simples" value="50" class="form-check-input ms-2" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="border p-3 rounded d-flex align-items-center justify-content-between bg-white shadow-sm" style="border-color: var(--rosa-pastel) !important;">
-                                    <div class="d-flex align-items-center">
-                                        <div class="p-3 rounded me-3 text-warning" style="background-color: var(--dourado-claro);"><i class="fas fa-percentage fa-lg"></i></div>
-                                        <div><h6 class="fw-bold m-0">15% de Desconto</h6><small class="text-muted">Custo: 100 pontos</small></div>
-                                    </div>
-                                    <input type="radio" name="premio" data-nome="15% de Desconto" value="100" class="form-check-input ms-2">
-                                </div>
-                            </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-bold m-0" style="color: var(--sidebar-color);">2. Selecione a recompensa</label>
+                            <a href="{{ url_for('main.gestao_recompensas') }}" class="small text-decoration-none">Gerenciar catálogo</a>
+                        </div>
+                        <div id="listaRecompensas" class="row g-3">
+                            <div class="col-12 text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>Carregando...</div>
                         </div>
                     </div>
 
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-fidelidade w-100 py-2 fs-6"><i class="fas fa-check-circle"></i> Confirmar Entrega e Deduzir Pontos</button>
-                    </div>
-                    <div id="msgResgate" class="mt-3"></div>
+                    <button id="btnConfirmar" type="submit" class="btn btn-fidelidade w-100 py-2 fs-6" disabled>
+                        <span class="texto-botao"><i class="fas fa-check-circle me-1"></i>Confirmar entrega e deduzir pontos</span>
+                        <span class="carregando d-none"><i class="fas fa-spinner fa-spin me-1"></i>Processando...</span>
+                    </button>
+                    <div id="msgResgate" class="mt-3 d-none" role="alert"></div>
                 </form>
             </div>
         </div>
 
-        <div class="card mt-4">
-            <div class="card-header text-muted bg-light" style="font-size: 0.9rem;"><i class="fas fa-history"></i> Ultimos Premios Entregues</div>
+        <div class="card mt-4 shadow-sm border-0">
+            <div class="card-header text-muted bg-light"><i class="fas fa-history me-2"></i>Últimas recompensas entregues</div>
             <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                <table class="table table-sm table-hover align-middle mb-0">
                     <tbody id="tbodyResgates">
-                        <tr><td colspan="4" class="text-center text-muted">Carregando...</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted py-3">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -67,55 +54,160 @@
 
 {% block scripts %}
 <script>
+let clientes = [];
 let clientesMap = {};
+let recompensas = [];
+let enviando = false;
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-async function carregarClientes(){
-    const r = await fetch('/api/clientes/', {credentials:'include'});
-    const cs = r.ok ? await r.json() : [];
-    const sel = document.getElementById('clienteId');
-    sel.innerHTML = '<option value="">Selecione o cliente (Nome - Telefone)...</option>' +
-        cs.map(c=>{ clientesMap[c.id_cliente]=c; return `<option value="${c.id_cliente}">${c.nome} — ${c.telefone} [Saldo: ${c.pontos_acumulados} pts]</option>`; }).join('');
+function elemento(tag, classes, texto) {
+    const el = document.createElement(tag);
+    if (classes) el.className = classes;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
 }
 
-async function carregarResgates(){
-    const r = await fetch('/api/resgates/', {credentials:'include'});
-    const rs = r.ok ? await r.json() : [];
-    const tb = document.getElementById('tbodyResgates');
-    if(!rs.length){ tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum resgate ainda.</td></tr>'; return; }
-    tb.innerHTML = rs.slice(0,10).map(x=>{
-        const dt = x.data ? new Date(x.data).toLocaleString('pt-BR') : '-';
-        const nome = clientesMap[x.id_cliente] ? clientesMap[x.id_cliente].nome : ('#'+x.id_cliente);
-        return `<tr><td class="ps-4">${dt}</td><td><strong>${nome}</strong></td><td>${x.descricao_recompensa}</td><td class="text-danger fw-bold text-end pe-4">-${x.pontos_utilizados} pts</td></tr>`;
-    }).join('');
+function clienteSelecionado() {
+    return clientesMap[Number(document.getElementById('clienteId').value)] || null;
 }
 
-document.getElementById('formResgate').addEventListener('submit', async e => {
-    e.preventDefault();
-    const msg = document.getElementById('msgResgate');
-    const id = parseInt(document.getElementById('clienteId').value);
-    const premio = document.querySelector('input[name="premio"]:checked');
-    if(!id || !premio){ msg.className='mt-3 text-danger'; msg.textContent='Selecione cliente e premio.'; return; }
+function motivoRecompensa(r, cliente) {
+    if (r.estado === 'pausada') return 'Pausada';
+    if (r.estado === 'expirada') return 'Expirada';
+    if (r.estado === 'esgotada') return 'Esgotada';
+    if (cliente && cliente.pontos_acumulados < r.custo_pontos) return 'Pontos insuficientes';
+    return null;
+}
 
-    const resp = await fetch('/api/resgates/', {
-        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-        body: JSON.stringify({
-            id_cliente: id,
-            pontos_utilizados: parseInt(premio.value),
-            descricao_recompensa: premio.dataset.nome
-        })
+function renderRecompensas() {
+    const lista = document.getElementById('listaRecompensas');
+    const cliente = clienteSelecionado();
+    lista.replaceChildren();
+    if (!recompensas.length) {
+        lista.appendChild(elemento('div', 'col-12 alert alert-light border text-center', 'Nenhuma recompensa cadastrada. Use “Gerenciar catálogo” para criar uma.'));
+        document.getElementById('btnConfirmar').disabled = true;
+        return;
+    }
+    recompensas.forEach(r => {
+        const motivo = motivoRecompensa(r, cliente);
+        const desabilitada = !cliente || Boolean(motivo);
+        const coluna = elemento('div', 'col-12 col-md-6');
+        const label = elemento('label', `reward-option-admin d-flex align-items-center justify-content-between h-100 ${desabilitada ? 'reward-unavailable' : ''}`);
+        const info = document.createElement('div');
+        info.append(elemento('h6', 'fw-bold m-0 text-dark', r.nome), elemento('small', 'text-muted d-block', `${r.beneficio_formatado} • ${r.custo_pontos} pontos`), elemento('small', 'text-muted', `Estoque: ${r.quantidade_disponivel}/${r.quantidade_total}`));
+        if (motivo) info.appendChild(elemento('span', 'badge bg-secondary d-block mt-2 fit-content', motivo));
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'recompensa';
+        radio.value = r.id_recompensa;
+        radio.className = 'form-check-input ms-3';
+        radio.disabled = desabilitada;
+        radio.addEventListener('change', atualizarBotao);
+        label.append(info, radio);
+        coluna.appendChild(label);
+        lista.appendChild(coluna);
     });
-    const data = await resp.json();
-    if(resp.ok){
-        msg.className = 'mt-3 alert alert-success';
-        msg.textContent = `Resgate confirmado! Novo saldo: ${data.saldo_atualizado} pts.`;
-        e.target.reset();
-        await carregarClientes(); carregarResgates();
-    } else {
-        msg.className = 'mt-3 alert alert-danger';
-        msg.textContent = data.erro + (data.saldo_atual!==undefined ? ` (saldo: ${data.saldo_atual} pts)` : '');
+    atualizarBotao();
+}
+
+function atualizarBotao() {
+    document.getElementById('btnConfirmar').disabled = !clienteSelecionado() || !document.querySelector('input[name="recompensa"]:checked') || enviando;
+}
+
+async function carregarClientes() {
+    const resposta = await fetch('/api/clientes/', {credentials: 'include'});
+    if (!resposta.ok) throw new Error('Não foi possível carregar os clientes.');
+    clientes = await resposta.json();
+    clientesMap = Object.fromEntries(clientes.map(c => [c.id_cliente, c]));
+    const select = document.getElementById('clienteId');
+    select.replaceChildren(new Option('Selecione o cliente (nome — saldo)...', ''));
+    clientes.forEach(c => select.appendChild(new Option(`${c.nome} — ${c.telefone} [${c.pontos_acumulados} pts]`, c.id_cliente)));
+}
+
+async function carregarRecompensas() {
+    const resposta = await fetch('/api/recompensas/', {credentials: 'include'});
+    if (!resposta.ok) throw new Error('Não foi possível carregar as recompensas.');
+    recompensas = await resposta.json();
+    renderRecompensas();
+}
+
+async function carregarResgates() {
+    const resposta = await fetch('/api/resgates/', {credentials: 'include'});
+    const resgates = resposta.ok ? await resposta.json() : [];
+    const corpo = document.getElementById('tbodyResgates');
+    corpo.replaceChildren();
+    if (!resgates.length) {
+        const tr = document.createElement('tr');
+        const td = elemento('td', 'text-center text-muted py-3', 'Nenhum resgate ainda.');
+        td.colSpan = 4;
+        tr.appendChild(td);
+        corpo.appendChild(tr);
+        return;
+    }
+    resgates.slice(0, 10).forEach(r => {
+        const tr = document.createElement('tr');
+        const nome = clientesMap[r.id_cliente] ? clientesMap[r.id_cliente].nome : `Cliente #${r.id_cliente}`;
+        tr.append(elemento('td', 'ps-4', r.data ? new Date(r.data).toLocaleString('pt-BR') : '-'), elemento('td', 'fw-bold', nome), elemento('td', '', r.descricao_recompensa), elemento('td', 'text-danger fw-bold text-end pe-4', `-${r.pontos_utilizados} pts`));
+        corpo.appendChild(tr);
+    });
+}
+
+function mensagem(texto, tipo) {
+    const box = document.getElementById('msgResgate');
+    box.className = `mt-3 alert alert-${tipo}`;
+    box.textContent = texto;
+    box.classList.remove('d-none');
+}
+
+document.getElementById('clienteId').addEventListener('change', () => {
+    document.querySelectorAll('input[name="recompensa"]').forEach(radio => { radio.checked = false; });
+    renderRecompensas();
+});
+
+document.getElementById('formResgate').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (enviando) return;
+    const cliente = clienteSelecionado();
+    const selecionada = document.querySelector('input[name="recompensa"]:checked');
+    if (!cliente || !selecionada) {
+        mensagem('Selecione cliente e recompensa.', 'danger');
+        return;
+    }
+    enviando = true;
+    const botao = document.getElementById('btnConfirmar');
+    botao.disabled = true;
+    botao.querySelector('.texto-botao').classList.add('d-none');
+    botao.querySelector('.carregando').classList.remove('d-none');
+    try {
+        const resposta = await fetch('/api/resgates/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            credentials: 'include',
+            body: JSON.stringify({id_cliente: cliente.id_cliente, id_recompensa: Number(selecionada.value)})
+        });
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro || 'Não foi possível processar o resgate.');
+        mensagem(`Resgate confirmado. Novo saldo: ${dados.saldo_atualizado} pontos.`, 'success');
+        await carregarClientes();
+        await carregarRecompensas();
+        await carregarResgates();
+    } catch (erro) {
+        mensagem(erro.message, 'danger');
+    } finally {
+        enviando = false;
+        botao.querySelector('.texto-botao').classList.remove('d-none');
+        botao.querySelector('.carregando').classList.add('d-none');
+        atualizarBotao();
     }
 });
 
-(async ()=>{ await carregarClientes(); carregarResgates(); })();
+(async () => {
+    try {
+        await Promise.all([carregarClientes(), carregarRecompensas()]);
+        await carregarResgates();
+    } catch (erro) {
+        mensagem(erro.message, 'danger');
+    }
+})();
 </script>
 {% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'alterar_senha' %}
+{% block titulo %}Alterar Senha do Administrador{% endblock %}
+{% block page_title %}Segurança da Conta{% endblock %}
+{% block page_subtitle %}Atualização segura de credenciais do perfil administrativo{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card border-0 shadow-sm p-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="p-3 rounded-circle me-3" style="background-color: #fff1f5; color: #d85f82;">
+                    <i class="fas fa-shield-alt fa-2x"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold m-0 text-dark">Alterar Senha de Acesso</h5>
+                    <small class="text-muted">Defina uma nova senha forte para proteger seu painel</small>
+                </div>
+            </div>
+
+            <div id="alertaSucesso" class="alert alert-success d-none mb-3" role="alert">
+                <i class="fas fa-check-circle me-2"></i><span id="msgSucesso"></span>
+            </div>
+
+            <div id="alertaErro" class="alert alert-danger d-none mb-3" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i><span id="msgErro"></span>
+            </div>
+
+            <form id="formAlterarSenha" novalidate>
+                <div class="mb-3">
+                    <label for="senhaAtual" class="form-label fw-bold small text-muted">Senha Atual</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="senhaAtual" required autocomplete="current-password" placeholder="Digite sua senha atual">
+                        <button class="btn btn-outline-secondary btnToggleSenha" type="button" data-target="senhaAtual">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="novaSenha" class="form-label fw-bold small text-muted">Nova Senha</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="novaSenha" required autocomplete="new-password" placeholder="Digite sua nova senha forte">
+                        <button class="btn btn-outline-secondary btnToggleSenha" type="button" data-target="novaSenha">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2 p-3 bg-light rounded small border">
+                        <div class="fw-bold mb-1 text-dark"><i class="fas fa-info-circle text-primary me-1"></i>Requisitos mínimos da nova senha:</div>
+                        <ul class="m-0 ps-3 text-muted" style="line-height: 1.6;">
+                            <li id="reqTamanho">Mínimo de 8 caracteres (máximo 128)</li>
+                            <li id="reqMinuscula">Ao menos uma letra minúscula (a-z)</li>
+                            <li id="reqMaiuscula">Ao menos uma letra maiúscula (A-Z)</li>
+                            <li id="reqNumero">Ao menos um dígito numérico (0-9)</li>
+                            <li id="reqEspecial">Ao menos um caractere especial (!@#$%&*...)</li>
+                            <li id="reqDiferente">Não pode ser igual à senha atual</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="confirmarNovaSenha" class="form-label fw-bold small text-muted">Confirmar Nova Senha</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="confirmarNovaSenha" required autocomplete="new-password" placeholder="Repita a nova senha exatamente igual">
+                        <button class="btn btn-outline-secondary btnToggleSenha" type="button" data-target="confirmarNovaSenha">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" id="btnSalvarSenha" class="btn text-white fw-bold py-2 shadow-sm" style="background-color: #d85f82; border: none;">
+                        <i class="fas fa-save me-2"></i>Atualizar Minha Senha
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Alternador de visibilidade de senhas
+    document.querySelectorAll('.btnToggleSenha').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        });
+    });
+
+    const form = document.getElementById('formAlterarSenha');
+    const alertaSucesso = document.getElementById('alertaSucesso');
+    const alertaErro = document.getElementById('alertaErro');
+    const msgSucesso = document.getElementById('msgSucesso');
+    const msgErro = document.getElementById('msgErro');
+    const btnSalvar = document.getElementById('btnSalvarSenha');
+
+    function limparAlertas() {
+        alertaSucesso.classList.add('d-none');
+        alertaErro.classList.add('d-none');
+        msgSucesso.textContent = '';
+        msgErro.textContent = '';
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        limparAlertas();
+
+        const senhaAtual = document.getElementById('senhaAtual').value;
+        const novaSenha = document.getElementById('novaSenha').value;
+        const confirmarNovaSenha = document.getElementById('confirmarNovaSenha').value;
+
+        if (!senhaAtual || !novaSenha || !confirmarNovaSenha) {
+            msgErro.textContent = 'Por favor, preencha todos os campos obrigatórios.';
+            alertaErro.classList.remove('d-none');
+            return;
+        }
+
+        if (novaSenha !== confirmarNovaSenha) {
+            msgErro.textContent = 'A confirmação não confere com a nova senha digitada.';
+            alertaErro.classList.remove('d-none');
+            return;
+        }
+
+        if (novaSenha === senhaAtual) {
+            msgErro.textContent = 'A nova senha deve ser diferente da senha atual.';
+            alertaErro.classList.remove('d-none');
+            return;
+        }
+
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Atualizando...';
+
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfMeta ? csrfMeta.content : '';
+
+            const resp = await fetch('/auth/alterar-senha', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    senha_atual: senhaAtual,
+                    nova_senha: novaSenha,
+                    confirmar_nova_senha: confirmarNovaSenha
+                })
+            });
+
+            const data = await resp.json();
+
+            if (resp.ok) {
+                msgSucesso.textContent = data.mensagem || 'Senha alterada com sucesso!';
+                alertaSucesso.classList.remove('d-none');
+                form.reset();
+            } else {
+                msgErro.textContent = data.erro || 'Falha ao atualizar senha.';
+                alertaErro.classList.remove('d-none');
+            }
+        } catch (err) {
+            msgErro.textContent = 'Erro de conexão com o servidor. Tente novamente.';
+            alertaErro.classList.remove('d-none');
+        } finally {
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = '<i class="fas fa-save me-2"></i>Atualizar Minha Senha';
+        }
+    });
+});
+</script>
+{% endblock %}

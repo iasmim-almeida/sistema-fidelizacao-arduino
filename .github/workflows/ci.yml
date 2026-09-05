@@ -1,0 +1,52 @@
+name: CI - FideliZa
+
+on:
+  push:
+    branches: [ main, master, feat/* ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Testes Automatizados e Auditoria de Segurança
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar Dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verificar Compilação Python
+        run: |
+          python -m compileall -q app migrations tests run.py seed.py test_security_audit.py
+
+      - name: Validar Consistência das Migrations (Alembic)
+        env:
+          SECRET_KEY: "ci-secret-key-test-environment"
+          DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          flask --app run.py db check
+
+      - name: Executar Suíte de Testes Unitários e de Integração
+        env:
+          SECRET_KEY: "ci-secret-key-test-environment"
+          DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          python -m unittest discover -s tests -v
+
+      - name: Executar Suíte de Auditoria de Segurança (SAST/DAST)
+        env:
+          SECRET_KEY: "ci-secret-key-test-environment"
+          DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          python test_security_audit.py

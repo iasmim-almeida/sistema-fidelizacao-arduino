@@ -2,82 +2,99 @@
 {% set active = 'dashboard' %}
 {% block titulo %}Dashboard Geral{% endblock %}
 {% block page_title %}Painel Administrativo da Loja{% endblock %}
-{% block page_subtitle %}Métricas globais e controle operacional do programa de fidelidade{% endblock %}
+{% block page_subtitle %}Métricas consolidadas em tempo real do programa de fidelidade e vendas{% endblock %}
 
 {% block content %}
-<div class="banner-welcome shadow-sm">
+<div class="banner-welcome shadow-sm mb-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
             <h3 class="fw-bold m-0">Bem-vinda de volta, {{ current_user.nome.split(' ')[0] if current_user.is_authenticated else 'Vendedora' }}! 👋</h3>
-            <p class="m-0 opacity-90 mt-1">Resumo gerencial em tempo real de clientes, pontos distribuídos e faturamento.</p>
+            <p class="m-0 opacity-90 mt-1">Acompanhe métricas em tempo real de clientes, pontos acumulados, resgates e faturamento pontuado.</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ url_for('main.pontuar') }}" class="btn btn-warning text-dark fw-bold btn-sm rounded-pill px-3 shadow-sm">
                 <i class="fas fa-coins me-1"></i>Pontuar PDV
             </a>
             <a href="{{ url_for('main.resgate') }}" class="btn btn-light text-dark fw-bold btn-sm rounded-pill px-3 shadow-sm">
-                <i class="fas fa-gift me-1"></i>Entregar Prêmio
+                <i class="fas fa-gift me-1"></i>Validar Resgate
             </a>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mb-4">
+<!-- Indicadores Principais -->
+<div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card-indicator d-flex align-items-center">
-            <div class="p-3 rounded bg-light text-primary me-3"><i class="fas fa-users fa-lg"></i></div>
-            <div>
-                <h4 class="fw-bold m-0" id="totClientes">0</h4>
-                <small class="text-muted">Total de Clientes</small>
+        <a href="{{ url_for('main.v_clientes') }}" class="text-decoration-none">
+            <div class="card-indicator d-flex align-items-center h-100 shadow-sm">
+                <div class="p-3 rounded bg-light text-primary me-3"><i class="fas fa-users fa-lg"></i></div>
+                <div>
+                    <h4 class="fw-bold m-0 text-dark" id="totClientes">0</h4>
+                    <small class="text-muted">Total de Clientes (<span id="totClientesAtivos">0</span> ativos)</small>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-3">
-        <div class="card-indicator d-flex align-items-center">
+        <div class="card-indicator d-flex align-items-center h-100 shadow-sm">
             <div class="p-3 rounded me-3 text-warning" style="background-color: #fffdf6;"><i class="fas fa-coins fa-lg"></i></div>
             <div>
-                <h4 class="fw-bold m-0" id="totPontos">0</h4>
-                <small class="text-muted">Pontos Distribuídos</small>
+                <h4 class="fw-bold m-0 text-dark" id="totPontos">0</h4>
+                <small class="text-muted">Pontos Emitidos (<span id="saldoCirculacao">0</span> em saldo)</small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card-indicator d-flex align-items-center">
-            <div class="p-3 rounded bg-light text-success me-3"><i class="fas fa-gift fa-lg"></i></div>
-            <div>
-                <h4 class="fw-bold m-0" id="totResgates">0</h4>
-                <small class="text-muted">Prêmios Resgatados</small>
+        <a href="{{ url_for('main.resgate') }}" class="text-decoration-none">
+            <div class="card-indicator d-flex align-items-center h-100 shadow-sm">
+                <div class="p-3 rounded bg-light text-success me-3"><i class="fas fa-gift fa-lg"></i></div>
+                <div>
+                    <h4 class="fw-bold m-0 text-dark" id="totResgates">0</h4>
+                    <small class="text-muted">Prêmios Resgatados (<span id="pontosResgatados">0</span> pts)</small>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-3">
-        <div class="card-indicator d-flex align-items-center">
-            <div class="p-3 rounded bg-light text-danger me-3"><i class="fas fa-dollar-sign fa-lg"></i></div>
-            <div>
-                <h4 class="fw-bold m-0" id="totFaturamento">R$ 0,00</h4>
-                <small class="text-muted">Faturamento Pontuado</small>
+        <a href="{{ url_for('main.relatorios') }}" class="text-decoration-none">
+            <div class="card-indicator d-flex align-items-center h-100 shadow-sm">
+                <div class="p-3 rounded bg-light text-danger me-3"><i class="fas fa-dollar-sign fa-lg"></i></div>
+                <div>
+                    <h4 class="fw-bold m-0 text-dark" id="totFaturamento">R$ 0,00</h4>
+                    <small class="text-muted">Faturamento Pontuado</small>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
+<!-- Listas de Atividades Recentes -->
 <div class="row g-4">
-    <div class="col-md-6">
-        <div class="card p-4 h-100 shadow-sm border-0">
+    <div class="col-md-4">
+        <div class="card p-3 h-100 shadow-sm border-0">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold m-0"><i class="fas fa-users text-warning me-2"></i>Clientes Cadastrados</h6>
+                <h6 class="fw-bold m-0"><i class="fas fa-user-check text-primary me-2"></i>Clientes Recentes</h6>
                 <a href="{{ url_for('main.v_clientes') }}" class="small text-decoration-none fw-bold" style="color: var(--sidebar-color);">Ver todos &rarr;</a>
             </div>
-            <div id="listaClientesDash" class="text-muted">Carregando...</div>
+            <div id="listaClientesDash" class="text-muted small">Carregando clientes...</div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card p-4 h-100 shadow-sm border-0">
+    <div class="col-md-4">
+        <div class="card p-3 h-100 shadow-sm border-0">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-bold m-0"><i class="fas fa-clock text-warning me-2"></i>Últimas Compras no PDV</h6>
+                <h6 class="fw-bold m-0"><i class="fas fa-shopping-bag text-warning me-2"></i>Últimas Compras (PDV)</h6>
                 <a href="{{ url_for('main.relatorios') }}" class="small text-decoration-none fw-bold" style="color: var(--sidebar-color);">Relatórios &rarr;</a>
             </div>
-            <div id="listaAtividade" class="text-muted">Carregando...</div>
+            <div id="listaComprasDash" class="text-muted small">Carregando compras...</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100 shadow-sm border-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold m-0"><i class="fas fa-gift text-success me-2"></i>Últimos Resgates</h6>
+                <a href="{{ url_for('main.resgate') }}" class="small text-decoration-none fw-bold" style="color: var(--sidebar-color);">Resgates &rarr;</a>
+            </div>
+            <div id="listaResgatesDash" class="text-muted small">Carregando resgates...</div>
         </div>
     </div>
 </div>
@@ -85,60 +102,77 @@
 
 {% block scripts %}
 <script>
-async function j(u){
+async function carregarDashboard() {
     try {
-        const r = await fetch(u, { credentials: 'include' });
-        return r.ok ? await r.json() : [];
+        const r = await fetch('/api/dashboard/estatisticas', { credentials: 'include' });
+        if (!r.ok) return;
+        const data = await r.json();
+
+        document.getElementById('totClientes').textContent = data.total_clientes || 0;
+        document.getElementById('totClientesAtivos').textContent = data.clientes_ativos || 0;
+        document.getElementById('totPontos').textContent = (data.pontos_emitidos || 0).toLocaleString('pt-BR');
+        document.getElementById('saldoCirculacao').textContent = (data.saldo_circulacao || 0).toLocaleString('pt-BR');
+        document.getElementById('totResgates').textContent = data.total_resgates || 0;
+        document.getElementById('pontosResgatados').textContent = (data.pontos_utilizados || 0).toLocaleString('pt-BR');
+        document.getElementById('totFaturamento').textContent = 'R$ ' + (data.faturamento_total || 0).toFixed(2).replace('.', ',');
+
+        // Clientes recentes
+        const ld = document.getElementById('listaClientesDash');
+        if (data.clientes_recentes && data.clientes_recentes.length) {
+            ld.innerHTML = data.clientes_recentes.map(c => `
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <strong class="text-dark">${escapeHtml(c.nome)}</strong><br>
+                        <small class="text-muted">${escapeHtml(c.telefone)}</small>
+                    </div>
+                    <span class="badge bg-warning text-dark">${c.pontos_acumulados} pts</span>
+                </div>
+            `).join('');
+        } else {
+            ld.innerHTML = '<p class="m-0 py-3 text-center text-muted">Nenhum cliente cadastrado.</p>';
+        }
+
+        // Compras recentes
+        const lc = document.getElementById('listaComprasDash');
+        if (data.ultimas_compras && data.ultimas_compras.length) {
+            lc.innerHTML = data.ultimas_compras.map(c => {
+                const dt = c.data ? new Date(c.data).toLocaleDateString('pt-BR') : '-';
+                return `
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <strong class="text-dark">${escapeHtml(c.cliente_nome)}</strong><br>
+                        <small class="text-muted">R$ ${parseFloat(c.valor).toFixed(2).replace('.', ',')} &bull; ${dt}</small>
+                    </div>
+                    <span class="text-success fw-bold">+${c.pontos} pts</span>
+                </div>`;
+            }).join('');
+        } else {
+            lc.innerHTML = '<p class="m-0 py-3 text-center text-muted">Nenhuma compra recente.</p>';
+        }
+
+        // Resgates recentes
+        const lr = document.getElementById('listaResgatesDash');
+        if (data.ultimos_resgates && data.ultimos_resgates.length) {
+            lr.innerHTML = data.ultimos_resgates.map(res => {
+                const dt = res.data ? new Date(res.data).toLocaleDateString('pt-BR') : '-';
+                return `
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <strong class="text-dark">${escapeHtml(res.descricao)}</strong><br>
+                        <small class="text-muted">${escapeHtml(res.cliente_nome)} &bull; ${dt}</small>
+                    </div>
+                    <span class="badge bg-success">-${res.pontos} pts</span>
+                </div>`;
+            }).join('');
+        } else {
+            lr.innerHTML = '<p class="m-0 py-3 text-center text-muted">Nenhum resgate recente.</p>';
+        }
+
     } catch(e) {
-        return [];
+        console.error('Falha ao carregar dashboard', e);
     }
 }
 
-(async () => {
-    const [clientes, compras, resgates] = await Promise.all([
-        j('/api/clientes/'),
-        j('/api/compras/'),
-        j('/api/resgates/')
-    ]);
-
-    const fat = compras.reduce((s,c) => s + (parseFloat(c.valor)||0), 0);
-
-    document.getElementById('totClientes').textContent = Array.isArray(clientes) ? clientes.length : 0;
-    document.getElementById('totPontos').textContent = compras.reduce((s,c) => s + (c.pontos_gerados||0), 0);
-    document.getElementById('totResgates').textContent = resgates.length;
-    document.getElementById('totFaturamento').textContent = 'R$ ' + fat.toFixed(2).replace('.', ',');
-
-    const ld = document.getElementById('listaClientesDash');
-    if (Array.isArray(clientes) && clientes.length) {
-        ld.innerHTML = clientes.slice(0, 5).map(c => `
-            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                <div>
-                    <strong>${c.nome}</strong><br>
-                    <small class="text-muted">${c.telefone}</small>
-                </div>
-                <span class="badge bg-success">${c.pontos_acumulados} pts</span>
-            </div>
-        `).join('');
-    } else {
-        ld.innerHTML = '<p class="m-0 py-3 text-center text-muted">Nenhum cliente cadastrado ainda.</p>';
-    }
-
-    const la = document.getElementById('listaAtividade');
-    if (compras.length) {
-        la.innerHTML = compras.slice(0, 5).map(c => {
-            const dt = c.data ? new Date(c.data).toLocaleDateString('pt-BR') : '-';
-            return `
-            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-                <div>
-                    <span><i class="fas fa-cart-shopping text-success me-1"></i>Compra R$ ${parseFloat(c.valor).toFixed(2)}</span><br>
-                    <small class="text-muted">Cliente #${c.id_cliente} &bull; ${dt}</small>
-                </div>
-                <span class="text-success fw-bold">+${c.pontos_gerados} pts</span>
-            </div>`;
-        }).join('');
-    } else {
-        la.innerHTML = '<p class="m-0 py-3 text-center text-muted">Nenhuma compra registrada.</p>';
-    }
-})();
+document.addEventListener('DOMContentLoaded', carregarDashboard);
 </script>
 {% endblock %}

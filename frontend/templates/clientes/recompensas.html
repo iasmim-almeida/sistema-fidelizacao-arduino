@@ -1,130 +1,161 @@
 {% extends "base_clientes.html" %}
 {% set active = 'recompensas' %}
-{% block titulo %}Catálogo de Prêmios{% endblock %}
+{% block titulo %}Catálogo de Recompensas{% endblock %}
 {% block page_title %}Vitrine de Recompensas{% endblock %}
-{% block page_subtitle %}Troque seus pontos acumulados por vantagens e prêmios na loja{% endblock %}
+{% block page_subtitle %}Troque seus pontos por benefícios cadastrados pela loja{% endblock %}
 
 {% block content %}
 <div class="card-welcome d-flex justify-content-between align-items-center row g-3">
     <div class="col-12 text-sm-start">
         <span class="text-uppercase opacity-75 small fw-bold tracking-wider">Saldo disponível para resgate</span>
         <h1 class="display-4 fw-black m-0 mt-1" style="font-weight: 800;">
-            <span id="saldoDisponivel">{{ current_user.pontos_acumulados if current_user.is_authenticated else 0 }}</span> <span style="font-size: 24px;">pontos</span>
+            <span id="saldoDisponivel">{{ current_user.pontos_acumulados if current_user.is_authenticated else 0 }}</span>
+            <span style="font-size: 24px;">pontos</span>
         </h1>
-        <p class="m-0 mt-2 opacity-75 small">Escolha seu prêmio! Ao resgatar, você recebe um voucher instantâneo para apresentar no caixa.</p>
+        <p class="m-0 mt-2 opacity-75 small">Escolha uma recompensa disponível. O custo sempre é validado pelo servidor.</p>
     </div>
 </div>
 
 <div class="alert alert-light border mb-4 d-flex align-items-center shadow-sm" style="background-color: #fffdf6; border-color: #d4a373 !important;">
     <i class="fas fa-circle-info text-warning me-3 fs-5"></i>
-    <span class="small text-muted">Após confirmar o resgate, apresente o voucher para a vendedora no balcão da loja.</span>
+    <span class="small text-muted">Recompensas com pontos insuficientes continuam visíveis para você acompanhar quanto falta.</span>
 </div>
 
-<div id="voucherAlerta" class="alert alert-success d-none mb-4 shadow-sm">
-    <h5 class="fw-bold m-0"><i class="fas fa-ticket-simple me-2"></i>Voucher Gerado com Sucesso!</h5>
-    <p class="mb-1 mt-1" id="voucherTexto"></p>
-    <small class="text-muted">Apresente este código à vendedora no caixa para retirar seu prêmio.</small>
-</div>
-
+<div id="resgateAlerta" class="alert d-none mb-4 shadow-sm" role="alert"></div>
 <div class="row g-4" id="vitrine">
-    <div class="col-12 text-center py-4 text-muted">Carregando catálogo de prêmios...</div>
+    <div class="col-12 text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Carregando catálogo...</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const PREMIOS = [
-    { nome: 'Acessório à Escolha', custo: 40, icon: 'fa-gem', desc: 'Brinco, colar ou pulseira selecionada' },
-    { nome: 'T-Shirt Básica FideliZa', custo: 100, icon: 'fa-shirt', desc: 'Camiseta 100% algodão da coleção' },
-    { nome: 'Cupom de R$ 50,00 OFF', custo: 200, icon: 'fa-tags', desc: 'Desconto imediato em compras na loja' },
-];
-
 let clienteAtual = {
-    id_cliente: {{ current_user.id_cliente if current_user.is_authenticated else 0 }},
-    nome: "{{ current_user.nome if current_user.is_authenticated else 'Cliente' }}",
     pontos_acumulados: {{ current_user.pontos_acumulados if current_user.is_authenticated else 0 }}
 };
+let recompensas = [];
+let resgateEmAndamento = false;
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+const tipoLabels = {produto_fisico: 'Produto Físico', desconto_percentual: 'Desconto em Porcentagem', desconto_valor_fixo: 'Desconto em Valor Fixo'};
+
+function elemento(tag, classes, texto) {
+    const el = document.createElement(tag);
+    if (classes) el.className = classes;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+}
+
+function mostrarAlerta(texto, tipo) {
+    const alerta = document.getElementById('resgateAlerta');
+    alerta.className = `alert alert-${tipo} mb-4 shadow-sm`;
+    alerta.textContent = texto;
+    alerta.classList.remove('d-none');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function iconeDoTipo(tipo) {
+    if (tipo === 'desconto_percentual') return 'fa-percent';
+    if (tipo === 'desconto_valor_fixo') return 'fa-tags';
+    return 'fa-gift';
+}
 
 function renderVitrine() {
-    const saldo = clienteAtual ? clienteAtual.pontos_acumulados : 0;
+    const saldo = clienteAtual.pontos_acumulados || 0;
     document.getElementById('saldoDisponivel').textContent = saldo;
     const topbar = document.getElementById('topbarSaldo');
     if (topbar) topbar.textContent = saldo;
+    const vitrine = document.getElementById('vitrine');
+    vitrine.replaceChildren();
 
-    document.getElementById('vitrine').innerHTML = PREMIOS.map((p, i) => {
-        const pode = saldo >= p.custo;
-        const btn = pode
-            ? `<button onclick="resgatarPremio(${i})" class="btn btn-fidelidade w-100 rounded-pill py-2 fw-bold"><i class="fas fa-gift me-2"></i>Resgatar Prêmio</button>`
-            : `<button class="btn btn-lock w-100 rounded-pill py-2" disabled><i class="fas fa-lock me-2"></i>Faltam ${p.custo - saldo} pts</button>`;
-        const dim = pode ? '' : 'opacity-75';
-        const bg = pode ? '' : 'style="background-color:#f8f9fa;color:#6c757d;"';
-
-        return `
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="reward-card ${dim} d-flex flex-column justify-content-between h-100">
-                <div>
-                    <div class="reward-img-container" ${bg}>
-                        <i class="fas ${p.icon}"></i>
-                        <span class="badge-cost">${p.custo} pts</span>
-                    </div>
-                    <div class="reward-body">
-                        <h5 class="fw-bold text-dark mb-1">${p.nome}</h5>
-                        <p class="small text-muted mb-0">${p.desc}</p>
-                    </div>
-                </div>
-                <div class="p-3 pt-0">${btn}</div>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-async function resgatarPremio(index) {
-    const p = PREMIOS[index];
-    if (!clienteAtual) return;
-
-    if (!confirm(`Confirmar o resgate de "${p.nome}" por ${p.custo} pontos?`)) {
+    if (!recompensas.length) {
+        const vazio = elemento('div', 'col-12 text-center py-5 text-muted');
+        vazio.append(elemento('i', 'fas fa-gift fa-2x mb-2 opacity-50'), elemento('p', 'm-0', 'Nenhuma recompensa disponível no catálogo no momento.'));
+        vitrine.appendChild(vazio);
         return;
     }
 
-    try {
-        const resp = await fetch('/api/resgates/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-                id_cliente: clienteAtual.id_cliente,
-                pontos_utilizados: p.custo,
-                descricao_recompensa: p.nome
-            })
-        });
-        const data = await resp.json();
+    recompensas.forEach(r => {
+        const pode = r.pode_resgatar;
+        const coluna = elemento('div', 'col-12 col-md-6 col-lg-4');
+        const card = elemento('article', `reward-card reward-card-catalogo d-flex flex-column justify-content-between h-100 ${pode ? '' : 'reward-unavailable'}`);
+        const conteudo = document.createElement('div');
+        const imagem = elemento('div', 'reward-img-container');
+        imagem.appendChild(elemento('i', `fas ${iconeDoTipo(r.tipo)}`));
+        imagem.appendChild(elemento('span', 'badge-cost', `${r.custo_pontos} pts`));
+        const corpo = elemento('div', 'reward-body');
+        corpo.appendChild(elemento('h5', 'fw-bold text-dark mb-1', r.nome));
+        corpo.appendChild(elemento('span', 'badge bg-light text-dark border mb-2', tipoLabels[r.tipo] || r.tipo));
+        corpo.appendChild(elemento('p', 'small text-muted mb-2', r.beneficio_formatado));
+        corpo.appendChild(elemento('p', 'small mb-1', `Válida até ${new Date(`${r.validade}T12:00:00`).toLocaleDateString('pt-BR')}`));
+        corpo.appendChild(elemento('p', 'small text-muted mb-0', `Estoque: ${r.quantidade_disponivel} unidade(s)`));
+        conteudo.append(imagem, corpo);
 
-        if (resp.ok) {
-            clienteAtual.pontos_acumulados = data.saldo_atualizado;
-            const codigoVoucher = `FID-${Math.floor(1000 + Math.random() * 9000)}`;
-            const alertaBox = document.getElementById('voucherAlerta');
-            document.getElementById('voucherTexto').innerHTML = `Prêmio: <strong>${p.nome}</strong> &bull; Código: <code class="fs-5">${codigoVoucher}</code> &bull; Novo Saldo: <strong>${data.saldo_atualizado} pts</strong>`;
-            alertaBox.classList.remove('d-none');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            renderVitrine();
-        } else {
-            alert(data.erro || 'Não foi possível efetuar o resgate.');
+        const rodape = elemento('div', 'p-3 pt-0');
+        if (pode) rodape.appendChild(elemento('div', 'small text-success fw-bold text-center mb-2', 'Disponível para resgate'));
+        if (!pode) {
+            const motivo = elemento('div', 'alert alert-secondary py-2 px-3 small fw-bold mb-2 text-center', r.motivo_indisponibilidade || 'Indisponível');
+            rodape.appendChild(motivo);
+            if (r.motivo_indisponibilidade === 'Pontos insuficientes' && r.pontos_faltantes > 0) {
+                rodape.appendChild(elemento('p', 'small text-center text-muted mb-2', `Faltam ${r.pontos_faltantes} pontos`));
+            }
         }
-    } catch (e) {
-        alert('Erro ao conectar com o servidor para resgatar.');
+        const botao = elemento('button', pode ? 'btn btn-fidelidade w-100 rounded-pill py-2 fw-bold' : 'btn btn-lock w-100 rounded-pill py-2', pode ? 'Resgatar recompensa' : 'Indisponível');
+        botao.type = 'button';
+        botao.disabled = !pode;
+        if (pode) botao.addEventListener('click', () => resgatar(r, botao));
+        rodape.appendChild(botao);
+        card.append(conteudo, rodape);
+        coluna.appendChild(card);
+        vitrine.appendChild(coluna);
+    });
+}
+
+async function carregarDados() {
+    const vitrine = document.getElementById('vitrine');
+    try {
+        const [resCliente, resRecompensas] = await Promise.all([
+            fetch('/api/clientes/me', {credentials: 'include'}),
+            fetch('/api/recompensas/', {credentials: 'include'})
+        ]);
+        const dadosCliente = await resCliente.json();
+        const dadosRecompensas = await resRecompensas.json();
+        if (!resCliente.ok) throw new Error(dadosCliente.erro || 'Erro ao carregar seu saldo.');
+        if (!resRecompensas.ok) throw new Error(dadosRecompensas.erro || 'Erro ao carregar o catálogo.');
+        clienteAtual = dadosCliente;
+        recompensas = dadosRecompensas;
+        renderVitrine();
+    } catch (erro) {
+        vitrine.replaceChildren(elemento('div', 'col-12 alert alert-danger', erro.message));
     }
 }
 
-(async () => {
+async function resgatar(recompensa, botao) {
+    if (resgateEmAndamento) return;
+    if (!confirm(`Confirmar o resgate de "${recompensa.nome}" por ${recompensa.custo_pontos} pontos?`)) return;
+    resgateEmAndamento = true;
+    botao.disabled = true;
+    const textoOriginal = botao.textContent;
+    botao.textContent = 'Processando...';
     try {
-        const r = await fetch('/api/clientes/me', { credentials: 'include' });
-        if (r.ok) {
-            clienteAtual = await r.json();
-        }
-    } catch (e) {
-        console.error('Erro ao buscar dados do cliente:', e);
+        const resposta = await fetch('/api/resgates/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            credentials: 'include',
+            body: JSON.stringify({id_recompensa: recompensa.id_recompensa})
+        });
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.erro || 'Não foi possível efetuar o resgate.');
+        clienteAtual.pontos_acumulados = dados.saldo_atualizado;
+        mostrarAlerta(`Resgate #${dados.resgate.id_resgate} confirmado: ${dados.resgate.descricao_recompensa}. Novo saldo: ${dados.saldo_atualizado} pontos.`, 'success');
+        await carregarDados();
+    } catch (erro) {
+        mostrarAlerta(erro.message, 'danger');
+        botao.disabled = false;
+        botao.textContent = textoOriginal;
+    } finally {
+        resgateEmAndamento = false;
     }
-    renderVitrine();
-})();
+}
+
+carregarDados();
 </script>
 {% endblock %}

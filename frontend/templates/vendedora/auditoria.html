@@ -1,0 +1,167 @@
+{% extends "base_vendedora.html" %}
+{% set active = 'auditoria' %}
+{% block titulo %}Auditoria{% endblock %}
+{% block page_title %}Auditoria Administrativa{% endblock %}
+{% block page_subtitle %}Histórico e rastreabilidade de eventos críticos de segurança e negócios{% endblock %}
+
+{% block content %}
+<div class="card mb-4 shadow-sm border-0">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Ação</label>
+                <input type="text" id="filtroAcao" class="form-control form-control-sm" placeholder="Ex: LOGIN, AJUSTE...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Entidade</label>
+                <select id="filtroEntidade" class="form-select form-select-sm">
+                    <option value="">Todas as entidades</option>
+                    <option value="usuario">Colaborador (Usuário)</option>
+                    <option value="cliente">Cliente</option>
+                    <option value="compra">Compra</option>
+                    <option value="resgate">Resgate</option>
+                    <option value="recompensa">Recompensa</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Data Inicial</label>
+                <input type="date" id="filtroDataInicio" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Data Final</label>
+                <input type="date" id="filtroDataFim" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-fidelidade btn-sm w-100" onclick="carregarAuditoria(1)">
+                    <i class="fas fa-filter me-1"></i> Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold m-0"><i class="fas fa-shield-alt text-warning me-2"></i>Registros de Atividades</h6>
+        <span class="badge bg-light text-dark border" id="totalRegistros">0 registros</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Data / Hora</th>
+                    <th>Operador</th>
+                    <th>Ação</th>
+                    <th>Entidade</th>
+                    <th>Detalhes</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyAuditoria">
+                <tr><td colspan="6" class="text-center text-muted py-4">Carregando logs de auditoria...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2" id="paginacaoAuditoria" style="display: none !important;">
+        <span class="small text-muted" id="infoPaginacao">Página 1 de 1</span>
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" id="btnPaginaAnt" onclick="mudarPagina(-1)">Anterior</button>
+            <button class="btn btn-outline-secondary" id="btnPaginaProx" onclick="mudarPagina(1)">Próxima</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let paginaAtual = 1;
+let totalPaginas = 1;
+
+document.addEventListener('DOMContentLoaded', () => {
+    carregarAuditoria(1);
+});
+
+async function carregarAuditoria(page = 1) {
+    paginaAtual = page;
+    const acao = document.getElementById('filtroAcao').value.trim();
+    const entidade = document.getElementById('filtroEntidade').value;
+    const dtIni = document.getElementById('filtroDataInicio').value;
+    const dtFim = document.getElementById('filtroDataFim').value;
+
+    const params = new URLSearchParams({ page: page, per_page: 20 });
+    if (acao) params.append('acao', acao);
+    if (entidade) params.append('entidade', entidade);
+    if (dtIni) params.append('data_inicio', dtIni + 'T00:00:00');
+    if (dtFim) params.append('data_fim', dtFim + 'T23:59:59');
+
+    const resp = await fetch(`/api/auditoria/?${params.toString()}`, { credentials: 'include' });
+    if (!resp.ok) {
+        document.getElementById('tbodyAuditoria').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Erro ao carregar auditoria.</td></tr>';
+        return;
+    }
+    const data = await resp.json();
+    totalPaginas = data.pages || 1;
+    document.getElementById('totalRegistros').textContent = `${data.total || 0} registros`;
+    renderAuditoria(data.items || []);
+    atualizarPaginacao(data.page, data.pages);
+}
+
+function renderAuditoria(items) {
+    const tb = document.getElementById('tbodyAuditoria');
+    if (!items.length) {
+        tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Nenhum evento registrado com os filtros selecionados.</td></tr>';
+        return;
+    }
+
+    tb.innerHTML = items.map(item => {
+        const dt = item.data_hora ? new Date(item.data_hora).toLocaleString('pt-BR') : '-';
+        let detalhesFormatados = '-';
+        if (item.detalhes) {
+            try {
+                const parsed = JSON.parse(item.detalhes);
+                detalhesFormatados = `<code>${escapeHtml(JSON.stringify(parsed))}</code>`;
+            } catch(e) {
+                detalhesFormatados = `<small>${escapeHtml(item.detalhes)}</small>`;
+            }
+        }
+
+        const badgeAcao = item.acao.includes('FALHA') 
+            ? `<span class="badge bg-danger">${escapeHtml(item.acao)}</span>`
+            : item.acao.includes('LOGIN')
+            ? `<span class="badge bg-info text-dark">${escapeHtml(item.acao)}</span>`
+            : item.acao.includes('AJUSTE')
+            ? `<span class="badge bg-warning text-dark">${escapeHtml(item.acao)}</span>`
+            : `<span class="badge bg-secondary">${escapeHtml(item.acao)}</span>`;
+
+        return `
+        <tr>
+            <td class="small text-nowrap">${dt}</td>
+            <td><strong>${escapeHtml(item.usuario_nome)}</strong> ${item.usuario_login ? `<small class="text-muted">(${escapeHtml(item.usuario_login)})</small>` : ''}</td>
+            <td>${badgeAcao}</td>
+            <td><span class="badge bg-light text-dark border">${escapeHtml(item.entidade)} #${item.entidade_id || '-'}</span></td>
+            <td style="max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${detalhesFormatados}</td>
+            <td class="small text-muted">${escapeHtml(item.ip || '-')}</td>
+        </tr>`;
+    }).join('');
+}
+
+function atualizarPaginacao(atual, total) {
+    const footer = document.getElementById('paginacaoAuditoria');
+    if (total > 1) {
+        footer.style.display = 'flex';
+        document.getElementById('infoPaginacao').textContent = `Página ${atual} de ${total}`;
+        document.getElementById('btnPaginaAnt').disabled = (atual <= 1);
+        document.getElementById('btnPaginaProx').disabled = (atual >= total);
+    } else {
+        footer.style.display = 'none';
+    }
+}
+
+function mudarPagina(delta) {
+    const nova = paginaAtual + delta;
+    if (nova >= 1 && nova <= totalPaginas) {
+        carregarAuditoria(nova);
+    }
+}
+</script>
+{% endblock %}

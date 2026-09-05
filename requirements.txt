@@ -5,4 +5,4 @@ Flask-Migrate>=4.0
 Flask-WTF>=1.2
 Flask-Limiter>=3.5
 python-dotenv>=1.0
-# psycopg2-binary>=2.9   # driver PostgreSQL (migracao)
+psycopg2-binary>=2.9

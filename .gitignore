@@ -1,6 +1,35 @@
+# Ambientes virtuais
 .venv/
+venv/
+ENV/
+env/
+
+# Bytecode Python
 __pycache__/
-*.pyc
-*.db
+*.py[cod]
+*$py.class
+
+# Variaveis de ambiente e segredos locais
 .env
+.env.*
+!.env.example
+
+# Bancos de dados locais SQLite e instancias
+*.db
+*.sqlite
+*.sqlite3
 instance/
+
+# Testes e cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

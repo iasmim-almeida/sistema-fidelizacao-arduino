@@ -324,8 +324,13 @@ body{
 
 @media(max-width:768px){
 
+    .wrapper{
+        display:block;
+    }
+
     #sidebar{
-        width:220px;
+        width:100%;
+        min-height:auto;
     }
 
     #content{
@@ -347,6 +352,11 @@ body{
     .reward-card{
         flex-direction:column;
         text-align:center;
+    }
+
+    #sidebar.sidebar-escondida{
+        display:none;
+        margin-left:0;
     }
 }
 
@@ -582,6 +592,41 @@ body{
             color: #6c757d;
             border: 1px solid #ced4da;
             cursor: not-allowed;
+        }
+
+        .reward-unavailable {
+            opacity: .68;
+            filter: grayscale(.35);
+            background-color: #f8f9fa;
+        }
+
+        .reward-card-catalogo {
+            padding: 0;
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+        }
+
+        .reward-option-admin {
+            background: #fff;
+            border: 1px solid var(--rosa-pastel);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(92, 58, 67, .05);
+        }
+
+        .reward-option-admin:has(input:checked) {
+            border-color: #d85f82;
+            box-shadow: 0 0 0 3px rgba(216, 95, 130, .14);
+        }
+
+        .reward-option-admin.reward-unavailable {
+            cursor: not-allowed;
+        }
+
+        .fit-content {
+            width: fit-content;
         }
 
 /* Estilos específicos adicionais para a organização dos passos da Home */

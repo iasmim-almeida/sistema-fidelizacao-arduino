@@ -37,34 +37,55 @@ function renderHistorico(){
         (m.titulo.toLowerCase().includes(q) || m.sub.toLowerCase().includes(q))
     );
     const box = document.getElementById('listaHistorico');
+    box.replaceChildren();
 
     if (!lista.length) {
-        box.innerHTML = `
-        <div class="card p-4 text-center text-muted shadow-sm">
-            <i class="fas fa-receipt fa-2x mb-2 opacity-50"></i>
-            <p class="m-0">Nenhuma movimentação encontrada para este filtro.</p>
-        </div>`;
+        const vazio = document.createElement('div');
+        vazio.className = 'card p-4 text-center text-muted shadow-sm';
+        const icone = document.createElement('i');
+        icone.className = 'fas fa-receipt fa-2x mb-2 opacity-50';
+        const texto = document.createElement('p');
+        texto.className = 'm-0';
+        texto.textContent = 'Nenhuma movimentação encontrada para este filtro.';
+        vazio.append(icone, texto);
+        box.appendChild(vazio);
         return;
     }
 
-    box.innerHTML = lista.map(m => {
+    lista.forEach(m => {
         const cor = m.pts >= 0 ? 'points-positive' : 'points-negative';
         const sinal = m.pts >= 0 ? '+' : '';
-        const ic = m.tipo === 'compra' ? 'icon-compra fa-cart-shopping' : 'icon-resgate fa-gift';
+        const classeIcone = m.tipo === 'compra' ? 'icon-compra' : 'icon-resgate';
+        const iconeFa = m.tipo === 'compra' ? 'fa-cart-shopping' : 'fa-gift';
         const dt = m.data ? new Date(m.data).toLocaleString('pt-BR') : '-';
-        return `
-        <div class="history-card shadow-sm">
-            <div class="d-flex align-items-center">
-                <div class="icon-history ${ic.split(' ')[0]}"><i class="fas ${ic.split(' ')[1]}"></i></div>
-                <div>
-                    <h5 class="mb-1 fw-bold text-dark">${m.titulo}</h5>
-                    <small class="text-muted fw-semibold">${m.sub}</small><br>
-                    <small class="text-muted"><i class="fas fa-calendar-day me-1"></i>${dt}</small>
-                </div>
-            </div>
-            <div class="${cor}">${sinal}${m.pts} pts</div>
-        </div>`;
-    }).join('');
+        const card = document.createElement('div');
+        card.className = 'history-card shadow-sm';
+        const esquerda = document.createElement('div');
+        esquerda.className = 'd-flex align-items-center';
+        const iconeBox = document.createElement('div');
+        iconeBox.className = `icon-history ${classeIcone}`;
+        const icone = document.createElement('i');
+        icone.className = `fas ${iconeFa}`;
+        iconeBox.appendChild(icone);
+        const detalhes = document.createElement('div');
+        const titulo = document.createElement('h5');
+        titulo.className = 'mb-1 fw-bold text-dark';
+        titulo.textContent = m.titulo;
+        const subtitulo = document.createElement('small');
+        subtitulo.className = 'text-muted fw-semibold';
+        subtitulo.textContent = m.sub;
+        const quebra = document.createElement('br');
+        const data = document.createElement('small');
+        data.className = 'text-muted';
+        data.textContent = dt;
+        detalhes.append(titulo, subtitulo, quebra, data);
+        esquerda.append(iconeBox, detalhes);
+        const pontos = document.createElement('div');
+        pontos.className = cor;
+        pontos.textContent = `${sinal}${m.pts} pts`;
+        card.append(esquerda, pontos);
+        box.appendChild(card);
+    });
 }
 
 document.getElementById('filtroTexto').addEventListener('input', renderHistorico);

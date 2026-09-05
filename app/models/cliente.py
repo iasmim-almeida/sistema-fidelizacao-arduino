@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import db
@@ -13,8 +13,12 @@ class Cliente(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=True)
     endereco = db.Column(db.String(200), nullable=True)
     senha_hash = db.Column(db.String(255), nullable=True)
-    data_cadastro = db.Column(db.DateTime, default=datetime.utcnow)
+    data_cadastro = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
     pontos_acumulados = db.Column(db.Integer, default=0, nullable=False)
+    ativo = db.Column(db.Boolean, default=True, nullable=False)
 
     # Identificadores de Perfil / Role
     tipo = "cliente"
@@ -23,6 +27,18 @@ class Cliente(UserMixin, db.Model):
 
     compras = db.relationship("Compra", backref="cliente", lazy=True, cascade="all, delete-orphan")
     resgates = db.relationship("Resgate", backref="cliente", lazy=True, cascade="all, delete-orphan")
+    movimentacoes = db.relationship(
+        "MovimentacaoPontos",
+        backref="cliente_rel",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="MovimentacaoPontos.data_hora.desc()",
+    )
+
+    @property
+    def is_active(self):
+        """Flask-Login: clientes desativados não conseguem autenticar."""
+        return bool(self.ativo)
 
     def get_id(self):
         return f"c_{self.id_cliente}"
@@ -47,5 +63,6 @@ class Cliente(UserMixin, db.Model):
             "endereco": self.endereco,
             "data_cadastro": self.data_cadastro.isoformat() if self.data_cadastro else None,
             "pontos_acumulados": self.pontos_acumulados,
+            "ativo": self.ativo,
             "tipo": self.tipo,
         }
