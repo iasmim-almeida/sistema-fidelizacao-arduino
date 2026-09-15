@@ -1,7 +1,7 @@
 /*
- * FideliZa - ESP8266: envia compra por TELEFONE para a API Flask.
+ * IT Clube - ESP8266: envia compra por TELEFONE para a API Flask.
  * POST /api/compras/  body {"telefone":"...","valor":...}
- * Acende LED verde ao receber HTTP 201.
+ * Acende LED verde ao receber HTTP 201 (1 compra = 1 ponto).
  */
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>

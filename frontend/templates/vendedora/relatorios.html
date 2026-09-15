@@ -92,15 +92,6 @@
         </div>
     </div>
 </div>
-
-<!-- Rodapé Técnico Oculto para manter a contagem de faturamento -->
-<div class="row g-4">
-    <div class="col-12">
-        <div class="p-2 text-end text-muted font-monospace" style="font-size: 0.8rem;">
-            <i class="fas fa-wallet me-1"></i>Faturamento Bruto Acumulado: <span id="kFaturamento" class="fw-bold">R$ 1,00</span>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -111,19 +102,17 @@
 async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.ok?r.json():[]; }
 
 (async () => {
-    // 1. Busca os dados brutos das APIs nativas do seu back-end
+    // 1. Busca os dados brutos das APIs nativas do back-end
     const [clientes, compras, resgates] = await Promise.all([
         j('/api/clientes/'), j('/api/compras/'), j('/api/resgates/')
     ]);
     const cmap = {}; clientes.forEach(c=>cmap[c.id_cliente]=c);
 
-    // 2. Cálculos Gerais e Faturamento do seu código original
+    // 2. Cálculos Gerais da base e movimentações
     const totalClientes = clientes.length;
     const totalCompras = compras.length;
     const pontosEmitidos = compras.reduce((s,c)=>s+(c.pontos_gerados||0),0);
-    const pontosResgatados = resgates.reduce((s,r)=>s+(r.pontos_utilizados||0),0);
-    const fat = compras.reduce((s,c)=>s+(c.valor||0),0);
-    document.getElementById('kFaturamento').textContent = 'R$ ' + fat.toFixed(2).replace('.',','); 
+    const pontosResgatados = resgates.reduce((s,r)=>s+(r.pontos_utilizados||0),0); 
 
     // ====================================================
     // CÁLCULO DAS TRÊS EQUAÇÕES ACADÊMICAS DO TCC (Meili, 2022)

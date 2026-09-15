@@ -1,38 +1,42 @@
 {% extends "base_vendedora.html" %}
 {% set active = 'pontuar' %}
-{% block titulo %}Fidelização{% endblock %}
-{% block page_title %}Fidelização{% endblock %}
-{% block page_subtitle %}Identificação por Telefone e Pontuação{% endblock %}
+{% block titulo %}Pontuar Compra{% endblock %}
+{% block page_title %}Pontuar Compra{% endblock %}
+{% block page_subtitle %}Identificação do cliente e registro de ponto (1 compra = 1 ponto){% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <!-- Formulario de pontuacao -->
-        <div class="card mb-4">
-            <div class="card-header"><i class="fas fa-mobile-alt text-warning"></i> Identificar Cliente e Pontuar</div>
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3"><i class="fas fa-mobile-alt text-warning me-2"></i> Identificar Cliente e Pontuar</div>
             <div class="card-body p-4">
                 <form id="formPontuar">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">Telefone do cliente</label>
-                            <input type="tel" id="telefone" class="form-control form-control-lg" placeholder="11999991111" required>
+                            <label class="form-label fw-bold small text-secondary">Telefone do cliente</label>
+                            <input type="tel" id="telefone" class="form-control form-control-lg" placeholder="11999991111" required autocomplete="tel">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-bold">Valor da compra (R$)</label>
-                            <input type="number" step="0.01" id="valor" class="form-control form-control-lg" placeholder="0,00" required>
+                            <label class="form-label fw-bold small text-secondary">Valor da compra (R$) <span class="text-muted fw-normal">(Opcional)</span></label>
+                            <input type="number" step="0.01" id="valor" class="form-control form-control-lg" placeholder="0,00" value="0.00">
                         </div>
                         <div class="col-md-2">
-                            <button type="submit" class="btn btn-fidelidade w-100 py-2"><i class="fas fa-coins"></i></button>
+                            <button type="submit" class="btn btn-fidelidade w-100 py-3 fw-bold" id="btnPontuar"><i class="fas fa-coins me-1"></i> +1 pt</button>
                         </div>
+                    </div>
+                    <div class="form-text small text-muted mt-2">
+                        <i class="fas fa-info-circle text-primary me-1"></i>
+                        Regra IT Clube: Cada compra computa exatamente <strong>1 ponto</strong> na conta do cliente.
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Resultado da pontuacao -->
-        <div id="resultado" class="p-4 rounded shadow-sm text-center border mb-4 d-none"
+        <div id="resultado" class="p-4 rounded-4 shadow-sm text-center border mb-4 d-none"
              style="background: linear-gradient(135deg, var(--dourado-claro) 0%, #fff 100%); border-color: var(--rosa-pastel) !important;">
-            <h3 class="fw-bold m-0" style="color: var(--sidebar-color);">Pontuacao Computada!</h3>
+            <h4 class="fw-bold m-0" style="color: var(--sidebar-color);"><i class="fas fa-check-circle text-success me-2"></i>+1 Ponto Computado com Sucesso!</h4>
             <div class="row my-4 align-items-center">
                 <div class="col-4 border-end">
                     <span class="text-muted small d-block">TELEFONE</span>
@@ -47,21 +51,20 @@
                     <strong class="fs-4 text-success" id="rSaldo">-</strong>
                 </div>
             </div>
-            <small class="text-muted"><i class="fas fa-check-circle text-success"></i> Sinal visual enviado: LED Verde e som emitidos no Arduino.</small>
         </div>
 
-        <div id="erroBox" class="alert alert-danger d-none"></div>
+        <div id="erroBox" class="alert alert-danger d-none shadow-sm"></div>
 
         <!-- Historico -->
-        <div class="card">
-            <div class="card-header"><i class="fas fa-history"></i> Últimas Compras Pontuadas</div>
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3"><i class="fas fa-history text-primary me-2"></i> Últimas Compras Pontuadas</div>
             <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle">
+                <table class="table table-sm table-hover align-middle mb-0">
                     <thead class="table-light">
-                        <tr><th>Data</th><th>Cliente (ID)</th><th>Valor</th><th>Pontos</th></tr>
+                        <tr><th>Data</th><th>Cliente (ID)</th><th>Valor Registrado</th><th>Pontos</th></tr>
                     </thead>
                     <tbody id="tbodyCompras">
-                        <tr><td colspan="4" class="text-center text-muted">Carregando...</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted py-3">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -73,41 +76,66 @@
 {% block scripts %}
 <script>
 async function carregarCompras(){
-    const r = await fetch('/api/compras/', {credentials:'include'});
-    const compras = r.ok ? await r.json() : [];
-    const tb = document.getElementById('tbodyCompras');
-    if(!compras.length){ tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma compra ainda.</td></tr>'; return; }
-    tb.innerHTML = compras.slice(0,10).map(c=>{
-        const dt = c.data ? new Date(c.data).toLocaleString('pt-BR') : '-';
-        return `<tr><td>${dt}</td><td>#${c.id_cliente}</td><td>R$ ${c.valor.toFixed(2)}</td><td><span class="badge bg-success">+${c.pontos_gerados} pts</span></td></tr>`;
-    }).join('');
+    try {
+        const r = await fetch('/api/compras/', {credentials:'include'});
+        const compras = r.ok ? await r.json() : [];
+        const tb = document.getElementById('tbodyCompras');
+        if(!compras.length){ 
+            tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Nenhuma compra registrada.</td></tr>'; 
+            return; 
+        }
+        tb.innerHTML = compras.slice(0,10).map(c=>{
+            const dt = c.data ? new Date(c.data).toLocaleString('pt-BR') : '-';
+            const val = (c.valor !== null && c.valor !== undefined) ? `R$ ${parseFloat(c.valor).toFixed(2).replace('.', ',')}` : '-';
+            return `<tr><td>${dt}</td><td>#${c.id_cliente}</td><td>${val}</td><td><span class="badge bg-success">+${c.pontos_gerados} pt</span></td></tr>`;
+        }).join('');
+    } catch(err) {
+        console.error('Erro ao carregar histórico de compras:', err);
+    }
 }
 
 document.getElementById('formPontuar').addEventListener('submit', async e => {
     e.preventDefault();
+    const btn = document.getElementById('btnPontuar');
     const resultado = document.getElementById('resultado');
     const erroBox = document.getElementById('erroBox');
-    resultado.classList.add('d-none'); erroBox.classList.add('d-none');
+    resultado.classList.add('d-none'); 
+    erroBox.classList.add('d-none');
+    btn.disabled = true;
 
     const telefone = document.getElementById('telefone').value.trim();
-    const valor = parseFloat(document.getElementById('valor').value);
+    const valorInput = document.getElementById('valor').value;
+    const valor = valorInput ? parseFloat(valorInput) : 0.0;
 
-    const resp = await fetch('/api/compras/', {
-        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-        body: JSON.stringify({ telefone, valor })
-    });
-    const data = await resp.json();
+    try {
+        const resp = await fetch('/api/compras/', {
+            method:'POST', 
+            headers:{
+                'Content-Type':'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }, 
+            credentials:'include',
+            body: JSON.stringify({ telefone, valor })
+        });
+        const data = await resp.json();
 
-    if(resp.ok){
-        document.getElementById('rTelefone').textContent = data.cliente.telefone;
-        document.getElementById('rCliente').textContent = data.cliente.nome;
-        document.getElementById('rSaldo').textContent = data.saldo_atualizado + ' pts';
-        resultado.classList.remove('d-none');
-        e.target.reset();
-        carregarCompras();
-    } else {
-        erroBox.textContent = data.erro || 'Erro ao pontuar. Verifique o telefone.';
+        if(resp.ok){
+            document.getElementById('rTelefone').textContent = data.cliente.telefone;
+            document.getElementById('rCliente').textContent = data.cliente.nome;
+            document.getElementById('rSaldo').textContent = data.saldo_atualizado + ' pts';
+            resultado.classList.remove('d-none');
+            e.target.reset();
+            document.getElementById('valor').value = "0.00";
+            carregarCompras();
+        } else {
+            erroBox.textContent = data.erro || 'Erro ao pontuar compra. Verifique o telefone.';
+            erroBox.classList.remove('d-none');
+        }
+    } catch(err) {
+        erroBox.textContent = 'Erro de comunicação com o servidor.';
         erroBox.classList.remove('d-none');
+    } finally {
+        btn.disabled = false;
     }
 });
 

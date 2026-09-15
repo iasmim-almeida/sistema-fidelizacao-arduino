@@ -1,297 +1,203 @@
-# FideliZa — Sistema Integrado de Fidelização, Gestão Administrativa & IoT
+# IT Clube — Sistema Integrado de Fidelização, Gestão de PDV & IoT
 
-[![CI - FideliZa](https://github.com/iasmim-almeida/sistema-fidelizacao-arduino/actions/workflows/ci.yml/badge.svg)](https://github.com/iasmim-almeida/sistema-fidelizacao-arduino/actions)
-![Python](https://img.shields.io/badge/python-3.12-blue.svg)
-![Flask](https://img.shields.io/badge/flask-3.1-black.svg)
-![SQLAlchemy](https://img.shields.io/badge/sqlalchemy-2.0-red.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+[![Testes Automatizados](https://img.shields.io/badge/testes-94%20aprovados%20(100%25)-success.svg)](backend/tests/)
+[![Auditoria de Segurança](https://img.shields.io/badge/seguran%C3%A7a-OWASP%20Hardened-blue.svg)](SECURITY.md)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/flask-3.1-black.svg)](https://flask.palletsprojects.com/)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)](Dockerfile)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-O **FideliZa** é um sistema completo de fidelização de clientes e gestão de loja física, desenvolvido no âmbito acadêmico de Trabalho de Conclusão de Curso (TCC). O projeto combina uma plataforma web administrativa moderna com controle de acesso baseado em papéis (**RBAC**), portal de autoatendimento para clientes, extrato transacional de pontos (**Ledger Imutável**), catálogo e resgate transacional de recompensas com controle de concorrência, auditoria de segurança e integração via hardware embarcado (**ESP8266**).
-
----
-
-## 1. Problema Resolvido
-
-Muitos estabelecimentos comerciais físicos enfrentam dificuldades para reter clientes e gerenciar programas de recompensas de forma segura:
-- Cartões de fidelidade físicos em papel são facilmente fraudados, perdidos ou esquecidos;
-- Sistemas improvisados não possuem integridade contábil nas transações de pontos, facilitando manipulações indevidas;
-- Falta de hierarquia entre colaboradores permite que operadores realizem ações críticas sem autorização;
-- Ausência de rastreabilidade e logs de auditoria impossibilita identificar fraudes ou erros de caixa.
-
-O **FideliZa** resolve esses desafios centralizando a gestão de clientes, compras, pontuações, funcionários e recompensas em uma aplicação segura, auditável e integrada diretamente ao caixa (PDV e terminal IoT).
+O **IT Clube** é uma solução corporativa completa de fidelização de clientes e gestão operacional de PDV voltada para o varejo físico de moda e cosméticos. O sistema combina uma aplicação web de alto desempenho com arquitetura em camadas (**Backend**, **Frontend**, **Database** e **IoT**), controle de acesso baseado em papéis (**RBAC**), portal de autoatendimento para clientes, extrato transacional com **Ledger Imutável de Pontos**, catálogo com resgate presencial seguro, auditoria de segurança completa e integração com hardware embarcado (**ESP8266 NodeMCU**).
 
 ---
 
-## 2. Recursos e Funcionalidades
+## 1. Regras Fundamentais de Negócio
 
-### 👥 Hierarquia de Colaboradores & RBAC (Role-Based Access Control)
-- **Proprietário / Administrador:** Acesso irrestrito a todos os módulos (dashboard, clientes, equipe, recompensas, resgates, relatórios, auditoria e configurações).
-- **Gerente:** Gestão operacional de clientes, ajuste de pontos, catálogo de recompensas, entrega de prêmios e relatórios de vendas.
-- **Vendedor:** Operação ágil de PDV (pesquisa e auto-cadastro de clientes, pontuação de compras e validação de resgates). Protegido contra escalada de privilégios.
-- Desativação suave (**soft disable**) de colaboradores impedindo login imediato de contas inativas.
-
-### 🛍️ Gestão Completa de Clientes
-- Cadastro de clientes no balcão e portal de auto-cadastro com proteção anti-CSRF;
-- Busca instantânea por nome, telefone ou e-mail, com filtros por status e faixa de pontos;
-- Perfil detalhado com histórico de visitas, total gasto, recompensas resgatadas e extrato de movimentações;
-- Desativação temporária (**soft delete**) preservando a integridade do histórico financeiro e de pontos.
-
-### 🪙 Ledger Imutável de Pontos & Ajuste Manual Seguro
-- Registro contábil completo de cada alteração de saldo através da entidade `MovimentacaoPontos`;
-- Tipos de movimentação: `COMPRA`, `RESGATE`, `AJUSTE_POSITIVO`, `AJUSTE_NEGATIVO`, `ESTORNO` e `EXPIRACAO`;
-- Bloqueio pessimista de linha (`with_for_update`) prevenindo *race conditions* em compras ou ajustes simultâneos;
-- Ajuste manual com justificativa obrigatória registrada para auditoria e impedimento de saldo negativo.
-
-### 🎁 Recompensas & Resgates Transacionais
-- Criação e gestão de prêmios: produtos físicos, desconto percentual (%) e desconto em valor fixo (R$);
-- Controle atômico de estoque, validade e custo em pontos com `CheckConstraint` no banco de dados;
-- Resgate seguro com atualização síncrona do saldo do cliente e estoque da recompensa; reversão completa (*rollback*) em caso de falha;
-- Catálogo no portal do cliente com bloqueio visual claro para itens com pontos insuficientes.
-
-### 🛡️ Trilha de Auditoria Administrativa
-- Registro persistente de eventos críticos: logins, logouts, troca de senha, criação/edição de funcionários, alteração de status, ajustes manuais de pontos e validação de resgates;
-- Sanitização estrita: senhas, hashes, chaves de API e tokens **nunca** são persistidos nos logs;
-- Interface de consulta paginada com filtros por operador, ação, entidade e período.
-
-### 📊 Dashboard & Métricas Acadêmicas de TCC
-- Indicadores em tempo real: clientes totais e ativos, pontos emitidos e em circulação, faturamento pontuado e prêmios entregues;
-- Fórmulas analíticas do modelo de retenção (Meili, 2022):
-  - **Taxa de Recorrência:** Média de compras por cliente cadastrado;
-  - **Rotatividade (Churn Adaptativo):** Percentual de clientes sem compras nos últimos 30 dias;
-  - **Taxa de Resgate (Redemption Rate):** Proporção de pontos emitidos que foram convertidos em benefícios.
-
-### ⚡ Integração IoT (ESP8266)
-- Firmware em C++ para microcontrolador ESP8266;
-- Registro de compras via API HTTP/JSON com autenticação por chave pré-compartilhada (`X-Device-Key`);
-- Feedback visual com LED para confirmação de transação bem-sucedida.
+1. **Regra de Pontuação Unificada (1 Compra = 1 Ponto):**
+   - No IT Clube, cada compra registrada no PDV ou via terminal IoT soma rigorosamente **1 ponto** à conta do cliente, de forma totalmente desacoplada do valor financeiro da compra.
+   - Compras de R$ 10,00, R$ 100,00 ou R$ 1.000,00 computam exatamente **+1 ponto**.
+2. **Autoatendimento do Cliente com Fronteiras Rígidas:**
+   - O cliente possui área própria em `/perfil` para atualizar seus dados cadastrais (nome, telefone e e-mail) e alterar sua senha com segurança.
+   - **Imutabilidade de Pontos:** O cliente não pode alterar seu saldo, criar movimentações ou visualizar dados de outros clientes.
+3. **Catálogo de Prêmios & Resgate Exclusivo em Loja Física:**
+   - Os clientes visualizam todas as recompensas cadastradas. Quando o saldo é inferior ao custo, o card é exibido desabilitado informando *"Pontos insuficientes"* e calculando *"Faltam X pontos"*.
+   - **Bloqueio de Auto-Resgate:** Clientes finais não podem efetuar resgates por conta própria (chamadas diretas a `POST /api/resgates/` retornam `403 Forbidden`). O resgate e a entrega do prêmio são confirmados exclusivamente pela vendedora/gestora no balcão da loja.
+4. **Foco Operacional sem Exibição Financeira Desnecessária:**
+   - O dashboard e os relatórios priorizam indicadores de retenção, recorrência e total de compras pontuadas, sem métricas financeiras acumuladas expostas na rotina de pontuação.
 
 ---
 
-## 3. Arquitetura do Sistema
+## 2. Estrutura Padronizada do Repositório
 
-```mermaid
-flowchart TD
-    subgraph Acesso["Interfaces de Usuário"]
-        G[Administrador / Colaborador] -->|HTTPS / Sessão Web| WebAdmin[Frontend Administrativo Jinja2]
-        C[Cliente Final] -->|HTTPS / Sessão Web| WebClient[Portal do Cliente Jinja2]
-        ESP[Terminal Físico ESP8266] -->|HTTP / JSON + X-Device-Key| APICompras[API de Compras PDV]
-    end
-
-    subgraph Backend["Aplicação Flask (Application Factory)"]
-        WebAdmin --> Middlewares[CSRF / Rate Limiter / RBAC]
-        WebClient --> Middlewares
-        APICompras --> AuthIoT[Validação de Chave Pré-Compartilhada]
-
-        Middlewares --> Blueprints
-        AuthIoT --> Blueprints
-
-        subgraph Blueprints["Módulos e Serviços"]
-            BAuth[Auth & Sessão]
-            BFunc[Funcionários & RBAC]
-            BCli[Clientes]
-            BPts[Ledger de Pontos]
-            BComp[Compras]
-            BRec[Recompensas]
-            BResg[Resgates]
-            BAud[Auditoria]
-        end
-
-        Blueprints --> ORM[SQLAlchemy / Engine Transacional]
-    end
-
-    subgraph Persistencia["Armazenamento Persistente"]
-        ORM --> DB[(Banco de Dados: SQLite / PostgreSQL)]
-    end
-```
-
----
-
-## 4. Stack Tecnológica
-
-| Camada | Tecnologias |
-|---|---|
-| **Backend** | Python 3.12, Flask 3.1, Flask-Login, Flask-WTF, Flask-Limiter, Werkzeug |
-| **Banco de Dados** | SQLAlchemy 2.0, Flask-Migrate (Alembic), SQLite3 (Dev/Test), PostgreSQL (Prod) |
-| **Frontend** | Jinja2 Server-Side Rendering, Bootstrap 5.3, FontAwesome 6, Chart.js, Fetch API |
-| **Segurança** | PBKDF2 Password Hashing, CSRFProtect, Content Security Policy (CSP), Session Hijacking Defense |
-| **IoT / Hardware** | Microcontrolador ESP8266 (ESP-12E / NodeMCU), C++, Arduino Core |
-| **CI / DevOps** | GitHub Actions, Git, Python compileall, Unittest |
-
----
-
-## 5. Estrutura do Diretório
+O projeto adota uma arquitetura em camadas desacopladas e padronizadas:
 
 ```text
-sistema-fidelizacao-arduino/
-├── app/
-│   ├── __init__.py               # Application Factory, extensões, cabeçalhos de segurança
-│   ├── config.py                 # Configurações de ambiente (Dev, Test, Prod)
-│   ├── extensions.py             # Instâncias db, login_manager, csrf, limiter, migrate
-│   ├── forms.py                  # Formulários Flask-WTF e validações de senha
-│   ├── models/                   # Modelos de dados SQLAlchemy
-│   │   ├── auditoria.py          # Entidade de trilha de auditoria
-│   │   ├── cliente.py            # Entidade do cliente (com soft delete)
-│   │   ├── compra.py             # Registro de compras e pontuações
-│   │   ├── movimentacao_pontos.py# Ledger imutável de transações de pontos
-│   │   ├── recompensa.py         # Catálogo com estoque e regras de benefício
-│   │   ├── resgate.py            # Registro atômico de entregas de prêmios
-│   │   └── usuario.py            # Colaboradores (Admin, Gerente, Vendedor)
-│   ├── routes/                   # Blueprints e controladores web e REST
-│   │   ├── auditoria.py          # Endpoints de consulta a logs
-│   │   ├── auth.py               # Login, logout, auto-cadastro e troca de senha
-│   │   ├── clientes.py           # Gestão de clientes, ajustes de pontos e extrato
-│   │   ├── compras.py            # Registro de compras PDV e IoT
-│   │   ├── funcionarios.py       # CRUD de colaboradores e RBAC
-│   │   ├── main.py               # Rotas das páginas web e dashboard
-│   │   ├── recompensas.py        # Catálogo administrativo de prêmios
-│   │   └── resgates.py           # Entrega transacional de benefícios
-│   └── services/                 # Lógica de negócio e utilitários transversais
-│       ├── auditoria.py          # Serviço seguro de sanitização e log
-│       ├── pontos.py             # Ledger transacional com lock pessimista
-│       └── rbac.py               # Matriz de papéis, permissões e decorators
-├── arduino/                      # Firmware C++ para o ESP8266
-├── database/scripts_sql/         # Schema PostgreSQL equivalente para provisionamento manual
-├── docs/                         # Documentações técnicas e especificações de TCC
-├── frontend/
-│   ├── static/css/style.css      # Folha de estilo compartilhada do FideliZa
-│   └── templates/                # Páginas Jinja2
-│       ├── base_vendedora.html   # Layout base da área administrativa
-│       ├── base_clientes.html    # Layout base do portal do cliente
-│       ├── login.html            # Tela unificada de autenticação
-│       ├── cadastro.html         # Tela de auto-cadastro do cliente
-│       ├── clientes/             # Visões do cliente (Dashboard, Extrato, Catálogo)
-│       └── vendedora/            # Visões administrativas (Clientes, Funcionários, Auditoria, etc.)
-├── migrations/                   # Versões de migração Alembic
-├── tests/                        # Suíte abrangente de testes automatizados (83 testes)
-├── .env.example                  # Variáveis de ambiente de exemplo
-├── .gitignore                    # Regras de exclusão do Git
-├── requirements.txt              # Dependências Python do projeto
-├── run.py                        # Ponto de entrada da aplicação
-├── seed.py                       # Script de carga inicial para demonstração
-└── test_security_audit.py        # Suíte de verificação de segurança (SAST/DAST local)
+sistema-fidelizacao-integrado/
+├── backend/                      # Aplicação Flask, APIs e Lógica de Negócio
+│   ├── app/
+│   │   ├── __init__.py           # Application Factory e extensões
+│   │   ├── config.py             # Configurações de ambiente (Dev, Test, Prod)
+│   │   ├── extensions.py         # SQLAlchemy, Migrate, Login, CSRF, Limiter
+│   │   ├── forms.py              # Formulários seguros Flask-WTF
+│   │   ├── models/               # Modelos relacionais (Usuario, Cliente, Compra, etc.)
+│   │   ├── repositories/         # Camada de acesso e consultas otimizadas
+│   │   ├── routes/               # Blueprints REST e controllers
+│   │   ├── security/             # Políticas de senha e sanitização
+│   │   ├── services/             # Ledger de pontos, RBAC e auditoria
+│   │   └── utils/                # Sanitizadores e utilitários auxiliares
+│   ├── tests/                    # Suíte completa de testes automatizados (94 testes)
+│   ├── Dockerfile                # Dockerfile individual do backend
+│   ├── requirements.txt          # Dependências Python com versões pinadas
+│   └── run.py                    # Script de inicialização do backend
+├── frontend/                     # Camada de Apresentação e Recursos Estáticos
+│   ├── static/
+│   │   ├── css/style.css         # Identidade visual e paleta oficial IT Clube
+│   │   ├── js/                   # Scripts auxiliares e manipulação do DOM
+│   │   └── assets/               # Imagens e ícones
+│   ├── templates/                # Templates Jinja2 organizados por contexto
+│   │   ├── base_clientes.html    # Layout base do Portal do Cliente
+│   │   ├── base_vendedora.html   # Layout base do Painel da Loja
+│   │   ├── login.html            # Login com seletor de perfil (Vendedora / Cliente)
+│   │   ├── cadastro.html         # Cadastro público de clientes
+│   │   ├── clientes/             # Início, Meus Pontos, Prêmios, Histórico e Perfil
+│   │   └── vendedora/            # Dashboard, Pontuar PDV, Resgate, Clientes, Relatórios
+│   └── README.md                 # Documentação detalhada do frontend
+├── database/                     # Migrações, Esquemas e Carga de Dados
+│   ├── migrations/               # Histórico versionado Alembic / Flask-Migrate (0001 a 0004)
+│   ├── schema/                   # DDL e diagramas relacionais
+│   ├── scripts/                  # Scripts SQL de suporte
+│   ├── seeds/                    # Carga inicial e massa de testes (seed.py)
+│   └── README.md                 # Documentação da modelagem do banco
+├── arduino/                      # Terminal Físico IoT (ESP8266 NodeMCU)
+│   ├── esp8266/                  # Código-fonte do firmware (.ino)
+│   └── README.md                 # Pinagem, esquemático e protocolo de segurança PSK
+├── docs/                         # Documentação Técnica e de Engenharia
+│   ├── architecture/             # Visão geral da arquitetura e fluxos
+│   ├── security/                 # Relatório de mitigação de vulnerabilidades e hardening
+│   ├── api/                      # Catálogo completo de endpoints REST
+│   └── development/              # Guia de configuração e execução local
+├── .dockerignore                 # Arquivos ignorados na geração das imagens Docker
+├── .env.example                  # Template estrito de variáveis de ambiente
+├── .gitignore                    # Regras de exclusão do controle de versão
+├── docker-compose.yml            # Orquestração do Backend + PostgreSQL
+├── Dockerfile                    # Imagem Docker segura de produção (non-root)
+├── README.md                     # Documento principal do projeto
+├── run.py                        # Ponto de entrada raiz da aplicação
+├── SECURITY.md                   # Política de divulgação de vulnerabilidades
+└── test_security_audit.py        # Suíte de verificação de segurança (SAST / DAST local)
 ```
 
 ---
 
-## 6. Modelo de Permissões (RBAC)
+## 3. Matriz de Perfis e Permissões (RBAC)
 
-O sistema implementa uma matriz de autorização centralizada em [`app/services/rbac.py`](app/services/rbac.py):
+O sistema conta com controle de acesso granular implementado em [`backend/app/services/rbac.py`](backend/app/services/rbac.py):
 
-| Permissão | Descrição | Proprietário | Gerente | Vendedor |
-|---|---|:---:|:---:|:---:|
-| `clientes.visualizar` | Consultar clientes e extratos | ✅ | ✅ | ✅ |
-| `clientes.criar` | Cadastrar novos clientes no PDV | ✅ | ✅ | ✅ |
-| `clientes.editar` | Alterar dados cadastrais de clientes | ✅ | ✅ | ❌ |
-| `clientes.desativar` | Ativar/desativar conta de cliente | ✅ | ✅ | ❌ |
-| `pontos.visualizar` | Consultar saldos e movimentações | ✅ | ✅ | ✅ |
-| `pontos.adicionar` | Creditar pontos e compras | ✅ | ✅ | ✅ |
-| `pontos.remover` | Estornar ou debitar pontos manualmente | ✅ | ✅ | ❌ |
-| `funcionarios.visualizar` | Listar equipe e dados cadastrais | ✅ | ❌ | ❌ |
-| `funcionarios.criar` | Cadastrar novos colaboradores | ✅ | ❌ | ❌ |
-| `funcionarios.editar` | Editar colaboradores e redefinir senhas | ✅ | ❌ | ❌ |
-| `funcionarios.desativar` | Ativar/desativar colaboradores | ✅ | ❌ | ❌ |
-| `recompensas.visualizar` | Consultar catálogo de recompensas | ✅ | ✅ | ✅ |
-| `recompensas.criar` | Criar novas recompensas | ✅ | ✅ | ❌ |
-| `recompensas.editar` | Editar catálogo e estoque | ✅ | ✅ | ❌ |
-| `recompensas.desativar` | Pausar e reativar recompensas | ✅ | ✅ | ❌ |
-| `resgates.validar` | Entregar e debitar prêmios | ✅ | ✅ | ✅ |
-| `relatorios.visualizar` | Visualizar métricas e faturamento | ✅ | ✅ | ❌ |
-| `auditoria.visualizar` | Consultar logs administrativos | ✅ | ❌ | ❌ |
+| Módulo / Ação | Proprietária | Gerente | Vendedora | Cliente |
+| :--- | :---: | :---: | :---: | :---: |
+| **Pontuar Compra no PDV** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| **Validar e Dar Baixa em Resgates** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
+| **Consultar Catálogo de Prêmios** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| **Cadastrar / Editar Recompensas** | :white_check_mark: | :white_check_mark: | :x: | :x: |
+| **Gestão de Clientes da Loja** | :white_check_mark: | :white_check_mark: | Consulta | :x: |
+| **Autoatendimento (Meu Perfil)** | :x: | :x: | :x: | :white_check_mark: |
+| **Gestão de Equipe (Funcionários)** | :white_check_mark: | :x: | :x: | :x: |
+| **Consulta à Trilha de Auditoria** | :white_check_mark: | :x: | :x: | :x: |
+| **Relatórios e Análise de Retenção** | :white_check_mark: | :white_check_mark: | :x: | :x: |
 
 ---
 
-## 7. Como Executar (Linux / WSL / macOS)
+## 4. Como Executar o Projeto
 
-### Pré-requisitos
-- Python 3.12 ou superior instalado;
-- Git instalado.
+### 4.1. Execução Local Rápida
 
-### Passo 1: Clonar e entrar no diretório
-```bash
-git clone https://github.com/iasmim-almeida/sistema-fidelizacao-arduino.git
-cd sistema-fidelizacao-arduino
-```
+1. **Clone o repositório:**
+   ```bash
+   git clone <URL_DO_REPOSITORIO>
+   cd sistema-fidelizacao-integrado
+   ```
 
-### Passo 2: Criar e ativar o ambiente virtual
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
+2. **Crie e ative o ambiente virtual:**
+   ```bash
+   python -m venv venv
+   # Windows:
+   .\venv\Scripts\Activate.ps1
+   # Linux/macOS:
+   source venv/bin/activate
+   ```
 
-### Passo 3: Instalar as dependências
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
+3. **Instale as dependências:**
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
 
-### Passo 4: Configurar as variáveis de ambiente
-```bash
-cp .env.example .env
-```
-*(Opcional: edite o `.env` para ajustar `SECRET_KEY` ou `IOT_DEVICE_KEY`).*
+4. **Configure as variáveis de ambiente:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edite o `.env` com sua chave secreta e configurações.
 
-### Passo 5: Executar as migrações do banco de dados
-```bash
-flask --app run.py db upgrade
-```
+5. **Execute as migrações e popule o banco inicial:**
+   ```bash
+   flask db upgrade
+   python database/seeds/seed.py
+   ```
 
-### Passo 6: (Opcional) Popular com dados de demonstração
-> ⚠️ **Atenção:** O comando `python seed.py` é destrutivo e recria a base para demonstração do TCC.
-```bash
-python seed.py
-```
+6. **Inicie o servidor:**
+   ```bash
+   python run.py
+   ```
+   Acesse a aplicação em `http://127.0.0.1:5000`.
 
-### Passo 7: Iniciar o servidor de desenvolvimento
-```bash
-FLASK_ENV=development python run.py
-```
-Acesse a aplicação em: **`http://127.0.0.1:5000`**
-
----
-
-## 8. Credenciais de Demonstração (após `seed.py`)
-
-| Perfil | E-mail / Usuário | Senha | Destino Inicial |
-|---|---|---|---|
-| **Proprietário (Admin)** | `admin@loja.com` *(ou `admin`)* | `FideliZa2026` | `/dashboard` |
-| **Gerente** | `gerente@loja.com` *(ou `gerente`)* | `FideliZa2026` | `/dashboard` |
-| **Vendedor** | `vendedora@loja.com` *(ou `vendedora`)* | `FideliZa2026` | `/dashboard` |
-| **Cliente Exemplo (Ana)** | `11999991111` | `FideliZa2026` | `/bemvindo` |
-| **Cliente Exemplo (Carlos)** | `11988882222` | `FideliZa2026` | `/bemvindo` |
-
----
-
-## 9. Testes Automatizados e Qualidade
-
-O sistema conta com suíte de testes automatizados com 100% de aprovação:
+### 4.2. Execução com Docker & Docker Compose
 
 ```bash
-# 1. Executar testes unitários e de integração (83 testes)
-python -m unittest discover -s tests -v
+# Sobe a aplicação conteinerizada com banco de dados PostgreSQL
+docker compose up --build -d
 
-# 2. Executar auditoria de segurança (SAST / DAST local)
-DATABASE_URL="sqlite:///:memory:" python test_security_audit.py
-
-# 3. Validar consistência do esquema do banco com as Migrations
-flask --app run.py db check
-
-# 4. Validar compilação limpa do código
-python -m compileall -q app migrations tests run.py seed.py test_security_audit.py
+# Visualizar logs
+docker compose logs -f backend
 ```
 
 ---
 
-## 10. Contexto Acadêmico (TCC)
+## 5. Credenciais Padrão de Demonstração
 
-Este projeto foi concebido e implementado como Trabalho de Conclusão de Curso (TCC), demonstrando a aplicação prática de conceitos avançados da Engenharia de Software:
-- Arquitetura em camadas com separação clara de responsabilidades;
-- Padrões de projeto: Application Factory, Blueprints, Service Layer, Repository Pattern via ORM;
-- Transações atômicas ACID e prevenção de concorrência com bloqueio pessimista;
-- Segurança da informação aderente às recomendações da OWASP (Top 10): defesa contra Broken Access Control, Injection, CSRF, IDOR e Session Collision;
-- Integração de sistemas físicos e digitais por meio de computação ubíqua e Internet das Coisas (IoT).
+Após a execução do script `database/seeds/seed.py`, o sistema disponibiliza os seguintes acessos:
+
+- **Proprietária / Admin:**
+  - E-mail: `admin@loja.com`
+  - Senha: `ITClube2026`
+- **Vendedora (PDV):**
+  - E-mail: `vendedora@loja.com`
+  - Senha: `ITClube2026`
+- **Cliente (Ana Silva):**
+  - Telefone: `11999991111`
+  - Senha: `ITClube2026`
 
 ---
 
-## 11. Licença
+## 6. Testes Automatizados & Qualidade
 
-Este projeto é disponibilizado sob a licença [MIT](LICENSE).
+O projeto possui **100% de aprovação** em suas baterias de testes:
+
+```bash
+# Executa todos os 94 testes unitários e de integração
+python -m unittest discover backend/tests
+
+# Executa os testes de auditoria de segurança (SAST/DAST)
+python test_security_audit.py
+```
+
+### Cobertura de Testes:
+- **`test_itclube_regras.py`**: Validação de 1 compra = 1 ponto, independência do valor financeiro, autoatendimento, bloqueio de auto-resgate e privacidade de senhas em logs.
+- **`test_pontos_ledger.py`**: Integridade e concorrência no livro contábil de pontos.
+- **`test_recompensas.py`**: Estoque atômico, vigência de prêmios e permissões de resgate.
+- **`test_security_audit.py`**: Mitigações para OWASP Top 10, proteção contra BOLA/IDOR, Anti-CSRF, PBKDF2 e isolamento de ambiente.
+- **`test_rbac.py`**, **`test_cadastro.py`**, **`test_troca_senha.py`**, **`test_funcionarios.py`**, **`test_auditoria.py`**.
+
+---
+
+## 7. Licença
+
+Este projeto é distribuído sob a licença **MIT**. Consulte o arquivo `LICENSE` para mais detalhes.

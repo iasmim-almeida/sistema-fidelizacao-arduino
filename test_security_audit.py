@@ -1,7 +1,17 @@
 """
 Suíte de Verificação Automatizada de Segurança (SAST / DAST Local)
-Valida a eficácia das mitigações aplicadas no sistema FideliZa.
+Valida a eficácia das mitigações aplicadas no sistema IT Clube.
 """
+import os
+import sys
+
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "backend"))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 import re
 from app import create_app
 from app.extensions import db
@@ -12,7 +22,7 @@ from app.models import load_user
 
 def run_tests():
     print("=" * 70)
-    print("🔒 INICIANDO SUÍTE DE TESTES DE SEGURANÇA - FIDELIZA")
+    print("[SEGURANCA] INICIANDO SUITE DE TESTES DE SEGURANCA - IT CLUBE")
     print("=" * 70)
 
     app = create_app('testing')
@@ -131,6 +141,7 @@ def run_tests():
         'csrf_token': csrf_token_new,
         'nome': 'Cliente Auditado',
         'telefone': '11911112222',
+        'email': 'cliente.auditado@teste.com',
         'senha': 'MinhaSenhaSegura99',
         'confirmar_senha': 'MinhaSenhaSegura99'
     }, follow_redirects=False)

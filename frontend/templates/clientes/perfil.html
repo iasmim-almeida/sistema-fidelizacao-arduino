@@ -1,0 +1,220 @@
+{% extends "base_clientes.html" %}
+
+{% block titulo %}Meu Perfil{% endblock %}
+{% block page_title %}Meu Perfil{% endblock %}
+{% block page_subtitle %}Gerencie seus dados cadastrais e credenciais de acesso{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Card de Resumo do Cliente -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white">
+            <div class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle" style="width: 80px; height: 80px; background: linear-gradient(135deg, #fce4ec, #f8bbd0); color: #c2185b; font-size: 36px;">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <h5 class="fw-bold mb-1" id="displayNome">{{ current_user.nome }}</h5>
+            <p class="text-muted small mb-3">Cliente IT Clube</p>
+            <div class="p-3 rounded-3 mb-3" style="background-color: var(--bg-sistema, #fdf8f9); border: 1px solid var(--rosa-pastel, #f6cfd9);">
+                <span class="text-muted small d-block">Saldo Acumulado</span>
+                <span class="fs-4 fw-bold" style="color: var(--rosa-primario, #d85f82);">
+                    <i class="fas fa-coins me-1"></i>{{ current_user.pontos_acumulados }} pts
+                </span>
+            </div>
+            <div class="alert alert-light border small text-muted text-start mb-0">
+                <i class="fas fa-info-circle me-1 text-primary"></i>
+                Seus pontos são acumulados automaticamente a cada compra na loja física (1 compra = 1 ponto) e seu saldo não pode ser alterado diretamente.
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulários de Edição -->
+    <div class="col-lg-8">
+        <!-- Notificações -->
+        <div id="perfilAlert" class="alert d-none alert-dismissible fade show" role="alert">
+            <span id="perfilAlertMsg"></span>
+            <button type="button" class="btn-close" onclick="fecharAlerta()"></button>
+        </div>
+
+        <!-- Dados Cadastrais -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+            <h5 class="fw-bold mb-3 pb-2 border-bottom" style="color: #4a2c35;">
+                <i class="fas fa-id-card me-2 text-primary"></i>Dados Cadastrais
+            </h5>
+            <form id="formDadosCadastrais" onsubmit="atualizarDados(event)">
+                <div class="mb-3">
+                    <label for="inputNome" class="form-label fw-semibold small text-secondary">Nome Completo</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+                        <input type="text" class="form-control" id="inputNome" value="{{ current_user.nome }}" required maxlength="100">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label for="inputTelefone" class="form-label fw-semibold small text-secondary">Telefone / WhatsApp</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-phone"></i></span>
+                            <input type="text" class="form-control" id="inputTelefone" value="{{ current_user.telefone }}" required maxlength="20">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputEmail" class="form-label fw-semibold small text-secondary">E-mail</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" id="inputEmail" value="{{ current_user.email or '' }}" required maxlength="120">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold rounded-pill" id="btnSalvarDados" style="background: linear-gradient(135deg, #d85f82 0%, #c43d67 100%); border: none;">
+                        <i class="fas fa-save me-1"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Alterar Senha -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+            <h5 class="fw-bold mb-3 pb-2 border-bottom" style="color: #4a2c35;">
+                <i class="fas fa-shield-alt me-2 text-danger"></i>Segurança e Senha
+            </h5>
+            <form id="formAlterarSenha" onsubmit="atualizarSenha(event)">
+                <div class="mb-3">
+                    <label for="senhaAtual" class="form-label fw-semibold small text-secondary">Senha Atual</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-lock"></i></span>
+                        <input type="password" class="form-control" id="senhaAtual" required autocomplete="current-password">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="novaSenha" class="form-label fw-semibold small text-secondary">Nova Senha</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-key"></i></span>
+                            <input type="password" class="form-control" id="novaSenha" required minlength="8" autocomplete="new-password">
+                        </div>
+                        <div class="form-text small">Mínimo 8 caracteres (letras e números).</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="confirmarNovaSenha" class="form-label fw-semibold small text-secondary">Confirmar Nova Senha</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-check-circle"></i></span>
+                            <input type="password" class="form-control" id="confirmarNovaSenha" required minlength="8" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-outline-danger px-4 fw-semibold rounded-pill" id="btnSalvarSenha">
+                        <i class="fas fa-shield-halved me-1"></i>Atualizar Senha
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function mostrarAlerta(tipo, mensagem) {
+    const alerta = document.getElementById('perfilAlert');
+    alerta.className = `alert alert-${tipo} alert-dismissible fade show`;
+    document.getElementById('perfilAlertMsg').textContent = mensagem;
+    alerta.classList.remove('d-none');
+    alerta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function fecharAlerta() {
+    document.getElementById('perfilAlert').classList.add('d-none');
+}
+
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
+async function atualizarDados(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSalvarDados');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
+
+    const payload = {
+        nome: document.getElementById('inputNome').value.trim(),
+        telefone: document.getElementById('inputTelefone').value.trim(),
+        email: document.getElementById('inputEmail').value.trim()
+    };
+
+    try {
+        const resp = await fetch('/api/clientes/me', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+
+        if (resp.ok && data.status === 'success') {
+            mostrarAlerta('success', data.mensagem || 'Dados cadastrais atualizados com sucesso!');
+            document.getElementById('displayNome').textContent = data.cliente.nome;
+        } else {
+            mostrarAlerta('danger', data.mensagem || 'Erro ao atualizar dados.');
+        }
+    } catch (err) {
+        mostrarAlerta('danger', 'Erro de comunicação com o servidor.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i>Salvar Alterações';
+    }
+}
+
+async function atualizarSenha(e) {
+    e.preventDefault();
+    const senhaAtual = document.getElementById('senhaAtual').value;
+    const novaSenha = document.getElementById('novaSenha').value;
+    const confirmarNovaSenha = document.getElementById('confirmarNovaSenha').value;
+
+    if (novaSenha !== confirmarNovaSenha) {
+        mostrarAlerta('danger', 'A nova senha e a confirmação não coincidem.');
+        return;
+    }
+
+    const btn = document.getElementById('btnSalvarSenha');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Atualizando...';
+
+    try {
+        const resp = await fetch('/api/clientes/me/alterar-senha', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                senha_atual: senhaAtual,
+                nova_senha: novaSenha,
+                confirmar_senha: confirmarNovaSenha
+            })
+        });
+        const data = await resp.json();
+
+        if (resp.ok && data.status === 'success') {
+            mostrarAlerta('success', data.mensagem || 'Senha alterada com sucesso!');
+            document.getElementById('formAlterarSenha').reset();
+        } else {
+            mostrarAlerta('danger', data.mensagem || 'Erro ao alterar senha.');
+        }
+    } catch (err) {
+        mostrarAlerta('danger', 'Erro de comunicação com o servidor.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-shield-halved me-1"></i>Atualizar Senha';
+    }
+}
+</script>
+{% endblock %}

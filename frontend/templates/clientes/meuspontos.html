@@ -39,7 +39,7 @@
         <div class="card-stats">
             <div class="how-to-earn">
                 <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-circle-info me-2"></i>Regra de Pontuação</h6>
-                <p class="small text-muted m-0 mt-1">A cada <strong>R$ 1,00</strong> gasto na loja, você ganha <strong>1 ponto</strong> automaticamente!</p>
+                <p class="small text-muted m-0 mt-1">A cada <strong>compra realizada</strong> na loja, você ganha <strong>1 ponto</strong> automaticamente!</p>
             </div>
         </div>
     </div>
@@ -57,10 +57,11 @@
         ]);
 
         if (resMe) {
-            document.getElementById('saldoAtual').textContent = resMe.pontos_acumulados;
-            document.getElementById('nomeInfo').textContent = `${resMe.nome} • ${resMe.telefone}`;
+            const cliente = resMe.cliente || resMe;
+            document.getElementById('saldoAtual').textContent = cliente.pontos_acumulados;
+            document.getElementById('nomeInfo').textContent = `${cliente.nome} • ${cliente.telefone}`;
             const topbar = document.getElementById('topbarSaldo');
-            if (topbar) topbar.textContent = resMe.pontos_acumulados;
+            if (topbar) topbar.textContent = cliente.pontos_acumulados;
         }
 
         const acumulado = Array.isArray(resCompras) ? resCompras.reduce((s, x) => s + (x.pontos_gerados || 0), 0) : 0;

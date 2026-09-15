@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>FideliZa - {% block titulo %}Portal do Cliente{% endblock %}</title>
+    <title>IT Clube - {% block titulo %}Portal do Cliente{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -14,7 +14,7 @@
 <div class="wrapper">
     <nav id="sidebar">
         <div class="sidebar-heading mb-4 px-4">
-            <i class="fas fa-sparkles text-warning"></i> FideliZa
+            <i class="fas fa-sparkles text-warning"></i> IT Clube
         </div>
 
         <div class="sidebar-section-title">Meu Programa</div>
@@ -22,6 +22,7 @@
         <a href="{{ url_for('main.meuspontos') }}" class="nav-link-sidebar {% if active=='meuspontos' %}active{% endif %}"><i class="fas fa-coins"></i> Meus Pontos</a>
         <a href="{{ url_for('main.recompensas') }}" class="nav-link-sidebar {% if active=='recompensas' %}active{% endif %}"><i class="fas fa-gift"></i> Catálogo de Prêmios</a>
         <a href="{{ url_for('main.historico') }}" class="nav-link-sidebar {% if active=='historico' %}active{% endif %}"><i class="fas fa-clock-rotate-left"></i> Extrato de Compras</a>
+        <a href="{{ url_for('main.perfil') }}" class="nav-link-sidebar {% if active=='perfil' %}active{% endif %}"><i class="fas fa-user-circle"></i> Meu Perfil</a>
     </nav>
 
     <div id="content">

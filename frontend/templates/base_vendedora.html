@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>FideliZa - {% block titulo %}Painel Administrativo{% endblock %}</title>
+    <title>IT Clube - {% block titulo %}Painel Administrativo{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -20,23 +20,15 @@
         </div>
 
         <div class="sidebar-heading mb-4 px-4">
-            <i class="fas fa-sparkles text-warning"></i> FideliZa
+            <i class="fas fa-sparkles text-warning"></i> IT Clube
         </div>
 
         <div class="sidebar-section-title">Administração</div>
         <a href="{{ url_for('main.dashboard') }}" class="nav-link-sidebar {% if active=='dashboard' %}active{% endif %}"><i class="fas fa-chart-pie"></i> Visão Geral</a>
         <a href="{{ url_for('main.v_clientes') }}" class="nav-link-sidebar {% if active=='clientes' %}active{% endif %}"><i class="fas fa-users"></i> Gerenciar Clientes</a>
-        
-        {% if current_user.tem_permissao('funcionarios.visualizar') %}
-        <a href="{{ url_for('main.funcionarios') }}" class="nav-link-sidebar {% if active=='funcionarios' %}active{% endif %}"><i class="fas fa-user-shield"></i> Funcionários</a>
-        {% endif %}
 
         {% if current_user.tem_permissao('recompensas.visualizar') %}
         <a href="{{ url_for('main.gestao_recompensas') }}" class="nav-link-sidebar {% if active=='gestao_recompensas' %}active{% endif %}"><i class="fas fa-tags"></i> Gerenciar Recompensas</a>
-        {% endif %}
-
-        {% if current_user.tem_permissao('auditoria.visualizar') %}
-        <a href="{{ url_for('main.auditoria') }}" class="nav-link-sidebar {% if active=='auditoria' %}active{% endif %}"><i class="fas fa-history"></i> Auditoria</a>
         {% endif %}
 
         <a href="{{ url_for('main.alterar_senha') }}" class="nav-link-sidebar {% if active=='alterar_senha' %}active{% endif %}"><i class="fas fa-key"></i> Alterar Senha</a>

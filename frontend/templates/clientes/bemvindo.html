@@ -12,7 +12,7 @@
         <h1 class="display-6 fw-bold m-0" style="font-weight: 800;">
             Olá, <span id="nomeCliente">{{ current_user.nome if current_user.is_authenticated else 'Cliente' }}</span>! 👋
         </h1>
-        <p class="m-0 mt-2 opacity-90 small">Bem-vindo(a) ao seu espaço exclusivo no programa FideliZa.</p>
+        <p class="m-0 mt-2 opacity-90 small">Bem-vindo(a) ao seu espaço exclusivo no programa IT Clube.</p>
     </div>
     <div class="col-12 col-md-4 text-center text-md-end">
         <a href="{{ url_for('main.recompensas') }}" class="btn btn-light text-dark fw-bold px-4 py-2 rounded-pill shadow-sm">
@@ -71,7 +71,7 @@
             <div class="row align-items-center g-3">
                 <div class="col-12 col-md-9">
                     <h6 class="fw-bold text-warning-dark m-0"><i class="fas fa-fire me-2 text-danger"></i>Pronto para aproveitar seus pontos?</h6>
-                    <p class="small text-muted m-0 mt-1">Troque seu saldo por descontos e brindes diretamente no caixa da loja.</p>
+                    <p class="small text-muted m-0 mt-1">Troque seu saldo por benefícios diretamente no caixa da loja física.</p>
                 </div>
                 <div class="col-12 col-md-3 text-md-end">
                     <span class="btn btn-warning btn-sm fw-bold px-3 rounded-pill shadow-sm">Ver Catálogo <i class="fas fa-arrow-right ms-1"></i></span>
@@ -83,7 +83,7 @@
 
 <!-- Como Funciona -->
 <div class="mb-3">
-    <h5 class="fw-bold m-0" style="color: var(--texto-escuro);"><i class="fas fa-circle-question me-2 text-warning"></i>Como funciona o FideliZa?</h5>
+    <h5 class="fw-bold m-0" style="color: var(--texto-escuro);"><i class="fas fa-circle-question me-2 text-warning"></i>Como funciona o IT Clube?</h5>
     <small class="text-muted">Veja como é fácil acumular e resgatar suas vantagens</small>
 </div>
 
@@ -96,7 +96,7 @@
                     <div class="step-number">1</div>
                 </div>
                 <h6 class="fw-bold text-dark">Compre na Loja</h6>
-                <p class="text-muted small m-0">Informe seu telefone no caixa: a cada <strong>R$ 1,00</strong> você ganha <strong>1 ponto</strong>.</p>
+                <p class="text-muted small m-0">Informe seu telefone no caixa: a cada <strong>compra realizada</strong> você ganha <strong>1 ponto</strong>.</p>
             </div>
         </div>
     </div>
@@ -120,7 +120,7 @@
                     <div class="step-number">3</div>
                 </div>
                 <h6 class="fw-bold text-dark">Resgate Prêmios</h6>
-                <p class="text-muted small m-0">Escolha brindes ou cupons de desconto e resgate no balcão da vendedora.</p>
+                <p class="text-muted small m-0">Escolha brindes ou descontos e resgate no balcão da vendedora na loja.</p>
             </div>
         </div>
     </div>
@@ -139,10 +139,11 @@
         ]);
 
         if (resMe) {
-            document.getElementById('nomeCliente').textContent = resMe.nome;
-            document.getElementById('saldoPontos').textContent = resMe.pontos_acumulados;
+            const cliente = resMe.cliente || resMe;
+            document.getElementById('nomeCliente').textContent = cliente.nome;
+            document.getElementById('saldoPontos').textContent = cliente.pontos_acumulados;
             const topbar = document.getElementById('topbarSaldo');
-            if (topbar) topbar.textContent = resMe.pontos_acumulados;
+            if (topbar) topbar.textContent = cliente.pontos_acumulados;
         }
 
         const acumulado = Array.isArray(resCompras) ? resCompras.reduce((s, x) => s + (x.pontos_gerados || 0), 0) : 0;
