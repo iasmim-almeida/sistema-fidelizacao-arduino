@@ -5,6 +5,7 @@ from app.models.compra import Compra
 from app.models.recompensa import Recompensa
 from app.models.resgate import Resgate
 from app.models.movimentacao_pontos import MovimentacaoPontos
+from app.models.historico import Historico
 from app.models.auditoria import Auditoria
 
 
@@ -41,6 +42,7 @@ __all__ = [
     "Recompensa",
     "Resgate",
     "MovimentacaoPontos",
+    "Historico",
     "Auditoria",
     "load_user",
 ]

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from app.extensions import db
 from app.models.cliente import Cliente
-from app.models.movimentacao_pontos import MovimentacaoPontos
+from app.models.historico import Historico
 
 
 TIPOS_MOVIMENTACAO = (
@@ -24,7 +24,7 @@ def registrar_movimentacao(
     compra_id: int | None = None,
     resgate_id: int | None = None,
     recompensa_id: int | None = None,
-) -> tuple[bool, MovimentacaoPontos | None, str | None]:
+) -> tuple[bool, Historico | None, str | None]:
     """
     Executa a alteração atômica do saldo do cliente e persiste o registro no ledger imutável.
     
@@ -43,7 +43,7 @@ def registrar_movimentacao(
         return False, None, "A quantidade de pontos para movimentação não pode ser zero."
 
     # Bloqueia a linha do cliente para concorrência
-    cliente = Cliente.query.with_for_update().filter_by(id_cliente=cliente_id).first()
+    cliente = Cliente.query.with_for_update().filter_by(id_usuario=cliente_id).first()
     if not cliente:
         return False, None, "Cliente não encontrado."
 
@@ -59,19 +59,16 @@ def registrar_movimentacao(
     # Atualiza saldo
     cliente.pontos_acumulados = novo_saldo
 
-    movimentacao = MovimentacaoPontos(
-        id_cliente=cliente.id_cliente,
-        tipo=tipo_formatado,
-        quantidade=quantidade,
+    movimentacao = Historico(
+        id_usuario=cliente.id_usuario,
+        id_produto=recompensa_id,
+        tipo_movimentacao=tipo_formatado,
+        pontos=quantidade,
         saldo_anterior=saldo_anterior,
         saldo_posterior=novo_saldo,
         origem=origem,
-        motivo=motivo.strip() if motivo else None,
-        id_usuario=usuario_id,
-        id_compra=compra_id,
-        id_resgate=resgate_id,
-        id_recompensa=recompensa_id,
-        data_hora=datetime.now(timezone.utc).replace(tzinfo=None),
+        descricao=motivo.strip() if motivo else None,
+        data_movimentacao=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.session.add(movimentacao)
     db.session.flush()

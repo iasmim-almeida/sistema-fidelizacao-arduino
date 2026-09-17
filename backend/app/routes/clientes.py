@@ -180,7 +180,8 @@ def listar():
             return jsonify({"erro": "Cliente nao encontrado"}), 404
         return jsonify(cliente.to_dict())
 
-    query = Cliente.query
+    # A tabela usuario também contém administradores; esta rota lista apenas clientes.
+    query = Cliente.query.filter(Cliente.nivel_acesso == "CLIENTE")
 
     # Busca textual (nome, telefone ou email)
     termo = request.args.get("q", "").strip()
@@ -317,6 +318,7 @@ def cadastrar():
     cliente = Cliente(
         nome=nome,
         telefone=tel_limpo,
+        login=tel_limpo,
         email=email,
         endereco=data.get("endereco"),
         ativo=True,

@@ -83,6 +83,7 @@ def cadastrar_cliente_web():
         cliente = Cliente(
             nome=form.nome.data.strip(),
             telefone=telefone_limpo,
+            login=telefone_limpo,
             email=email_limpo,
             pontos_acumulados=0,
             ativo=True,
@@ -176,8 +177,9 @@ def login_cliente():
     tel_limpo = re.sub(r"\D", "", identificador)
 
     cliente = None
+    cliente = Cliente.query.filter_by(login=identificador).first()
     if tel_limpo:
-        cliente = Cliente.query.filter(
+        cliente = cliente or Cliente.query.filter(
             (Cliente.telefone == identificador) | (Cliente.telefone == tel_limpo)
         ).first()
 

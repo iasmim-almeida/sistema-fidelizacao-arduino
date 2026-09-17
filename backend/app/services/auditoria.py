@@ -44,7 +44,6 @@ def registrar_auditoria(
     ip: str | None = None,
     user_agent: str | None = None,
 ) -> Auditoria | None:
-    """Registra uma operação administrativa de forma segura e não bloqueante."""
     try:
         # Deriva o usuário responsável se não fornecido explicitamente
         if usuario_id is None and has_request_context():

@@ -122,23 +122,29 @@ def _validar_payload(data, recompensa=None):
     if (criando or "validade" in data) and validade < data_local_atual():
         raise ValueError("validade não pode estar no passado")
 
-    quantidade_total = _inteiro(
-        data,
+    quantidade_raw = data.get(
         "quantidade_total",
         recompensa.quantidade_total if recompensa else None,
     )
-    if quantidade_total < 0 or quantidade_total > MAX_ESTOQUE:
-        raise ValueError("quantidade_total deve estar entre zero e 1000000000")
+    if quantidade_raw is None:
+        quantidade_total = None
+    else:
+        quantidade_total = _inteiro({"quantidade_total": quantidade_raw}, "quantidade_total")
+        if quantidade_total < 0 or quantidade_total > MAX_ESTOQUE:
+            raise ValueError("quantidade_total deve estar entre zero e 1000000000")
 
     if recompensa:
-        quantidade_utilizada = recompensa.quantidade_total - recompensa.quantidade_disponivel
-        if quantidade_total < quantidade_utilizada:
+        if recompensa.quantidade_total is None:
+            quantidade_utilizada = 0
+        else:
+            quantidade_utilizada = recompensa.quantidade_total - (recompensa.quantidade_disponivel or 0)
+        if quantidade_total is not None and quantidade_total < quantidade_utilizada:
             raise ValueError(
                 f"quantidade_total não pode ser menor que as {quantidade_utilizada} unidades já resgatadas"
             )
-        quantidade_disponivel = quantidade_total - quantidade_utilizada
+        quantidade_disponivel = None if quantidade_total is None else quantidade_total - quantidade_utilizada
     else:
-        quantidade_disponivel = quantidade_total
+        quantidade_disponivel = None if quantidade_total is None else quantidade_total
 
     status = data.get("status", recompensa.status if recompensa else None)
     if status not in STATUS_RECOMPENSA:

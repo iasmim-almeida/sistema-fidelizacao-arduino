@@ -76,7 +76,7 @@ def create_app(config_name: str = "development") -> Flask:
             )
         return response
 
-    from app.models import cliente, compra, recompensa, resgate, usuario, movimentacao_pontos, auditoria  # noqa: F401
+    from app.models import cliente, compra, recompensa, resgate, usuario, movimentacao_pontos, historico, auditoria  # noqa: F401
 
     from app.routes.main import main_bp
     from app.routes.auth import auth_bp

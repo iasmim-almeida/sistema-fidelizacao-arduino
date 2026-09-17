@@ -1,12 +1,35 @@
 import os
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
+def database_url_from_environment() -> str:
+    """Resolve DATABASE_URL or monta uma URI PostgreSQL a partir das variáveis PG*."""
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if database_url:
+        return database_url.strip("'\"")
+
+    host = os.getenv("PGHOST", "").strip()
+    database = os.getenv("PGDATABASE", "").strip()
+    user = os.getenv("PGUSER", "").strip()
+    password = os.getenv("PGPASSWORD", "")
+    if not all((host, database, user, password)):
+        return "sqlite:///fidelizacao.db"
+
+    sslmode = os.getenv("PGSSLMODE", "require").strip()
+    channel_binding = os.getenv("PGCHANNELBINDING", "require").strip()
+    return (
+        f"postgresql+psycopg2://{quote_plus(user)}:{quote_plus(password)}"
+        f"@{host}/{database}?sslmode={quote_plus(sslmode)}"
+        f"&channel_binding={quote_plus(channel_binding)}"
+    )
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///fidelizacao.db")
+    SQLALCHEMY_DATABASE_URI = database_url_from_environment()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_SORT_KEYS = False
     PONTOS_POR_REAL = int(os.getenv("PONTOS_POR_REAL", "1"))

@@ -105,12 +105,7 @@ def registrar():
         # Regra de negócio IT Clube: 1 COMPRA = 1 PONTO (independente do valor monetário)
         pontos_gerados = 1
 
-        # Cria a compra
-        compra = Compra(id_cliente=cliente.id_cliente, valor=valor, pontos_gerados=pontos_gerados)
-        db.session.add(compra)
-        db.session.flush()
-
-        # Registra no ledger de pontos de forma atômica (+1 ponto)
+        # A compra e a movimentação são a mesma linha no histórico unificado.
         usuario_id = current_user.id_usuario if current_user.is_authenticated and getattr(current_user, "is_vendedora", False) else None
         sucesso, mov, erro = registrar_movimentacao(
             cliente_id=cliente.id_cliente,
@@ -119,12 +114,15 @@ def registrar():
             origem=origem,
             motivo=f"Compra registrada (+1 ponto)",
             usuario_id=usuario_id,
-            compra_id=compra.id_compra,
         )
 
         if not sucesso:
             db.session.rollback()
             return jsonify({"erro": erro or "Falha ao creditar pontos no ledger."}), 400
+
+        mov.valor_compra = valor
+        mov.descricao = "Compra registrada (+1 ponto)"
+        compra = mov
 
         db.session.commit()
 

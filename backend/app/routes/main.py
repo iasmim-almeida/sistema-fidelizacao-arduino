@@ -52,19 +52,20 @@ def dashboard_estatisticas():
     )
     novos_clientes_mes = Cliente.query.filter(Cliente.data_cadastro >= inicio_mes).count()
 
-    total_compras = Compra.query.count()
-    faturamento_total = db.session.query(func.coalesce(func.sum(Compra.valor), 0)).scalar()
+    total_compras = Compra.query.filter_by(tipo_movimentacao="COMPRA").count()
+    faturamento_total = db.session.query(func.coalesce(func.sum(Compra.valor), 0)).filter(Compra.tipo_movimentacao == "COMPRA").scalar()
     faturamento_mes = db.session.query(func.coalesce(func.sum(Compra.valor), 0)).filter(
         Compra.data >= inicio_mes
-    ).scalar()
-    pontos_emitidos = db.session.query(func.coalesce(func.sum(Compra.pontos_gerados), 0)).scalar()
+    ).filter(Compra.tipo_movimentacao == "COMPRA").scalar()
+    pontos_emitidos = db.session.query(func.coalesce(func.sum(Compra.pontos_gerados), 0)).filter(Compra.tipo_movimentacao == "COMPRA").scalar()
 
-    total_resgates = Resgate.query.count()
-    pontos_utilizados = db.session.query(func.coalesce(func.sum(Resgate.pontos_utilizados), 0)).scalar()
+    total_resgates = Resgate.query.filter_by(tipo_movimentacao="RESGATE").count()
+    pontos_utilizados = db.session.query(func.coalesce(func.sum(Resgate.pontos_utilizados), 0)).filter(Resgate.tipo_movimentacao == "RESGATE").scalar()
     saldo_circulacao = db.session.query(func.coalesce(func.sum(Cliente.pontos_acumulados), 0)).scalar()
 
     ultimas_compras = (
         db.session.query(Compra, Cliente.nome)
+        .filter(Compra.tipo_movimentacao == "COMPRA")
         .join(Cliente, Compra.id_cliente == Cliente.id_cliente)
         .order_by(Compra.data.desc())
         .limit(6)
@@ -83,6 +84,7 @@ def dashboard_estatisticas():
 
     ultimos_resgates = (
         db.session.query(Resgate, Cliente.nome)
+        .filter(Resgate.tipo_movimentacao == "RESGATE")
         .join(Cliente, Resgate.id_cliente == Cliente.id_cliente)
         .order_by(Resgate.data.desc())
         .limit(6)

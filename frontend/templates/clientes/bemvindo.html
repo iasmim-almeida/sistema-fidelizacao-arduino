@@ -141,9 +141,12 @@
         if (resMe) {
             const cliente = resMe.cliente || resMe;
             document.getElementById('nomeCliente').textContent = cliente.nome;
-            document.getElementById('saldoPontos').textContent = cliente.pontos_acumulados;
+            const saldo = Number(cliente.pontos_acumulados);
+            if (Number.isFinite(saldo)) {
+                document.getElementById('saldoPontos').textContent = saldo;
+            }
             const topbar = document.getElementById('topbarSaldo');
-            if (topbar) topbar.textContent = cliente.pontos_acumulados;
+            if (topbar && Number.isFinite(saldo)) topbar.textContent = saldo;
         }
 
         const acumulado = Array.isArray(resCompras) ? resCompras.reduce((s, x) => s + (x.pontos_gerados || 0), 0) : 0;

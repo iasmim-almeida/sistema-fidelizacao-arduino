@@ -134,23 +134,24 @@ def registrar():
 
         # Além do FOR UPDATE (efetivo no PostgreSQL), os UPDATEs condicionais
         # impedem estoque/saldo negativos inclusive no SQLite de desenvolvimento.
-        estoque = db.session.execute(
-            update(Recompensa)
-            .where(
-                Recompensa.id_recompensa == recompensa.id_recompensa,
-                Recompensa.status == "ativa",
-                Recompensa.validade >= data_local_atual(),
-                Recompensa.quantidade_disponivel > 0,
+        if recompensa.quantidade_disponivel is not None:
+            estoque = db.session.execute(
+                update(Recompensa)
+                .where(
+                    Recompensa.id_recompensa == recompensa.id_recompensa,
+                    Recompensa.status == "ativa",
+                    Recompensa.validade >= data_local_atual(),
+                    Recompensa.quantidade_disponivel > 0,
+                )
+                .values(
+                    quantidade_disponivel=Recompensa.quantidade_disponivel - 1,
+                    updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                )
+                .execution_options(synchronize_session=False)
             )
-            .values(
-                quantidade_disponivel=Recompensa.quantidade_disponivel - 1,
-                updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
-            )
-            .execution_options(synchronize_session=False)
-        )
-        if estoque.rowcount != 1:
-            db.session.rollback()
-            return jsonify({"erro": "Recompensa não está mais disponível"}), 409
+            if estoque.rowcount != 1:
+                db.session.rollback()
+                return jsonify({"erro": "Recompensa não está mais disponível"}), 409
 
         saldo = db.session.execute(
             update(Cliente)
@@ -166,10 +167,14 @@ def registrar():
             return jsonify({"erro": "Pontos insuficientes"}), 400
 
         resgate = Resgate(
-            id_cliente=cliente.id_cliente,
-            id_recompensa=recompensa.id_recompensa,
-            pontos_utilizados=recompensa.custo_pontos,
-            descricao_recompensa=recompensa.nome,
+            id_usuario=cliente.id_usuario,
+            id_produto=recompensa.id_produto,
+            tipo_movimentacao="RESGATE",
+            pontos=recompensa.custo_pontos,
+            descricao=recompensa.nome,
+            origem="vendedora" if getattr(current_user, "is_vendedora", False) else "cliente",
+            saldo_anterior=saldo_anterior,
+            saldo_posterior=saldo_anterior - recompensa.custo_pontos,
         )
         db.session.add(resgate)
         db.session.flush()
@@ -177,20 +182,6 @@ def registrar():
         # Registro no Ledger de Movimentação de Pontos
         origem = "vendedora" if getattr(current_user, "is_vendedora", False) else "cliente"
         usuario_id = current_user.id_usuario if getattr(current_user, "is_vendedora", False) else None
-        mov = MovimentacaoPontos(
-            id_cliente=cliente.id_cliente,
-            tipo="RESGATE",
-            quantidade=-recompensa.custo_pontos,
-            saldo_anterior=saldo_anterior,
-            saldo_posterior=saldo_anterior - recompensa.custo_pontos,
-            origem=origem,
-            motivo=f"Resgate da recompensa: {recompensa.nome}",
-            id_usuario=usuario_id,
-            id_resgate=resgate.id_resgate,
-            id_recompensa=recompensa.id_recompensa,
-            data_hora=datetime.now(timezone.utc).replace(tzinfo=None),
-        )
-        db.session.add(mov)
 
         # Registro em auditoria
         registrar_auditoria(
