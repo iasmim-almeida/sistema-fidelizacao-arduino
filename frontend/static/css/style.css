@@ -55,67 +55,154 @@ body{
     padding:30px;
 }
 
-/* ========= SIDEBAR ========= */
+/* ==========================================================================
+   1. ESTRUTURA PRINCIPAL E LAYOUT (FLEXBOX)
+   ========================================================================== */
 
-/* Garante transições suaves nos elementos */
-#sidebar {
-    transition: all 0.3s ease-in-out;
+/* Contêiner principal que amarra a barra lateral e o conteúdo lado a lado */
+/* Contêiner principal */
+.wrapper {
+    position: relative; /* Mudado de flex para relative */
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
+/* Área do conteúdo principal */
 #content {
-    transition: all 0.3s ease-in-out;
     width: 100%;
+    padding: 20px;
+    min-height: 100vh;
+    transition: all 0.3s ease-in-out !important;
+    background-color: #f8f9fa; 
+    /* Removemos o flex: 1 para que ele ocupe a tela toda nativamente */
 }
 
-/* Classe injetada pelo script para esconder a barra rosa */
-#sidebar.sidebar-escondida {
-    margin-left: -260px; 
-}
-
-/* Classe injetada pelo script para expandir o conteúdo quando o menu some */
+/* Como a sidebar vai flutuar por cima, o conteúdo NÃO muda de tamanho/margem */
 #content.content-expandido {
-    width: 100%;
-    margin-left: 0;
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+/* ==========================================================================
+   2. CONFIGURAÇÕES DA BARRA LATERAL (SIDEBAR GERAL)
+   ========================================================================== */
+
+#sidebar {
+    position: fixed; /* Torna a sidebar flutuante sobre o conteúdo */
+    top: 0;
+    left: 0;
+    z-index: 1050; /* Garante que fique acima de quase tudo (padrão Bootstrap) */
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    background-color: #e59bb1; 
+    color: white;
+    transition: transform 0.3s ease-in-out !important; /* Transição usando transform é mais suave */
+    min-height: 100vh;
+    height: 100vh;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); /* Sombra leve igual à da imagem */
+}
+
+/* Esconde a barra lateral jogando-a totalmente para a esquerda */
+#sidebar.sidebar-escondida {
+    transform: translateX(-260px) !important;
+    margin-left: 0 !important; /* Zera a margem antiga */
 }
 
 
-
-.sidebar-heading{
-    padding:10px 25px;
-    font-size:30px;
-    font-weight:700;
-    color:var(--texto-escuro);
+/* Elementos internos de marcação de texto da Sidebar */
+.sidebar-heading {
+    padding: 10px 25px;
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--texto-escuro);
 }
 
-.sidebar-section-title{
-    padding:18px 25px 8px;
-    text-transform:uppercase;
-    font-size:12px;
-    letter-spacing:1px;
-    color:var(--texto-escuro);
+.sidebar-section-title {
+    padding: 18px 25px 8px;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--texto-escuro);
 }
 
-.nav-link-sidebar{
-    display:flex;
-    align-items:center;
-    gap:15px;
-    text-decoration:none;
-    color:var(--texto-escuro);
-    padding:13px 25px;
-    transition:.3s;
-    font-size:15px;
+
+/* ==========================================================================
+   3. LINKS DE NAVEGAÇÃO DA VENDEDORA (SIDEBAR FIXA)
+   ========================================================================== */
+
+.nav-link-sidebar {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+    color: var(--texto-escuro);
+    padding: 13px 25px;
+    transition: 0.3s;
+    font-size: 15px;
 }
 
-.nav-link-sidebar i{
-    width:18px;
-    text-align:center;
+.nav-link-sidebar i {
+    width: 18px;
+    text-align: center;
 }
 
 .nav-link-sidebar:hover,
-.nav-link-sidebar.active{
-    background:var(--sidebar-hover);
-    color:#fff;
+.nav-link-sidebar.active {
+    background: var(--sidebar-hover);
+    color: #fff;
 }
+
+
+/* Estilização dos Links dentro do Menu Lateral Mobile */
+.nav-link-mobile {
+    display: flex;
+    align-items: center;
+    padding: 14px 24px;
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Efeito ao passar o mouse ou focar no link */
+.nav-link-mobile:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Link Ativo (A tela em que o cliente está navegando no momento) */
+.nav-link-mobile.active {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: 700;
+    border-left: 4px solid white;
+}
+
+/* Configuração de transições fluidas no painel administrativo */
+#sidebar {
+    transition: all 0.3s ease-in-out !important;
+}
+
+#content {
+    transition: all 0.3s ease-in-out !important;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Oculta o menu empurrando para a esquerda */
+#sidebar.sidebar-escondida {
+    margin-left: -260px !important;
+}
+
+/* Ajusta a margem do painel quando o menu está oculto */
+#content.content-expandido {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
 
 /* ========= BANNERS ========= */
 

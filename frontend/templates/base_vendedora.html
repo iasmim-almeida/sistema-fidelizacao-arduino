@@ -12,16 +12,15 @@
 <body>
 
 <div class="wrapper">
-    <nav id="sidebar">
-        <div class="text-end px-3 pt-2">
-            <button id="btnFecharSidebar" class="btn btn-sm rounded-circle text-white" style="background-color: rgba(255,255,255,0.2); border: none;">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-
-        <div class="sidebar-heading mb-4 px-4">
-            <i class="fas fa-sparkles text-warning"></i> IT Clube
-        </div>
+    <nav id="sidebar" class="sidebar-escondida">
+        <!-- BOTÃO INTERNO: Fecha o menu quando ele está aberto -->
+       <div class="d-flex align-items-center justify-content-between px-4 pt-4 mb-2 border-bottom border-light border-opacity-25 pb-3">
+    <h5 class="fw-bold text-white m-0" style="font-size: 1.25rem;">
+        <i class="fas fa-sparkles text-warning me-1"></i> IT Clube
+    </h5>
+    <!-- Botão 'X' branco para fechar o menu lateral -->
+    <button type="button" id="btnFecharSidebar" class="btn-close btn-close-white" aria-label="Close"></button>
+</div>
 
         <div class="sidebar-section-title">Administração</div>
         <a href="{{ url_for('main.dashboard') }}" class="nav-link-sidebar {% if active=='dashboard' %}active{% endif %}"><i class="fas fa-chart-pie"></i> Visão Geral</a>
@@ -39,11 +38,12 @@
         <a href="{{ url_for('main.relatorios') }}" class="nav-link-sidebar {% if active=='relatorios' %}active{% endif %}"><i class="fas fa-file-invoice-dollar"></i> Relatórios & Vendas</a>
     </nav>
 
+    <!-- CONTEÚDO PRINCIPAL DA LOJA (CONTENT) -->
     <div id="content">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-
             <div class="d-flex align-items-center gap-3">
-                <button id="btnAbrirSidebar" class="btn btn-light shadow-sm p-2 rounded-circle d-none" style="color: #d85f82; border: 1px solid #ffccd8;">
+                <!-- BOTÃO EXTERNO: Aparece para reabrir o menu quando ele se esconde -->
+                <button id="btnAbrirSidebar" class="btn btn-light shadow-sm p-2 rounded-circle" style="color: #d85f82; border: 1px solid #ffccd8;">
                     <i class="fas fa-bars"></i>
                 </button>
                 <div>
@@ -51,6 +51,7 @@
                     <small class="text-muted">{% block page_subtitle %}{% endblock %}</small>
                 </div>
             </div>
+            
             <div class="d-flex align-items-center gap-2">
                 {% if current_user.is_authenticated %}
                 <span class="badge bg-light text-dark border px-2 py-2 me-1">
@@ -68,6 +69,8 @@
         {% block content %}{% endblock %}
     </div>
 </div>
+
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -96,6 +99,7 @@ async function realizarLogout() {
 </script>
 {% block scripts %}{% endblock %}
 
+<!-- Script de controle dos dois botões da área administrativa -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const btnAbrir = document.getElementById('btnAbrirSidebar');
@@ -104,8 +108,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const conteudo = document.getElementById('content');
 
     function alternarMenu() {
+        sidebar.getAnimations();
         sidebar.classList.toggle('sidebar-escondida');
         conteudo.classList.toggle('content-expandido');
+        
+        // Altera a visibilidade do botão de três risquinhos do lado de fora
         btnAbrir.classList.toggle('d-none');
     }
 
