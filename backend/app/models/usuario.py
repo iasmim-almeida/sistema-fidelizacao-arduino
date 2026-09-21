@@ -34,8 +34,8 @@ class Usuario(UserMixin, db.Model):
     senha_hash = db.Column(db.String(255), nullable=False, default="!senha_nao_configurada!")
     nivel_acesso = db.Column(db.String(20), default="CLIENTE", nullable=False)
 
-    # Campos do modelo de funcionários
-    cargo = db.Column(db.String(30), default="proprietario", nullable=False)
+    # Campos do modelo de funcionários / vendedoras
+    cargo = db.Column(db.String(30), default="vendedora", nullable=False)
     ativo = db.Column(db.Boolean, default=True, nullable=False)
     ultimo_login = db.Column(db.DateTime, nullable=True)
     precisa_trocar_senha = db.Column(db.Boolean, default=False, nullable=False)
@@ -45,6 +45,10 @@ class Usuario(UserMixin, db.Model):
     def __init__(self, **kwargs):
         if "nivel_acesso" not in kwargs:
             kwargs["nivel_acesso"] = "CLIENTE" if kwargs.get("telefone") else "ADMIN"
+        if "cargo" not in kwargs:
+            kwargs["cargo"] = "cliente" if kwargs["nivel_acesso"] == "CLIENTE" else "proprietario"
+        elif kwargs.get("nivel_acesso") == "CLIENTE":
+            kwargs["cargo"] = "cliente"
         super().__init__(**kwargs)
 
     @property
@@ -54,18 +58,15 @@ class Usuario(UserMixin, db.Model):
 
     @property
     def is_proprietario(self) -> bool:
-        from app.services.rbac import ROLE_PROPRIETARIO, normalizar_cargo
-        return normalizar_cargo(self.cargo or self.nivel_acesso) == ROLE_PROPRIETARIO
+        return str(self.cargo or "").lower() in ("proprietario", "proprietaria", "gestor")
 
     @property
     def is_gerente(self) -> bool:
-        from app.services.rbac import ROLE_GERENTE, normalizar_cargo
-        return normalizar_cargo(self.cargo or self.nivel_acesso) == ROLE_GERENTE
+        return self.is_vendedora
 
     @property
     def is_vendedor(self) -> bool:
-        from app.services.rbac import ROLE_VENDEDOR, normalizar_cargo
-        return normalizar_cargo(self.cargo or self.nivel_acesso) == ROLE_VENDEDOR
+        return self.is_vendedora
 
     def tem_permissao(self, permissao: str) -> bool:
         from app.services.rbac import usuario_tem_permissao
@@ -86,7 +87,7 @@ class Usuario(UserMixin, db.Model):
     def is_vendedora(self):
         if self.nivel_acesso == "CLIENTE":
             return False
-        return self.nivel_acesso == "ADMIN" or bool(self.cargo)
+        return True
 
     def set_senha(self, senha: str) -> None:
         if not senha:
@@ -101,8 +102,7 @@ class Usuario(UserMixin, db.Model):
     check_senha = verificar_senha
 
     def to_dict(self):
-        from app.services.rbac import normalizar_cargo
-        cargo_norm = normalizar_cargo(self.cargo or self.nivel_acesso)
+        cargo_norm = "cliente" if self.is_cliente else "vendedora"
         return {
             "id_usuario": self.id_usuario,
             "id_cliente": self.id_usuario if self.is_cliente else None,

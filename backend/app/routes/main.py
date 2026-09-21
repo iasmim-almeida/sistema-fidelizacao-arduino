@@ -20,12 +20,23 @@ def index():
             return redirect(url_for("main.dashboard"))
         elif getattr(current_user, "is_cliente", False):
             return redirect(url_for("main.bemvindo"))
+
+    from app.routes.auth import sistema_precisa_setup
+    if sistema_precisa_setup():
+        return redirect(url_for("auth.setup"))
+
     return render_template("login.html")
 
 
 @main_bp.route("/health")
 def health():
     return {"status": "ok"}
+
+
+@main_bp.route("/setup", methods=["GET", "POST"])
+def setup():
+    from app.routes.auth import setup as auth_setup
+    return auth_setup()
 
 
 @main_bp.route("/cadastro")
@@ -134,13 +145,6 @@ def funcionarios():
     return render_template("vendedora/funcionarios.html")
 
 
-@main_bp.route("/auditoria")
-@vendedora_required
-@permissao_requerida("auditoria.visualizar")
-def auditoria():
-    return render_template("vendedora/auditoria.html")
-
-
 @main_bp.route("/pontuar")
 @vendedora_required
 def pontuar():
@@ -200,3 +204,20 @@ def historico():
 @cliente_required
 def perfil():
     return render_template("clientes/perfil.html")
+
+
+@main_bp.route("/cliente/trocar-senha")
+@cliente_required
+def cliente_trocar_senha():
+    return render_template("clientes/trocar_senha.html")
+
+
+@main_bp.route("/trocar-senha")
+def trocar_senha():
+    if not current_user.is_authenticated:
+        return redirect(url_for("main.index"))
+    if getattr(current_user, "is_cliente", False):
+        return redirect(url_for("main.cliente_trocar_senha"))
+    elif getattr(current_user, "is_vendedora", False):
+        return redirect(url_for("main.alterar_senha"))
+    return redirect(url_for("main.index"))

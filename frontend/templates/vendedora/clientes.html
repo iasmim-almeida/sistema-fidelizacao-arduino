@@ -94,6 +94,18 @@
                         <label class="form-label fw-bold">Endereço (opcional)</label>
                         <input type="text" id="novoEndereco" class="form-control" placeholder="Rua das Flores, 123">
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Senha Inicial de Acesso</label>
+                        <div class="input-group">
+                            <input type="password" id="novoSenha" class="form-control" placeholder="Mínimo 8 caracteres (letras e números)" required minlength="8" autocomplete="new-password">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleSenhaVisibilidade('novoSenha', 'eyeNovoSenha')">
+                                <i class="fas fa-eye" id="eyeNovoSenha"></i>
+                            </button>
+                        </div>
+                        <div class="form-text small text-muted">
+                            <i class="fas fa-shield-alt text-primary me-1"></i>O sistema identificará que o cliente foi cadastrado pela equipe da loja e exigirá a troca da senha no primeiro login.
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -378,6 +390,7 @@ document.getElementById('formNovoCliente').addEventListener('submit', async (e) 
         telefone: document.getElementById('novoTelefone').value,
         email: document.getElementById('novoEmail').value || null,
         endereco: document.getElementById('novoEndereco').value || null,
+        senha: document.getElementById('novoSenha').value,
     };
 
     const resp = await fetch('/api/clientes/', {
@@ -396,6 +409,19 @@ document.getElementById('formNovoCliente').addEventListener('submit', async (e) 
         alerta.classList.remove('d-none');
     }
 });
+
+function toggleSenhaVisibilidade(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (!input || !icon) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
 
 function abrirEditar(id) {
     const c = clientesLista.find(item => item.id_cliente === id);

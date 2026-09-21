@@ -21,6 +21,8 @@ def verificar_autenticacao_pontuacao():
     if current_user.is_authenticated and getattr(current_user, "is_vendedora", False):
         if not getattr(current_user, "ativo", True):
             return False, None
+        if not current_user.tem_permissao("pontos.adicionar"):
+            return False, None
         return True, "vendedora"
 
     device_key = request.headers.get("X-Device-Key")
@@ -40,6 +42,8 @@ def listar():
     if getattr(current_user, "is_cliente", False):
         query = query.filter_by(id_cliente=current_user.id_cliente)
     elif getattr(current_user, "is_vendedora", False):
+        if not current_user.tem_permissao("pontos.visualizar"):
+            return jsonify({"erro": "Acesso negado. Requer permissão 'pontos.visualizar'."}), 403
         id_cliente = request.args.get("id_cliente", type=int)
         if id_cliente:
             query = query.filter_by(id_cliente=id_cliente)
@@ -65,8 +69,17 @@ def registrar():
     try:
         # Busca com lock pessimista para evitar concorrência no saldo
         query_cli = Cliente.query.with_for_update()
-        if data.get("id_cliente"):
-            cliente = query_cli.filter_by(id_cliente=data["id_cliente"]).first()
+        id_cli_raw = data.get("id_cliente")
+        if id_cli_raw is not None:
+            if isinstance(id_cli_raw, bool) or not isinstance(id_cli_raw, int):
+                try:
+                    id_cli = int(id_cli_raw)
+                except (ValueError, TypeError):
+                    db.session.rollback()
+                    return jsonify({"erro": "id_cliente deve ser um número inteiro"}), 400
+            else:
+                id_cli = id_cli_raw
+            cliente = query_cli.filter_by(id_cliente=id_cli).first()
         elif data.get("telefone"):
             identificador = str(data["telefone"]).strip()
             tel_limpo = re.sub(r"\D", "", identificador)

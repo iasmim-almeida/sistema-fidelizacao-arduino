@@ -89,14 +89,14 @@ class FuncionariosTestCase(unittest.TestCase):
             u = Usuario.query.filter_by(login="novo_vend").first()
             self.assertIsNotNone(u)
             self.assertTrue(u.verificar_senha("SenhaForte@2026"))
-            self.assertEqual(u.cargo, "vendedor")
+            self.assertEqual(u.cargo, "vendedora")
 
     def test_criar_funcionario_senha_fraca_rejeitada(self):
         self.autenticar(self.admin_id)
         payload = {
             "nome": "Fraco Vendedor",
             "login": "fraco_vend",
-            "cargo": "vendedor",
+            "cargo": "vendedora",
             "senha": "1234",
         }
         resp = self.client.post("/api/funcionarios/", json=payload)
@@ -107,23 +107,23 @@ class FuncionariosTestCase(unittest.TestCase):
         payload = {
             "nome": "Duplicado",
             "login": "admin_chefe",
-            "cargo": "vendedor",
+            "cargo": "vendedora",
             "senha": "SenhaForte@2026",
         }
         resp = self.client.post("/api/funcionarios/", json=payload)
         self.assertEqual(resp.status_code, 409)
 
     def test_prevencao_privilege_escalation(self):
-        # Vendedor tenta criar usuário
-        self.autenticar(self.vendedor_id)
+        # Tentativa de atribuir cargo inexistente fora de ROLES_VALIDOS é rejeitada
+        self.autenticar(self.admin_id)
         payload = {
             "nome": "Invasor",
             "login": "invasor",
-            "cargo": "proprietario",
+            "cargo": "cargo_invalido_superadmin",
             "senha": "SenhaForte@2026",
         }
         resp = self.client.post("/api/funcionarios/", json=payload)
-        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.status_code, 400)
 
     def test_editar_funcionario(self):
         self.autenticar(self.admin_id)

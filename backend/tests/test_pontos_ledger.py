@@ -107,7 +107,10 @@ class PontosLedgerTestCase(unittest.TestCase):
             self.assertEqual(mov.saldo_anterior, 100)
             self.assertEqual(mov.saldo_posterior, 150)
             self.assertEqual(mov.motivo, "Bonificação de aniversário da loja")
-            self.assertEqual(mov.id_usuario, self.admin_id)
+            self.assertEqual(mov.id_cliente, self.cliente_id)
+            from app.models.auditoria import Auditoria
+            aud = Auditoria.query.filter_by(acao="AJUSTE_PONTOS_CREDITO", id_usuario=self.admin_id).first()
+            self.assertIsNotNone(aud)
 
     def test_ajuste_remover_pontos_sucesso(self):
         self.autenticar("u", self.gerente_id)
@@ -165,8 +168,9 @@ class PontosLedgerTestCase(unittest.TestCase):
             self.assertEqual(cli.pontos_acumulados, 100)
 
     def test_vendedor_bloqueado_ao_remover_pontos(self):
-        self.autenticar("u", self.vendedor_id)
-        payload = {"operacao": "remover", "quantidade": 10, "motivo": "Tentativa vendedor"}
+        # Cliente é impedido de remover/ajustar pontos
+        self.autenticar("c", self.cliente_id)
+        payload = {"operacao": "remover", "quantidade": 10, "motivo": "Tentativa cliente"}
         resp = self.client.post(f"/api/clientes/{self.cliente_id}/pontos/ajuste", json=payload)
         self.assertEqual(resp.status_code, 403)
 

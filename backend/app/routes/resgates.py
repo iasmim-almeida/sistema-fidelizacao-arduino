@@ -93,8 +93,8 @@ def registrar():
         recompensa_query = Recompensa.query.with_for_update().filter_by(
             id_recompensa=id_recompensa
         )
-        if getattr(current_user, "is_vendedora", False):
-            # A entrega administrativa só opera recompensas da própria gestora.
+        if getattr(current_user, "is_proprietario", False):
+            # A entrega por gestora é segregada por conta/gestão
             recompensa_query = recompensa_query.filter_by(id_usuario=current_user.id_usuario)
         recompensa = recompensa_query.first()
 
@@ -138,7 +138,7 @@ def registrar():
             estoque = db.session.execute(
                 update(Recompensa)
                 .where(
-                    Recompensa.id_recompensa == recompensa.id_recompensa,
+                    Recompensa.id_produto == recompensa.id_produto,
                     Recompensa.status == "ativa",
                     Recompensa.validade >= data_local_atual(),
                     Recompensa.quantidade_disponivel > 0,
@@ -152,11 +152,12 @@ def registrar():
             if estoque.rowcount != 1:
                 db.session.rollback()
                 return jsonify({"erro": "Recompensa não está mais disponível"}), 409
+            recompensa.quantidade_disponivel -= 1
 
         saldo = db.session.execute(
             update(Cliente)
             .where(
-                Cliente.id_cliente == cliente.id_cliente,
+                Cliente.id_usuario == cliente.id_usuario,
                 Cliente.pontos_acumulados >= recompensa.custo_pontos,
             )
             .values(pontos_acumulados=Cliente.pontos_acumulados - recompensa.custo_pontos)
@@ -165,6 +166,10 @@ def registrar():
         if saldo.rowcount != 1:
             db.session.rollback()
             return jsonify({"erro": "Pontos insuficientes"}), 400
+        cliente.pontos_acumulados -= recompensa.custo_pontos
+
+        origem = "vendedora" if getattr(current_user, "is_vendedora", False) else "cliente"
+        usuario_id = current_user.id_usuario if getattr(current_user, "is_vendedora", False) else None
 
         resgate = Resgate(
             id_usuario=cliente.id_usuario,
@@ -172,16 +177,13 @@ def registrar():
             tipo_movimentacao="RESGATE",
             pontos=recompensa.custo_pontos,
             descricao=recompensa.nome,
-            origem="vendedora" if getattr(current_user, "is_vendedora", False) else "cliente",
+            origem=origem,
             saldo_anterior=saldo_anterior,
             saldo_posterior=saldo_anterior - recompensa.custo_pontos,
+            data_movimentacao=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.session.add(resgate)
         db.session.flush()
-
-        # Registro no Ledger de Movimentação de Pontos
-        origem = "vendedora" if getattr(current_user, "is_vendedora", False) else "cliente"
-        usuario_id = current_user.id_usuario if getattr(current_user, "is_vendedora", False) else None
 
         # Registro em auditoria
         registrar_auditoria(
@@ -197,8 +199,7 @@ def registrar():
             usuario_id=usuario_id,
         )
 
-        db.session.refresh(cliente)
-        db.session.refresh(recompensa)
+        db.session.commit()
         resposta = {
             "status": "sucesso",
             "resgate": resgate.to_dict(),
@@ -206,9 +207,10 @@ def registrar():
             "recompensa": recompensa.to_dict(saldo_cliente=cliente.pontos_acumulados),
             "saldo_atualizado": cliente.pontos_acumulados,
         }
-        db.session.commit()
         return jsonify(resposta), 201
 
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).exception("Erro ao processar resgate: %s", e)
         db.session.rollback()
         return jsonify({"erro": "Falha transacional ao processar resgate"}), 500

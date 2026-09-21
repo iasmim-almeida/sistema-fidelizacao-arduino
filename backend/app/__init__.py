@@ -20,6 +20,10 @@ def create_app(config_name: str = "development") -> Flask:
     )
     app.config.from_object(config_by_name.get(config_name, config_by_name["development"]))
 
+    if config_name == "production":
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db, directory=MIGRATIONS_DIR)
@@ -64,16 +68,20 @@ def create_app(config_name: str = "development") -> Flask:
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
         if "Content-Security-Policy" not in response.headers:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-                "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; "
                 "img-src 'self' data:; "
                 "connect-src 'self'; "
                 "frame-ancestors 'self';"
             )
+        if request.is_secure or app.config.get("SESSION_COOKIE_SECURE"):
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
     from app.models import cliente, compra, recompensa, resgate, usuario, movimentacao_pontos, historico, auditoria  # noqa: F401
@@ -98,5 +106,9 @@ def create_app(config_name: str = "development") -> Flask:
     app.register_blueprint(recompensas_bp, url_prefix="/api/recompensas")
     app.register_blueprint(funcionarios_bp, url_prefix="/api/funcionarios")
     app.register_blueprint(auditoria_bp, url_prefix="/api/auditoria")
+
+    # Registro de comandos CLI do Flask (ex: flask create-owner)
+    from app.cli import register_cli_commands
+    register_cli_commands(app)
 
     return app

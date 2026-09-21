@@ -91,7 +91,7 @@ SENHAS_COMUNS_BLACKLIST = {
     "1234", "123456", "12345678", "123456789", "password", "senha123",
     "admin123", "fideliza2026", "administrador", "admin@loja.com",
     "fideliza", "mudar123", "trocar123", "qwerty", "111111", "000000",
-    "admin", "root", "master", "gestor"
+    "admin", "root", "master", "gestor", "itclube", "itclube2026"
 }
 
 

@@ -21,7 +21,7 @@ O **IT Clube** é uma solução corporativa completa de fidelização de cliente
    - **Imutabilidade de Pontos:** O cliente não pode alterar seu saldo, criar movimentações ou visualizar dados de outros clientes.
 3. **Catálogo de Prêmios & Resgate Exclusivo em Loja Física:**
    - Os clientes visualizam todas as recompensas cadastradas. Quando o saldo é inferior ao custo, o card é exibido desabilitado informando *"Pontos insuficientes"* e calculando *"Faltam X pontos"*.
-   - **Bloqueio de Auto-Resgate:** Clientes finais não podem efetuar resgates por conta própria (chamadas diretas a `POST /api/resgates/` retornam `403 Forbidden`). O resgate e a entrega do prêmio são confirmados exclusivamente pela vendedora/gestora no balcão da loja.
+   - **Bloqueio de Auto-Resgate:** Clientes finais não podem efetuar resgates por conta própria (chamadas diretas a `POST /api/resgates/` retornam `403 Forbidden`). O resgate e a entrega do prêmio são confirmados exclusivamente pela Vendedora (Admin) no balcão da loja.
 4. **Foco Operacional sem Exibição Financeira Desnecessária:**
    - O dashboard e os relatórios priorizam indicadores de retenção, recorrência e total de compras pontuadas, sem métricas financeiras acumuladas expostas na rotina de pontuação.
 
@@ -91,19 +91,19 @@ sistema-fidelizacao-integrado/
 
 ## 3. Matriz de Perfis e Permissões (RBAC)
 
-O sistema conta com controle de acesso granular implementado em [`backend/app/services/rbac.py`](backend/app/services/rbac.py):
+O sistema conta com controle de acesso seguro e simplificado implementado em [`backend/app/services/rbac.py`](backend/app/services/rbac.py), unificando a administração da loja no papel de **Vendedora (Admin)** e segregando o portal de autoatendimento para o **Cliente**:
 
-| Módulo / Ação | Proprietária | Gerente | Vendedora | Cliente |
-| :--- | :---: | :---: | :---: | :---: |
-| **Pontuar Compra no PDV** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
-| **Validar e Dar Baixa em Resgates** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
-| **Consultar Catálogo de Prêmios** | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| **Cadastrar / Editar Recompensas** | :white_check_mark: | :white_check_mark: | :x: | :x: |
-| **Gestão de Clientes da Loja** | :white_check_mark: | :white_check_mark: | Consulta | :x: |
-| **Autoatendimento (Meu Perfil)** | :x: | :x: | :x: | :white_check_mark: |
-| **Gestão de Equipe (Funcionários)** | :white_check_mark: | :x: | :x: | :x: |
-| **Consulta à Trilha de Auditoria** | :white_check_mark: | :x: | :x: | :x: |
-| **Relatórios e Análise de Retenção** | :white_check_mark: | :white_check_mark: | :x: | :x: |
+| Módulo / Ação | Vendedora (Admin) | Cliente |
+| :--- | :---: | :---: |
+| **Pontuar Compra no PDV** | :white_check_mark: | :x: |
+| **Validar e Dar Baixa em Resgates** | :white_check_mark: | :x: |
+| **Consultar Catálogo de Prêmios** | :white_check_mark: | :white_check_mark: |
+| **Cadastrar / Editar Recompensas** | :white_check_mark: | :x: |
+| **Gestão de Clientes da Loja** | :white_check_mark: | :x: |
+| **Autoatendimento (Meu Perfil & Saldo)** | :x: | :white_check_mark: |
+| **Gestão de Equipe da Loja** | :white_check_mark: | :x: |
+| **Consulta à Trilha de Auditoria** | :white_check_mark: | :x: |
+| **Relatórios e Análise de Retenção** | :white_check_mark: | :x: |
 
 ---
 
@@ -137,10 +137,9 @@ O sistema conta com controle de acesso granular implementado em [`backend/app/se
    ```
    Edite o `.env` com sua chave secreta e configurações.
 
-5. **Execute as migrações e popule o banco inicial:**
+5. **Execute as migrações:**
    ```bash
    flask db upgrade
-   python database/seeds/seed.py
    ```
 
 6. **Inicie o servidor:**
@@ -161,19 +160,29 @@ docker compose logs -f backend
 
 ---
 
-## 5. Credenciais Padrão de Demonstração
+## 5. Cadastro e Acesso Inicial Seguro
 
-Após a execução do script `database/seeds/seed.py`, o sistema disponibiliza os seguintes acessos:
+O sistema adota uma política de **segurança por padrão** e **não expõe senhas pré-definidas em documentação**. O provisionamento e acesso aos perfis ocorrem de forma segura:
 
-- **Proprietária / Admin:**
-  - E-mail: `admin@loja.com`
-  - Senha: `ITClube2026`
-- **Vendedora (PDV):**
-  - E-mail: `vendedora@loja.com`
-  - Senha: `ITClube2026`
-- **Cliente (Ana Silva):**
-  - Telefone: `11999991111`
-  - Senha: `ITClube2026`
+### 5.1. Cadastro Inicial Seguro da Vendedora (Admin)
+No primeiro acesso ao sistema (quando ainda não há nenhuma administradora cadastrada na base), o acesso inicial é realizado de forma segura:
+- **Via Interface Web (`/setup`):** Ao acessar a aplicação pela primeira vez no navegador (`http://127.0.0.1:5000/`), o sistema redireciona automaticamente para a tela de **Cadastro Inicial Seguro**. A vendedora administradora cadastra seu nome, login corporativo, e-mail e define uma senha forte. O endpoint de setup é automaticamente bloqueado após a criação do primeiro acesso.
+- **Via CLI do Flask:** No terminal, execute o comando interativo seguro:
+  ```bash
+  flask create-vendedora
+  ```
+  O utilitário solicita nome, login, e-mail e oculta a digitação da senha com confirmação e validação estrita de complexidade (mínimo de 8 caracteres, letras maiúsculas, minúsculas, números e caracteres especiais).
+
+### 5.2. Cadastro e Acesso dos Clientes
+- **Autoatendimento do Cliente:** Novos clientes criam sua conta diretamente no portal de autoatendimento em `/cadastro`, definindo sua própria senha segura (armazenada com hash criptográfico PBKDF2-SHA256).
+- **Acesso ao Portal do Cliente:** Clientes já cadastrados efetuam login informando o **telefone** registrado e sua **senha pessoal**.
+
+### 5.3. Carga Opcional de Demonstração em Desenvolvimento (`seed.py`)
+Para testes em ambiente local de desenvolvimento, dados de demonstração podem ser gerados informando suas próprias credenciais seguras via variáveis de ambiente no arquivo `.env`:
+```bash
+SEED_ADMIN_PASSWORD="SuaSenhaForteAqui@2026" python database/seeds/seed.py
+```
+> ⚠ **Atenção:** Em ambiente de produção (`FLASK_ENV=production`), a execução de seeds de demonstração é terminantemente bloqueada para garantir a integridade da base.
 
 ---
 

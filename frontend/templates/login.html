@@ -7,6 +7,7 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
   <style>
@@ -59,25 +60,6 @@
       font-size: 14px;
       border: 1px solid #bbf7d0;
     }
-    .badge-demo-box {
-      background: var(--rosa-claro);
-      border: 1px dashed var(--sidebar-color);
-      border-radius: 14px;
-      padding: 14px;
-      font-size: 13px;
-      color: var(--texto-escuro);
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .badge-demo-box:hover {
-      transform: translateY(-2px);
-      background: #fff;
-    }
-    .btn-quick-fill {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 6px;
-    }
   </style>
 </head>
 
@@ -119,7 +101,7 @@
             <label class="form-label text-muted small fw-semibold">E-mail corporativo</label>
             <div class="input-group">
               <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
-              <input type="email" id="emailVendedora" class="form-control" placeholder="admin@loja.com" required autocomplete="username">
+              <input type="email" id="emailVendedora" class="form-control" placeholder="admin@itclube.com.br" required autocomplete="username">
             </div>
           </div>
           <div class="mb-3">
@@ -145,7 +127,7 @@
             <label class="form-label text-muted small fw-semibold">Telefone cadastrado</label>
             <div class="input-group">
               <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
-              <input type="tel" id="telCliente" class="form-control" placeholder="11999991111" required autocomplete="tel">
+              <input type="tel" id="telCliente" class="form-control" placeholder="11999998888" required autocomplete="tel">
             </div>
             <div class="form-text small">Utilize o mesmo número informado em suas compras.</div>
           </div>
@@ -173,31 +155,6 @@
       </div>
     </div>
 
-    <!-- ACESSOS RÁPIDOS PARA A BANCA DE TCC / DEMONSTRAÇÃO -->
-    <div class="mt-4 pt-3 border-top">
-      <div class="divider mb-3">Acessos Rápidos de Demonstração</div>
-      
-      <div class="row g-2">
-        <div class="col-12">
-          <div class="badge-demo-box d-flex justify-content-between align-items-center" onclick="preencherVendedora()">
-            <div>
-              <strong>👩‍💼 Vendedora (Admin):</strong><br>
-              <code>admin@loja.com</code> &bull; Senha: <code>ITClube2026</code>
-            </div>
-            <button class="btn btn-sm btn-dark btn-quick-fill">Preencher</button>
-          </div>
-        </div>
-        <div class="col-12">
-          <div class="badge-demo-box d-flex justify-content-between align-items-center" onclick="preencherCliente()">
-            <div>
-              <strong>🛍️ Cliente (Ana Silva - 280 pts):</strong><br>
-              <code>11999991111</code> &bull; Senha: <code>ITClube2026</code>
-            </div>
-            <button class="btn btn-sm btn-warning btn-quick-fill">Preencher</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -222,22 +179,6 @@
         input.type = 'password';
         icone.className = 'bi bi-eye';
       }
-    }
-
-    function preencherVendedora() {
-      const tabTrigger = new bootstrap.Tab(document.getElementById('pills-vendedora-tab'));
-      tabTrigger.show();
-      document.getElementById('emailVendedora').value = 'admin@loja.com';
-      document.getElementById('senhaVendedora').value = 'ITClube2026';
-      limparAlertas();
-    }
-
-    function preencherCliente() {
-      const tabTrigger = new bootstrap.Tab(document.getElementById('pills-cliente-tab'));
-      tabTrigger.show();
-      document.getElementById('telCliente').value = '11999991111';
-      document.getElementById('senhaCliente').value = 'ITClube2026';
-      limparAlertas();
     }
 
     // LOGIN VENDEDORA
@@ -289,6 +230,12 @@
         const data = await resp.json();
 
         if (resp.ok) {
+          if (data.precisa_trocar_senha) {
+            sucessoTexto.innerHTML = '<strong>Cadastro realizado pela loja!</strong> Identificamos que este é o seu primeiro acesso. Redirecionando para definir sua nova senha...';
+            alertaSucesso.classList.remove('d-none');
+            setTimeout(() => { window.location.href = data.redirect || '/cliente/trocar-senha'; }, 800);
+            return;
+          }
           sucessoTexto.textContent = 'Bem-vindo(a), ' + (data.cliente?.nome || 'Cliente') + '! Carregando seus pontos...';
           alertaSucesso.classList.remove('d-none');
           // Salva telefone para conveniência

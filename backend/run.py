@@ -8,7 +8,7 @@ if BACKEND_DIR not in sys.path:
 
 from app import create_app
 
-env = os.getenv("FLASK_ENV", "production").lower()
+env = os.getenv("FLASK_ENV", "development").lower()
 app = create_app(env)
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from app.services.rbac import (
     permissao_requerida,
     normalizar_cargo,
     pode_gerenciar_cargo,
+    ROLE_VENDEDORA,
     ROLE_PROPRIETARIO,
     ROLE_GERENTE,
     ROLE_VENDEDOR,
@@ -58,14 +59,14 @@ def obter(id_usuario: int):
 @login_required
 @permissao_requerida("funcionarios.criar")
 def criar():
-    """Cadastra um novo funcionário com senha segura e validação de hierarquia."""
+    """Cadastra um novo colaborador com perfil Vendedora (Admin)."""
     data = request.get_json(silent=True) or {}
 
     nome = str(data.get("nome", "")).strip()
     login = str(data.get("login", "")).strip().lower()
     email = str(data.get("email", "")).strip().lower() or None
     senha = str(data.get("senha", ""))
-    cargo_solicitado = normalizar_cargo(data.get("cargo", ROLE_VENDEDOR))
+    cargo_solicitado = normalizar_cargo(data.get("cargo", ROLE_VENDEDORA))
 
     if len(nome) < 3:
         return jsonify({"erro": "O nome deve conter ao menos 3 caracteres."}), 400
@@ -76,10 +77,9 @@ def criar():
     if cargo_solicitado not in ROLES_VALIDOS:
         return jsonify({"erro": f"Cargo inválido. Cargos permitidos: {', '.join(ROLES_VALIDOS)}."}), 400
 
-    # Prevenção de Privilege Escalation: operador não pode criar usuário com cargo superior ou igual
     cargo_operador = getattr(current_user, "cargo", None) or getattr(current_user, "nivel_acesso", None)
     if not pode_gerenciar_cargo(cargo_operador, cargo_solicitado):
-        return jsonify({"erro": f"Você não possui permissão para criar usuários com o cargo '{cargo_solicitado}'."}), 403
+        return jsonify({"erro": f"Você não possui permissão para gerenciar colaboradores."}), 403
 
     # Validação rigorosa de senha
     valida, motivo = validar_politica_senha_admin(senha)
@@ -98,7 +98,7 @@ def criar():
         login=login,
         email=email,
         cargo=cargo_solicitado,
-        nivel_acesso="gestor" if cargo_solicitado == ROLE_PROPRIETARIO else cargo_solicitado,
+        nivel_acesso="ADMIN",
         ativo=True,
     )
     novo.set_senha(senha)
@@ -180,7 +180,7 @@ def editar(id_usuario: int):
 
         alteracoes["cargo_anterior"] = funcionario.cargo
         funcionario.cargo = novo_cargo
-        funcionario.nivel_acesso = "gestor" if novo_cargo == ROLE_PROPRIETARIO else novo_cargo
+        funcionario.nivel_acesso = "ADMIN"
         alteracoes["cargo_novo"] = novo_cargo
 
     try:
@@ -217,15 +217,15 @@ def alterar_status(id_usuario: int):
     data = request.get_json(silent=True) or {}
     novo_status = bool(data.get("ativo", not funcionario.ativo))
 
-    # Protege contra desativação do último proprietário ativo
-    if not novo_status and funcionario.is_proprietario:
-        proprietarios_ativos = Usuario.query.filter(
-            (Usuario.cargo == ROLE_PROPRIETARIO) | (Usuario.nivel_acesso == "gestor"),
+    # Protege contra desativação da única vendedora ativa
+    if not novo_status and funcionario.is_vendedora:
+        vendedoras_ativas = Usuario.query.filter(
+            Usuario.nivel_acesso != "CLIENTE",
             Usuario.ativo == True,
             Usuario.id_usuario != id_usuario
         ).count()
-        if proprietarios_ativos == 0:
-            return jsonify({"erro": "Não é possível desativar o único proprietário/administrador ativo do sistema."}), 400
+        if vendedoras_ativas == 0:
+            return jsonify({"erro": "Não é possível desativar a única vendedora/administradora ativa do sistema."}), 400
 
     cargo_operador = getattr(current_user, "cargo", None) or getattr(current_user, "nivel_acesso", None)
     if not pode_gerenciar_cargo(cargo_operador, funcionario.cargo):

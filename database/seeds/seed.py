@@ -13,10 +13,10 @@ from app.models.auditoria import Auditoria
 from app.models.usuario import Usuario
 
 
-ADMIN_LOGIN = "admin"
-ADMIN_PASSWORD = "ITClube2026"
-CLIENT_LOGIN = "ana.silva"
-CLIENT_PASSWORD = "ITClube2026"
+ADMIN_LOGIN = os.getenv("SEED_ADMIN_LOGIN", "vendedora")
+ADMIN_PASSWORD = os.getenv("SEED_ADMIN_PASSWORD", "ITClube2026!")
+CLIENT_LOGIN = os.getenv("SEED_CLIENT_LOGIN", "ana.silva")
+CLIENT_PASSWORD = os.getenv("SEED_CLIENT_PASSWORD", "ITClube2026!")
 
 
 def obter_ou_criar_usuario(login: str, **dados) -> Usuario:
@@ -30,14 +30,23 @@ def obter_ou_criar_usuario(login: str, **dados) -> Usuario:
     return usuario
 
 
-app = create_app("production")
+env = os.getenv("FLASK_ENV", "development").lower()
+
+if env == "production" and not os.getenv("ALLOW_DEMO_SEED"):
+    print("ERRO DE SEGURANCA: Execucao de seeds de demonstracao bloqueada em ambiente de PRODUCAO!")
+    print("Para criar a conta da vendedora/administradora de forma segura em producao, use:")
+    print("  flask create-vendedora")
+    print("Ou acesse a interface web em /setup no primeiro acesso.")
+    sys.exit(1)
+
+app = create_app(env)
 with app.app_context():
     admin = obter_ou_criar_usuario(
         ADMIN_LOGIN,
-        nome="Administrador IT Clube",
-        email="admin@loja.com",
+        nome="Vendedora Administradora",
+        email="vendedora@itclube.com.br",
         nivel_acesso="ADMIN",
-        cargo="proprietario",
+        cargo="vendedora",
         ativo=True,
     )
     admin.set_senha(ADMIN_PASSWORD)
@@ -70,5 +79,6 @@ with app.app_context():
         ))
 
     db.session.commit()
-    print("Administrador: login=admin senha=ITClube2026")
-    print("Cliente: login=ana.silva senha=ITClube2026 telefone=11999991111 pontos=280")
+    print(f"Carga de demonstracao finalizada com sucesso (ambiente: {env}).")
+    print(f"Vendedora (Admin): login={ADMIN_LOGIN}")
+    print(f"Cliente: login={CLIENT_LOGIN} telefone=11999991111 pontos=280")

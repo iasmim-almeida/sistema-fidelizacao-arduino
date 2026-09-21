@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: itclube-fidelizacao
+    runtime: python
+    region: ohio
+    plan: starter
+    buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt && flask db upgrade"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 3 --threads 2 --timeout 60 --no-control-socket run:app"
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONPATH
+        value: backend
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: IOT_DEVICE_KEY
+        generateValue: true
+      - key: TIMEZONE
+        value: America/Sao_Paulo
+      - key: SESSION_COOKIE_SECURE
+        value: "True"
+      - key: REMEMBER_COOKIE_SECURE
+        value: "True"

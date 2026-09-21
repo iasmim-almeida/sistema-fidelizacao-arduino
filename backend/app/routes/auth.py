@@ -48,6 +48,16 @@ def cliente_required(f):
             if request.is_json or request.path.startswith("/api") or request.path.startswith("/auth"):
                 return jsonify({"erro": "Conta desativada. Acesso negado."}), 403
             return redirect(url_for("main.index"))
+        if getattr(current_user, "precisa_trocar_senha", False):
+            rotas_permitidas = ("main.cliente_trocar_senha", "main.trocar_senha", "clientes.alterar_minha_senha", "auth.logout")
+            if request.endpoint not in rotas_permitidas:
+                if request.is_json or request.path.startswith("/api"):
+                    return jsonify({
+                        "erro": "Troca de senha obrigatória no primeiro acesso.",
+                        "precisa_trocar_senha": True,
+                        "redirect": url_for("main.cliente_trocar_senha"),
+                    }), 403
+                return redirect(url_for("main.cliente_trocar_senha"))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -87,6 +97,8 @@ def cadastrar_cliente_web():
             email=email_limpo,
             pontos_acumulados=0,
             ativo=True,
+            cargo="cliente",
+            nivel_acesso="CLIENTE",
         )
         cliente.set_senha(senha)
 
@@ -121,7 +133,7 @@ def login_vendedora():
         (Usuario.email == identificador) | (Usuario.login == identificador)
     ).first()
 
-    if usuario:
+    if usuario and getattr(usuario, "is_vendedora", False):
         if not getattr(usuario, "ativo", True):
             registrar_auditoria(
                 acao="LOGIN_FALHA",
@@ -186,24 +198,31 @@ def login_cliente():
     if not cliente and "@" in identificador:
         cliente = Cliente.query.filter_by(email=identificador).first()
 
-    # Mitigação VULN-06: Resposta uniforme para impedir enumeração de usuários (CWE-204)
-    if not cliente or not cliente.verificar_senha(senha):
+    # Mitigação VULN-06 e Segregação de Perfis: Resposta uniforme e validação de perfil cliente
+    if not cliente or not getattr(cliente, "is_cliente", False) or not cliente.verificar_senha(senha):
         return jsonify({"erro": "Telefone ou senha invalidos."}), 401
 
     if not getattr(cliente, "ativo", True):
         return jsonify({"erro": "Conta desativada. Entre em contato com a loja."}), 401
 
     login_user(cliente)
+    cliente.ultimo_login = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.session.commit()
+
+    precisa_trocar = bool(getattr(cliente, "precisa_trocar_senha", False))
+
     return jsonify({
-        "mensagem": "Login de cliente realizado com sucesso",
+        "mensagem": "Cadastro realizado pela equipe da loja: solicitada a troca de senha no primeiro acesso." if precisa_trocar else "Login de cliente realizado com sucesso",
         "tipo": "cliente",
-        "redirect": "/bemvindo",
+        "precisa_trocar_senha": precisa_trocar,
+        "cadastrado_por_vendedora": precisa_trocar,
+        "redirect": "/cliente/trocar-senha" if precisa_trocar else "/bemvindo",
         "cliente": cliente.to_dict(),
     })
 
 
 # ---------- LOGOUT UNIFICADO ----------
-@auth_bp.route("/logout", methods=["POST"])
+@auth_bp.route("/logout", methods=["GET", "POST"])
 @csrf.exempt
 @login_required
 def logout():
@@ -306,3 +325,113 @@ def alterar_senha_admin():
         db.session.rollback()
         logger.exception("Falha transacional ao atualizar senha de administrador")
         return jsonify({"erro": "Ocorreu um erro interno ao atualizar a senha. Tente novamente."}), 500
+
+
+# ---------- CADASTRO INICIAL SEGURO (SETUP VENDEDORA ADMIN) ----------
+def sistema_precisa_setup() -> bool:
+    """Retorna True se ainda não houver nenhuma vendedora/administradora cadastrada."""
+    return Usuario.query.filter(Usuario.nivel_acesso != "CLIENTE").first() is None
+
+
+@auth_bp.route("/setup", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+def setup():
+    """Cadastro inicial seguro da Vendedora (Admin).
+    Permitido estritamente quando não existe nenhuma administradora cadastrada no sistema.
+    """
+    from app.services.rbac import ROLE_VENDEDORA
+
+    precisa = sistema_precisa_setup()
+
+    if request.method == "GET":
+        if not precisa:
+            flash("O cadastro inicial já foi realizado. Efetue login.", "info")
+            return redirect(url_for("main.index"))
+        return render_template("setup.html")
+
+    # POST
+    if not precisa:
+        if request.is_json:
+            return jsonify({"erro": "Cadastro inicial já concluído. O sistema já possui administradora configurada."}), 403
+        flash("O cadastro inicial já foi realizado.", "warning")
+        return redirect(url_for("main.index"))
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    nome = str(data.get("nome", "")).strip()
+    login = str(data.get("login", "")).strip().lower()
+    email = str(data.get("email", "")).strip().lower()
+    senha = str(data.get("senha", ""))
+    confirmar_senha = str(data.get("confirmar_senha", ""))
+
+    erros = []
+    if len(nome) < 3:
+        erros.append("O nome deve ter pelo menos 3 caracteres.")
+    if not re.match(r"^[a-zA-Z0-9_.@-]{3,50}$", login):
+        erros.append("O login deve ter entre 3 e 50 caracteres alfanuméricos.")
+    if not email or "@" not in email:
+        erros.append("Informe um e-mail válido.")
+    if senha != confirmar_senha:
+        erros.append("A confirmação de senha não confere.")
+
+    valida_senha, msg_senha = validar_politica_senha_admin(senha)
+    if not valida_senha:
+        erros.append(msg_senha)
+
+    if erros:
+        msg_total = " ".join(erros)
+        if request.is_json:
+            return jsonify({"erro": msg_total}), 400
+        for err in erros:
+            flash(err, "danger")
+        return render_template("setup.html", nome=nome, login=login, email=email), 400
+
+    # Verifica duplicidade
+    if Usuario.query.filter((Usuario.login == login) | (Usuario.email == email)).first():
+        msg_dup = "Já existe um usuário com esse login ou e-mail."
+        if request.is_json:
+            return jsonify({"erro": msg_dup}), 409
+        flash(msg_dup, "danger")
+        return render_template("setup.html", nome=nome, login=login, email=email), 409
+
+    vendedora = Usuario(
+        nome=nome,
+        login=login,
+        email=email,
+        cargo=ROLE_VENDEDORA,
+        nivel_acesso="ADMIN",
+        ativo=True,
+        precisa_trocar_senha=False,
+    )
+    vendedora.set_senha(senha)
+
+    try:
+        db.session.add(vendedora)
+        db.session.commit()
+
+        registrar_auditoria(
+            acao="CADASTRO_INICIAL_VENDEDORA_ADMIN",
+            entidade="usuario",
+            entidade_id=vendedora.id_usuario,
+            detalhes={"login": login, "email": email, "cargo": ROLE_VENDEDORA, "metodo": "setup_seguro"},
+            usuario_id=vendedora.id_usuario,
+        )
+        db.session.commit()
+
+        login_user(vendedora)
+
+        if request.is_json:
+            return jsonify({
+                "mensagem": "Cadastro inicial da Vendedora (Admin) realizado com sucesso!",
+                "redirect": "/dashboard",
+                "usuario": vendedora.to_dict(),
+            }), 201
+
+        flash("Cadastro inicial concluído com sucesso! Bem-vinda ao IT Clube.", "success")
+        return redirect(url_for("main.dashboard"))
+    except Exception:
+        db.session.rollback()
+        logger.exception("Falha no cadastro inicial seguro")
+        if request.is_json:
+            return jsonify({"erro": "Erro interno ao processar cadastro inicial."}), 500
+        flash("Erro ao salvar cadastro inicial. Tente novamente.", "danger")
+        return render_template("setup.html", nome=nome, login=login, email=email), 500

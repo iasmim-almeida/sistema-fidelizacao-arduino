@@ -32,7 +32,6 @@ frontend/
         ├── clientes.html        # Gestão e consulta da carteira de clientes
         ├── recompensas.html     # Cadastro e edição de recompensas
         ├── funcionarios.html    # Gestão interna de acessos e cargos
-        ├── auditoria.html       # Trilha de auditoria administrativa
         └── alterar_senha.html   # Troca de senha da vendedora/gestora
 ```
 

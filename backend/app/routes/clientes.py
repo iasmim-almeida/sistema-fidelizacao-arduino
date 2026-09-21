@@ -135,6 +135,7 @@ def alterar_minha_senha():
 
     try:
         cliente.set_senha(nova_senha)
+        cliente.precisa_trocar_senha = False
         db.session.commit()
 
         registrar_auditoria(
@@ -295,6 +296,9 @@ def cadastrar():
     if not nome or not telefone:
         return jsonify({"erro": "nome e telefone sao obrigatorios"}), 400
 
+    if len(nome) < 3 or len(nome) > 120:
+        return jsonify({"erro": "O nome deve conter entre 3 e 120 caracteres."}), 400
+
     tel_limpo = re.sub(r"\D", "", telefone)
     if len(tel_limpo) < 10 or len(tel_limpo) > 11:
         return jsonify({"erro": "Telefone invalido. Informe o DDD e o numero com 10 ou 11 digitos."}), 400
@@ -303,8 +307,13 @@ def cadastrar():
         return jsonify({"erro": "Ja existe um cliente cadastrado com este telefone."}), 409
 
     email = (data.get("email") or "").strip().lower() or None
-    if email and Cliente.query.filter_by(email=email).first():
-        return jsonify({"erro": "Ja existe um cliente cadastrado com este e-mail."}), 409
+    if email:
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            return jsonify({"erro": "Formato de e-mail invalido."}), 400
+        if Cliente.query.filter_by(email=email).first():
+            return jsonify({"erro": "Ja existe um cliente cadastrado com este e-mail."}), 409
+
+    endereco = str(data["endereco"]).strip()[:255] if data.get("endereco") else None
 
     senha = data.get("senha")
     senha_gerada = False
@@ -312,18 +321,22 @@ def cadastrar():
     if not senha:
         senha = secrets.token_urlsafe(8)
         senha_gerada = True
-    elif len(str(senha)) < 8 or str(senha) == "1234":
-        return jsonify({"erro": "A senha deve conter no minimo 8 caracteres e nao pode ser '1234'"}), 400
+    else:
+        valida, motivo = validar_politica_senha_cliente(str(senha))
+        if not valida:
+            return jsonify({"erro": motivo}), 400
 
     cliente = Cliente(
         nome=nome,
         telefone=tel_limpo,
         login=tel_limpo,
         email=email,
-        endereco=data.get("endereco"),
+        endereco=endereco,
         ativo=True,
+        precisa_trocar_senha=True,
     )
     cliente.set_senha(str(senha))
+    cliente.precisa_trocar_senha = True
 
     try:
         db.session.add(cliente)
@@ -333,11 +346,12 @@ def cadastrar():
             acao="CRIAR_CLIENTE",
             entidade="cliente",
             entidade_id=cliente.id_cliente,
-            detalhes={"nome": nome, "telefone": tel_limpo, "email": email},
+            detalhes={"nome": nome, "telefone": tel_limpo, "email": email, "cadastrado_por_vendedora": True},
         )
         db.session.commit()
 
         res = cliente.to_dict()
+        res["precisa_trocar_senha"] = True
         if senha_gerada:
             res["senha_gerada_automatica"] = senha
         return jsonify(res), 201

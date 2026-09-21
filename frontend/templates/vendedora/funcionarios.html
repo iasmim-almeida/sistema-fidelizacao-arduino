@@ -8,13 +8,10 @@
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div class="d-flex gap-2 flex-wrap">
-                <select id="filtroCargo" class="form-select form-select-sm" style="width: auto;" onchange="carregarFuncionarios()">
-                    <option value="">Todos os Cargos</option>
-                    <option value="proprietario">Proprietário / Admin</option>
-                    <option value="gerente">Gerente</option>
-                    <option value="vendedor">Vendedor / PDV</option>
-                </select>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <span class="badge bg-light text-secondary border px-3 py-2">
+                    <i class="fas fa-shield-alt text-primary me-1"></i> Perfil Único: Vendedora (Admin)
+                </span>
                 <select id="filtroStatus" class="form-select form-select-sm" style="width: auto;" onchange="carregarFuncionarios()">
                     <option value="">Todos os Status</option>
                     <option value="ativo">Ativos</option>
@@ -78,14 +75,10 @@
                         <input type="email" id="novoEmail" class="form-control" placeholder="colaborador@loja.com">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Cargo / Papel</label>
-                        <select id="novoCargo" class="form-select" required>
-                            <option value="vendedor">Vendedor (Operação PDV & Clientes)</option>
-                            <option value="gerente">Gerente (Gestão & Recompensas)</option>
-                            {% if current_user.is_proprietario %}
-                            <option value="proprietario">Proprietário / Admin (Acesso Total)</option>
-                            {% endif %}
-                        </select>
+                        <label class="form-label fw-bold">Função / Perfil de Acesso</label>
+                        <input type="text" class="form-control" value="Vendedora (Admin)" readonly disabled>
+                        <input type="hidden" id="novoCargo" value="vendedora">
+                        <small class="text-muted">Acesso administrativo completo à operação da loja.</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Senha Inicial</label>
@@ -107,7 +100,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold"><i class="fas fa-edit text-warning me-2"></i>Editar Colaborador</h5>
+                <h5 class="modal-title fw-bold"><i class="fas fa-user-edit text-warning me-2"></i>Editar Colaborador</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="formEditarFuncionario">
@@ -122,18 +115,11 @@
                         <label class="form-label fw-bold">E-mail</label>
                         <input type="email" id="editEmail" class="form-control">
                     </div>
-                    {% if current_user.tem_permissao('funcionarios.alterar_permissao') %}
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Cargo / Papel</label>
-                        <select id="editCargo" class="form-select" required>
-                            <option value="vendedor">Vendedor</option>
-                            <option value="gerente">Gerente</option>
-                            {% if current_user.is_proprietario %}
-                            <option value="proprietario">Proprietário / Admin</option>
-                            {% endif %}
-                        </select>
+                        <label class="form-label fw-bold">Função / Perfil de Acesso</label>
+                        <input type="text" class="form-control" value="Vendedora (Admin)" readonly disabled>
+                        <input type="hidden" id="editCargo" value="vendedora">
                     </div>
-                    {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -213,11 +199,7 @@ function renderFuncionarios(lista) {
 
     tb.innerHTML = lista.map(f => {
         const dtLogin = f.ultimo_login ? new Date(f.ultimo_login).toLocaleString('pt-BR') : '<span class="text-muted">Nunca acessou</span>';
-        const badgeCargo = {
-            'proprietario': '<span class="badge bg-danger">Proprietário</span>',
-            'gerente': '<span class="badge bg-primary">Gerente</span>',
-            'vendedor': '<span class="badge bg-info text-dark">Vendedor</span>'
-        }[f.cargo] || `<span class="badge bg-secondary">${f.cargo}</span>`;
+        const badgeCargo = '<span class="badge bg-danger">Vendedora (Admin)</span>';
 
         const badgeStatus = f.ativo 
             ? '<span class="badge bg-success">Ativo</span>' 

@@ -119,8 +119,8 @@ class AuditoriaTestCase(unittest.TestCase):
         self.assertEqual(len(data["items"]), 3)
 
     def test_auditoria_acesso_restrito(self):
-        # Vendedor não pode visualizar auditoria
-        self.autenticar("u", self.vend_id)
+        # Cliente não pode visualizar auditoria
+        self.autenticar("c", self.cliente_id)
         resp = self.client.get("/api/auditoria/")
         self.assertEqual(resp.status_code, 403)
 

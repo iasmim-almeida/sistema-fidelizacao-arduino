@@ -38,3 +38,6 @@ def validar_politica_senha_admin(senha: str) -> tuple[bool, str | None]:
     if not re.search(r"[^A-Za-z0-9]", senha):
         return False, "A nova senha deve conter ao menos um caractere especial (ex: !@#$%&*)."
     return True, None
+
+
+validar_complexidade_senha = validar_politica_senha_admin

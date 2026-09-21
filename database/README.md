@@ -28,11 +28,11 @@ database/
 
 O banco de dados foi estruturado com foco em rastreabilidade, imutabilidade e integridade referencial:
 
-1. **`usuario`**: Funcionários da loja (Proprietária, Gerente, Vendedora) com controle RBAC granular. Senhas armazenadas com hash PBKDF2-SHA256 (`generate_password_hash`).
+1. **`usuario`**: Gestão da loja sob perfil administrativo unificado **Vendedora (Admin)**. Senhas armazenadas com hash criptográfico PBKDF2-SHA256 (`generate_password_hash`).
 2. **`cliente`**: Clientes do programa de fidelidade identificados por telefone único e e-mail único. Possuem senha com hash e saldo consolidado de pontos (`pontos_acumulados`).
 3. **`compra`**: Registro de transações do PDV. No IT Clube, **1 compra gera exatamente 1 ponto**, desacoplado de valor financeiro.
-4. **`recompensa`**: Catálogo persistente de prêmios gerenciado pela proprietária/gerente, contendo custo em pontos, quantidade disponível, validade e tipo.
-5. **`resgate`**: Registro de consumo de pontos e validação física de prêmios, executado e confirmado exclusivamente pela vendedora/gestora no balcão da loja.
+4. **`recompensa`**: Catálogo persistente de prêmios gerenciado pela Vendedora (Admin), contendo custo em pontos, quantidade disponível, validade e tipo.
+5. **`resgate`**: Registro de consumo de pontos e validação física de prêmios, executado e confirmado exclusivamente pela Vendedora (Admin) no balcão da loja.
 6. **`movimentacao_pontos`**: Ledger imutável de movimentação atômica de pontos (`COMPRA`, `RESGATE`, `AJUSTE_MANUAL`, `EXPIRACAO`), garantindo auditoria contábil de cada ponto emitido ou debitado.
 7. **`auditoria`**: Trilha de auditoria administrativa e de segurança registrando IP, User-Agent, entidade modificada, ação e alterações (sem armazenar senhas ou dados sensíveis em texto plano).
 

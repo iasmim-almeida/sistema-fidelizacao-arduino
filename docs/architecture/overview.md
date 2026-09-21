@@ -63,7 +63,7 @@ flowchart TD
 ### 2.3. Camada de Domínio & Regras de Negócio
 - **Regra de Pontuação:** Cada compra confirmada gera exatamente 1 ponto (`pontos_gerados = 1`), independentemente do valor transacionado.
 - **Ledger Duplo de Pontos:** Cada alteração no saldo do cliente é acompanhada de um registro imutável em `movimentacao_pontos`, garantindo auditoria contábil.
-- **Controle de Acesso Baseado em Papéis (RBAC):** Papéis segregados para `proprietario`, `gerente`, `vendedor` e `cliente`.
+- **Controle de Acesso Seguro (RBAC):** Perfis segregados entre a gestão da loja (**Vendedora / Admin**) e o portal de autoatendimento (**Cliente**).
 
 ### 2.4. Camada de Integração IoT (Hardware)
 - Microcontrolador **ESP8266** configurado com chave pré-compartilhada (`X-Device-Key`) para envio de compras e ativação de sinalizador luminoso (LED Verde).

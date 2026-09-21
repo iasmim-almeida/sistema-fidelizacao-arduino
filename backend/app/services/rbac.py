@@ -2,19 +2,20 @@ from functools import wraps
 from flask import jsonify, request, redirect, url_for
 from flask_login import current_user
 
-# Papéis de funcionários
-ROLE_PROPRIETARIO = "proprietario"
-ROLE_GERENTE = "gerente"
-ROLE_VENDEDOR = "vendedor"
+# Papel administrativo único da loja: Vendedora (Admin)
+ROLE_VENDEDORA = "vendedora"
 
-ROLES_VALIDOS = (ROLE_PROPRIETARIO, ROLE_GERENTE, ROLE_VENDEDOR)
+# Aliases de retrocompatibilidade
+ROLE_ADMIN = "vendedora"
+ROLE_PROPRIETARIO = "vendedora"
+ROLE_GERENTE = "vendedora"
+ROLE_VENDEDOR = "vendedora"
 
-# Hierarquia de cargos para prevenção de privilege escalation
-# Quanto maior o peso, maior a hierarquia
+ROLES_VALIDOS = (ROLE_VENDEDORA,)
+
+# Hierarquia unificada (Vendedora com perfil de administração integral)
 HIERARQUIA_CARGOS = {
-    ROLE_PROPRIETARIO: 30,
-    ROLE_GERENTE: 20,
-    ROLE_VENDEDOR: 10,
+    ROLE_VENDEDORA: 30,
 }
 
 # Permissões do sistema
@@ -45,47 +46,22 @@ PERMISSOES = {
     "configuracoes.editar": "Permissão para alterar configurações do sistema",
 }
 
-# Matriz de permissões por papel
+# Matriz de permissões: a Vendedora (Admin) possui acesso integral ao sistema
 MATRIZ_PERMISSOES = {
-    ROLE_PROPRIETARIO: set(PERMISSOES.keys()),
-    ROLE_GERENTE: {
-        "clientes.visualizar",
-        "clientes.criar",
-        "clientes.editar",
-        "clientes.desativar",
-        "pontos.visualizar",
-        "pontos.adicionar",
-        "pontos.remover",
-        "recompensas.visualizar",
-        "recompensas.criar",
-        "recompensas.editar",
-        "recompensas.desativar",
-        "resgates.validar",
-        "relatorios.visualizar",
-    },
-    ROLE_VENDEDOR: {
-        "clientes.visualizar",
-        "clientes.criar",
-        "pontos.visualizar",
-        "pontos.adicionar",
-        "recompensas.visualizar",
-        "resgates.validar",
-    },
+    ROLE_VENDEDORA: set(PERMISSOES.keys()),
 }
 
 
 def normalizar_cargo(cargo_ou_nivel: str | None) -> str:
-    """Mapeia aliases legados ('gestor', 'admin') para os papéis padronizados."""
+    """Mapeia aliases administrativos para o papel único Vendedora."""
     if not cargo_ou_nivel:
-        return ROLE_VENDEDOR
+        return ROLE_VENDEDORA
     valor = str(cargo_ou_nivel).strip().lower()
-    if valor in ("gestor", "admin", "administrador", "proprietario", "proprietária"):
-        return ROLE_PROPRIETARIO
-    if valor in ("gerente", "gerencia"):
-        return ROLE_GERENTE
-    if valor in ("vendedor", "vendedora", "funcionario", "operador"):
-        return ROLE_VENDEDOR
-    return ROLE_VENDEDOR
+    if valor in ("vendedora", "vendedor", "admin", "proprietario", "proprietaria", "proprietária", "gerente", "gestor"):
+        return ROLE_VENDEDORA
+    if valor == "cliente":
+        return "cliente"
+    return valor
 
 
 def usuario_tem_permissao(usuario, permissao: str) -> bool:
@@ -93,7 +69,7 @@ def usuario_tem_permissao(usuario, permissao: str) -> bool:
     if not usuario or not getattr(usuario, "is_authenticated", False):
         return False
 
-    # Apenas usuários internos (funcionários/vendedoras) possuem permissões administrativas
+    # Apenas usuários internos (vendedoras) possuem permissões administrativas
     if not getattr(usuario, "is_vendedora", False):
         return False
 
@@ -139,10 +115,8 @@ def permissao_requerida(permissao: str):
 
 
 def pode_gerenciar_cargo(cargo_operador: str, cargo_alvo: str) -> bool:
-    """Impede privilege escalation: operador só gerencia cargos estritamente inferiores."""
-    peso_operador = HIERARQUIA_CARGOS.get(normalizar_cargo(cargo_operador), 0)
-    peso_alvo = HIERARQUIA_CARGOS.get(normalizar_cargo(cargo_alvo), 0)
-    # Proprietário pode gerenciar tudo inclusive outro proprietário se autorizado
-    if peso_operador >= HIERARQUIA_CARGOS[ROLE_PROPRIETARIO]:
-        return True
-    return peso_operador > peso_alvo
+    """Verifica se o operador possui privilégio para gerenciar o colaborador."""
+    if not cargo_operador:
+        return False
+    # Vendedora ativa pode gerenciar os colaboradores da loja
+    return normalizar_cargo(cargo_operador) == ROLE_VENDEDORA

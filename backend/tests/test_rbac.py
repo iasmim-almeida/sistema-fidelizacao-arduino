@@ -95,50 +95,43 @@ class RBACTestCase(unittest.TestCase):
 
     def test_matriz_permissoes_unitaria(self):
         with self.app.app_context():
-            prop = db.session.get(Usuario, self.ids["prop"])
-            ger = db.session.get(Usuario, self.ids["ger"])
-            vend = db.session.get(Usuario, self.ids["vend"])
+            vendedora = db.session.get(Usuario, self.ids["prop"])
             inat = db.session.get(Usuario, self.ids["inat"])
+            cli = db.session.get(Cliente, self.ids["cli"])
 
-            # Proprietário tem tudo
-            self.assertTrue(usuario_tem_permissao(prop, "funcionarios.criar"))
-            self.assertTrue(usuario_tem_permissao(prop, "auditoria.visualizar"))
-            self.assertTrue(usuario_tem_permissao(prop, "pontos.remover"))
-
-            # Gerente não tem funcionários nem auditoria, mas tem pontos e recompensas
-            self.assertFalse(usuario_tem_permissao(ger, "funcionarios.criar"))
-            self.assertFalse(usuario_tem_permissao(ger, "auditoria.visualizar"))
-            self.assertTrue(usuario_tem_permissao(ger, "pontos.remover"))
-            self.assertTrue(usuario_tem_permissao(ger, "recompensas.criar"))
-
-            # Vendedor não tem auditoria, nem funcionários, nem remover pontos, nem desativar cliente
-            self.assertFalse(usuario_tem_permissao(vend, "funcionarios.visualizar"))
-            self.assertFalse(usuario_tem_permissao(vend, "auditoria.visualizar"))
-            self.assertFalse(usuario_tem_permissao(vend, "pontos.remover"))
-            self.assertFalse(usuario_tem_permissao(vend, "clientes.desativar"))
-            self.assertTrue(usuario_tem_permissao(vend, "clientes.visualizar"))
-            self.assertTrue(usuario_tem_permissao(vend, "pontos.adicionar"))
+            # Vendedora (Admin) possui acesso integral
+            self.assertTrue(usuario_tem_permissao(vendedora, "funcionarios.criar"))
+            self.assertTrue(usuario_tem_permissao(vendedora, "auditoria.visualizar"))
+            self.assertTrue(usuario_tem_permissao(vendedora, "pontos.remover"))
+            self.assertTrue(usuario_tem_permissao(vendedora, "recompensas.criar"))
+            self.assertTrue(usuario_tem_permissao(vendedora, "clientes.visualizar"))
+            self.assertTrue(usuario_tem_permissao(vendedora, "pontos.adicionar"))
 
             # Usuário inativo não possui permissão alguma
             self.assertFalse(usuario_tem_permissao(inat, "clientes.visualizar"))
+            self.assertFalse(usuario_tem_permissao(inat, "pontos.adicionar"))
 
-    def test_vendedor_bloqueado_em_funcionarios_e_auditoria(self):
-        self.autenticar("u", self.ids["vend"])
+            # Cliente não possui permissões administrativas
+            self.assertFalse(usuario_tem_permissao(cli, "funcionarios.visualizar"))
+            self.assertFalse(usuario_tem_permissao(cli, "auditoria.visualizar"))
+
+    def test_cliente_bloqueado_em_funcionarios_e_auditoria(self):
+        self.autenticar("c", self.ids["cli"])
         resp_func = self.client.get("/api/funcionarios/")
         self.assertEqual(resp_func.status_code, 403)
 
         resp_audit = self.client.get("/api/auditoria/")
         self.assertEqual(resp_audit.status_code, 403)
 
-    def test_gerente_bloqueado_em_auditoria_e_funcionarios(self):
-        self.autenticar("u", self.ids["ger"])
+    def test_inativo_bloqueado_em_funcionarios_e_auditoria(self):
+        self.autenticar("u", self.ids["inat"])
         resp_func = self.client.get("/api/funcionarios/")
-        self.assertEqual(resp_func.status_code, 403)
+        self.assertIn(resp_func.status_code, [401, 403])
 
         resp_audit = self.client.get("/api/auditoria/")
-        self.assertEqual(resp_audit.status_code, 403)
+        self.assertIn(resp_audit.status_code, [401, 403])
 
-    def test_proprietario_acessa_funcionarios_e_auditoria(self):
+    def test_vendedora_admin_acessa_funcionarios_e_auditoria(self):
         self.autenticar("u", self.ids["prop"])
         resp_func = self.client.get("/api/funcionarios/")
         self.assertEqual(resp_func.status_code, 200)

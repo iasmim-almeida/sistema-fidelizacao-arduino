@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>IT Clube - Cadastro Inicial Seguro da Vendedora (Admin)</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <style>
+    body {
+      background-color: var(--bg-sistema, #fdf8f9);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 15px;
+    }
+    .setup-card {
+      border: 2px solid var(--rosa-pastel, #f6cfd9);
+      border-radius: 24px;
+      background: #ffffff;
+      box-shadow: 0 15px 35px rgba(92, 58, 67, 0.08);
+      padding: 35px;
+      max-width: 520px;
+      width: 100%;
+    }
+    .setup-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .setup-header .icon-badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: #c2185b;
+      margin-bottom: 12px;
+    }
+    .btn-setup {
+      background: linear-gradient(135deg, #d85f82 0%, #c43d67 100%);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+    .btn-setup:hover {
+      background: linear-gradient(135deg, #c43d67 0%, #a82a52 100%);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(196, 61, 103, 0.3);
+    }
+    .requisitos-box {
+      background-color: #faf5f7;
+      border-left: 4px solid #d85f82;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="setup-card">
+    <div class="setup-header">
+      <div class="icon-badge">
+        <i class="bi bi-shield-lock-fill"></i>
+      </div>
+      <h2 class="fw-bold mb-1" style="color: var(--vinho-principal, #4a2835); font-size: 1.6rem;">
+        Cadastro Inicial Seguro
+      </h2>
+      <p class="text-muted small mb-0">
+        Configuração da conta da <strong>Vendedora (Admin)</strong> da loja
+      </p>
+    </div>
+
+    <div class="alert alert-info py-2 px-3 small border-0 mb-3" style="background-color: #f1f8fc; color: #1e5670;">
+      <i class="bi bi-info-circle-fill me-1"></i>
+      Este é o primeiro acesso à aplicação. Cadastre as credenciais da administradora. Por segurança, esta tela será bloqueada após a conclusão.
+    </div>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show small py-2" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('auth.setup') }}" id="formSetup">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <label for="nome" class="form-label text-muted small fw-semibold">Nome Completo</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+          <input type="text" id="nome" name="nome" class="form-control" placeholder="Ex: Camila Silva" required minlength="3" value="{{ nome or '' }}" autocomplete="name">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="login" class="form-label text-muted small fw-semibold">Login de Acesso</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-person-badge"></i></span>
+          <input type="text" id="login" name="login" class="form-control" placeholder="Ex: vendedora" required minlength="3" maxlength="50" value="{{ login or '' }}" autocomplete="username">
+        </div>
+        <div class="form-text small">Utilizado para efetuar login no painel da loja.</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label text-muted small fw-semibold">E-mail Corporativo</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+          <input type="email" id="email" name="email" class="form-control" placeholder="vendedora@loja.com.br" required value="{{ email or '' }}" autocomplete="email">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="senha" class="form-label text-muted small fw-semibold">Senha Forte</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+          <input type="password" id="senha" name="senha" class="form-control" placeholder="••••••••" required autocomplete="new-password">
+          <button class="btn btn-outline-secondary" type="button" onclick="toggleSenha('senha', 'eyeSenha')">
+            <i class="bi bi-eye" id="eyeSenha"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="confirmar_senha" class="form-label text-muted small fw-semibold">Confirmar Senha</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-lock-fill"></i></span>
+          <input type="password" id="confirmar_senha" name="confirmar_senha" class="form-control" placeholder="••••••••" required autocomplete="new-password">
+          <button class="btn btn-outline-secondary" type="button" onclick="toggleSenha('confirmar_senha', 'eyeConfirmar')">
+            <i class="bi bi-eye" id="eyeConfirmar"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="requisitos-box mb-4">
+        <div class="fw-bold text-dark mb-1"><i class="bi bi-shield-check text-success me-1"></i>Política de Senha Forte:</div>
+        <ul class="mb-0 ps-3 small text-muted">
+          <li>Mínimo de 8 caracteres</li>
+          <li>Letra maiúscula e minúscula</li>
+          <li>Pelo menos um número e um caractere especial (!@#$%...)</li>
+        </ul>
+      </div>
+
+      <button type="submit" class="btn btn-setup w-100 shadow-sm" id="btnSubmit">
+        <i class="bi bi-check-circle me-1"></i> Concluir Cadastro da Vendedora (Admin)
+      </button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function toggleSenha(inputId, eyeId) {
+      const input = document.getElementById(inputId);
+      const eye = document.getElementById(eyeId);
+      if (!input || !eye) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        eye.classList.remove('bi-eye');
+        eye.classList.add('bi-eye-slash');
+      } else {
+        input.type = 'password';
+        eye.classList.remove('bi-eye-slash');
+        eye.classList.add('bi-eye');
+      }
+    }
+  </script>
+</body>
+</html>
