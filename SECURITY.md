@@ -30,7 +30,7 @@ A equipe de engenharia do IT Clube leva a segurança a sério. Se você identifi
 O sistema foi submetido a um processo de hardening rigoroso, cobrindo:
 
 - **Autenticação Segura:**
-  - Armazenamento de credenciais exclusivamente com PBKDF2-HMAC-SHA256 e sal aleatório criptográfico.
+  - Armazenamento de credenciais exclusivamente com scrypt (N=32768, r=8, p=1) via Werkzeug 3.x e sal aleatório criptográfico.
   - Eliminação de qualquer mecanismo ou senha de emergência *hardcoded*.
   - Deserialização de sessão estrita (`u_<id>` e `c_<id>`), impedindo colisão e escalação vertical de privilégio.
 - **Proteção de API & BOLA/IDOR:**

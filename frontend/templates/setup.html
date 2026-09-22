@@ -160,6 +160,19 @@
         </ul>
       </div>
 
+      {% if setup_token_required %}
+      <div class="mb-4">
+        <label for="setup_token" class="form-label text-muted small fw-semibold">Token de Autorização do Setup</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="bi bi-key-fill text-danger"></i></span>
+          <input type="password" id="setup_token" name="setup_token" class="form-control" placeholder="Informe o token configurado no Render" required value="" autocomplete="off">
+        </div>
+        <div class="form-text small text-danger">Ambiente de produção protegido: forneça o token definido em INITIAL_SETUP_TOKEN.</div>
+      </div>
+      {% else %}
+      <input type="hidden" name="setup_token" value="">
+      {% endif %}
+
       <button type="submit" class="btn btn-setup w-100 shadow-sm" id="btnSubmit">
         <i class="bi bi-check-circle me-1"></i> Concluir Cadastro da Vendedora (Admin)
       </button>

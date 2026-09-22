@@ -1,6 +1,6 @@
 # IT Clube — Sistema Integrado de Fidelização, Gestão de PDV & IoT
 
-[![Testes Automatizados](https://img.shields.io/badge/testes-94%20aprovados%20(100%25)-success.svg)](backend/tests/)
+[![Testes Automatizados](https://img.shields.io/badge/testes-138%20aprovados%20(100%25)-success.svg)](backend/tests/)
 [![Auditoria de Segurança](https://img.shields.io/badge/seguran%C3%A7a-OWASP%20Hardened-blue.svg)](SECURITY.md)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/flask-3.1-black.svg)](https://flask.palletsprojects.com/)
@@ -45,7 +45,7 @@ sistema-fidelizacao-integrado/
 │   │   ├── security/             # Políticas de senha e sanitização
 │   │   ├── services/             # Ledger de pontos, RBAC e auditoria
 │   │   └── utils/                # Sanitizadores e utilitários auxiliares
-│   ├── tests/                    # Suíte completa de testes automatizados (94 testes)
+│   ├── tests/                    # Suíte completa de testes automatizados (136 testes)
 │   ├── Dockerfile                # Dockerfile individual do backend
 │   ├── requirements.txt          # Dependências Python com versões pinadas
 │   └── run.py                    # Script de inicialização do backend
@@ -174,7 +174,7 @@ No primeiro acesso ao sistema (quando ainda não há nenhuma administradora cada
   O utilitário solicita nome, login, e-mail e oculta a digitação da senha com confirmação e validação estrita de complexidade (mínimo de 8 caracteres, letras maiúsculas, minúsculas, números e caracteres especiais).
 
 ### 5.2. Cadastro e Acesso dos Clientes
-- **Autoatendimento do Cliente:** Novos clientes criam sua conta diretamente no portal de autoatendimento em `/cadastro`, definindo sua própria senha segura (armazenada com hash criptográfico PBKDF2-SHA256).
+- **Autoatendimento do Cliente:** Novos clientes criam sua conta diretamente no portal de autoatendimento em `/cadastro`, definindo sua própria senha segura (armazenada com hash criptográfico scrypt via Werkzeug 3.x).
 - **Acesso ao Portal do Cliente:** Clientes já cadastrados efetuam login informando o **telefone** registrado e sua **senha pessoal**.
 
 ### 5.3. Carga Opcional de Demonstração em Desenvolvimento (`seed.py`)
@@ -191,7 +191,7 @@ SEED_ADMIN_PASSWORD="SuaSenhaForteAqui@2026" python database/seeds/seed.py
 O projeto possui **100% de aprovação** em suas baterias de testes:
 
 ```bash
-# Executa todos os 94 testes unitários e de integração
+# Executa todos os 136 testes unitários e de integração
 python -m unittest discover backend/tests
 
 # Executa os testes de auditoria de segurança (SAST/DAST)
@@ -202,7 +202,7 @@ python test_security_audit.py
 - **`test_itclube_regras.py`**: Validação de 1 compra = 1 ponto, independência do valor financeiro, autoatendimento, bloqueio de auto-resgate e privacidade de senhas em logs.
 - **`test_pontos_ledger.py`**: Integridade e concorrência no livro contábil de pontos.
 - **`test_recompensas.py`**: Estoque atômico, vigência de prêmios e permissões de resgate.
-- **`test_security_audit.py`**: Mitigações para OWASP Top 10, proteção contra BOLA/IDOR, Anti-CSRF, PBKDF2 e isolamento de ambiente.
+- **`test_security_audit.py`**: Mitigações para OWASP Top 10, proteção contra BOLA/IDOR, Anti-CSRF, scrypt e isolamento de ambiente.
 - **`test_rbac.py`**, **`test_cadastro.py`**, **`test_troca_senha.py`**, **`test_funcionarios.py`**, **`test_auditoria.py`**.
 
 ---

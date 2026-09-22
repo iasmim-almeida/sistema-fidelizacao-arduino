@@ -178,9 +178,19 @@ def editar(id_usuario: int):
         if not pode_gerenciar_cargo(cargo_operador, novo_cargo):
             return jsonify({"erro": f"Você não pode promover para o cargo '{novo_cargo}'."}), 403
 
+        # Protege contra rebaixamento do ultimo administrador ativo
+        if funcionario.is_vendedora and novo_cargo == "cliente":
+            admins_restantes = Usuario.query.filter(
+                Usuario.nivel_acesso != "CLIENTE",
+                Usuario.ativo == True,
+                Usuario.id_usuario != id_usuario
+            ).count()
+            if admins_restantes == 0:
+                return jsonify({"erro": "Não é possível rebaixar o último administrador ativo do sistema."}), 400
+
         alteracoes["cargo_anterior"] = funcionario.cargo
         funcionario.cargo = novo_cargo
-        funcionario.nivel_acesso = "ADMIN"
+        funcionario.nivel_acesso = "ADMIN" if novo_cargo != "cliente" else "CLIENTE"
         alteracoes["cargo_novo"] = novo_cargo
 
     try:

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from flask import Blueprint, render_template, redirect, url_for, jsonify
+from flask import Blueprint, render_template, redirect, url_for, jsonify, request
 from flask_login import current_user
 from sqlalchemy import func
 from app.extensions import db
@@ -30,13 +30,17 @@ def index():
 
 @main_bp.route("/health")
 def health():
-    return {"status": "ok"}
+    """Health check com verificação de conectividade ao banco de dados."""
+    try:
+        db.session.execute(db.text("SELECT 1"))
+        return jsonify({"status": "healthy", "database": "connected"}), 200
+    except Exception:
+        return jsonify({"status": "unhealthy", "database": "disconnected"}), 503
 
 
 @main_bp.route("/setup", methods=["GET", "POST"])
 def setup():
-    from app.routes.auth import setup as auth_setup
-    return auth_setup()
+    return redirect(url_for("auth.setup"), code=307 if request.method == "POST" else 302)
 
 
 @main_bp.route("/cadastro")

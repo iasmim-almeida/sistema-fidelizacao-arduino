@@ -87,20 +87,28 @@ class ProductionHardeningTestCase(unittest.TestCase):
 
     def test_production_cookies_e_hsts(self):
         """Valida configuração de cookies seguros e headers em ambiente production."""
-        app_prod = create_app("production")
-        self.assertFalse(app_prod.config["DEBUG"])
-        self.assertFalse(app_prod.config["TESTING"])
-        self.assertTrue(app_prod.config["SESSION_COOKIE_HTTPONLY"])
-        self.assertTrue(app_prod.config["SESSION_COOKIE_SECURE"])
-        self.assertEqual(app_prod.config["SESSION_COOKIE_SAMESITE"], "Lax")
-        self.assertTrue(app_prod.config["REMEMBER_COOKIE_HTTPONLY"])
-        self.assertTrue(app_prod.config["REMEMBER_COOKIE_SECURE"])
+        with patch.dict(os.environ, {"SECRET_KEY": "chave-super-segura-producao-64-caracteres-para-teste-1234567890"}):
+            app_prod = create_app("production")
+            self.assertFalse(app_prod.config["DEBUG"])
+            self.assertFalse(app_prod.config["TESTING"])
+            self.assertTrue(app_prod.config["SESSION_COOKIE_HTTPONLY"])
+            self.assertTrue(app_prod.config["SESSION_COOKIE_SECURE"])
+            self.assertEqual(app_prod.config["SESSION_COOKIE_SAMESITE"], "Lax")
+            self.assertTrue(app_prod.config["REMEMBER_COOKIE_HTTPONLY"])
+            self.assertTrue(app_prod.config["REMEMBER_COOKIE_SECURE"])
 
-        client_prod = app_prod.test_client()
-        resp = client_prod.get("/health")
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("Strict-Transport-Security", resp.headers)
-        self.assertIn("max-age=31536000", resp.headers["Strict-Transport-Security"])
+            client_prod = app_prod.test_client()
+            resp = client_prod.get("/health")
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Strict-Transport-Security", resp.headers)
+            self.assertIn("max-age=31536000", resp.headers["Strict-Transport-Security"])
+
+    def test_production_secret_key_fail_closed(self):
+        """Garante que a aplicação falha de forma explícita em PRD se SECRET_KEY estiver ausente ou insegura."""
+        for segredo_invalido in ["", "dev-secret-key", "troque-por-uma-chave-longa-e-aleatoria"]:
+            with patch.dict(os.environ, {"SECRET_KEY": segredo_invalido}):
+                with self.assertRaises(ValueError):
+                    create_app("production")
 
     def test_cli_create_owner(self):
         """Valida bootstrap administrativo via comando CLI 'flask create-owner'."""

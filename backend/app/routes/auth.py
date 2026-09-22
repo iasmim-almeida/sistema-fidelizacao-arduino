@@ -1,5 +1,7 @@
+import os
 import logging
 import re
+import threading
 from datetime import datetime, timezone
 from functools import wraps
 from flask import Blueprint, jsonify, request, redirect, url_for, render_template, flash, session
@@ -12,6 +14,7 @@ from app.services.auditoria import registrar_auditoria
 
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
+_SETUP_LOCK = threading.Lock()
 
 
 def vendedora_required(f):
@@ -333,6 +336,22 @@ def sistema_precisa_setup() -> bool:
     return Usuario.query.filter(Usuario.nivel_acesso != "CLIENTE").first() is None
 
 
+def obter_token_setup_esperado() -> str:
+    """Retorna o token de bootstrap se configurado na variável de ambiente INITIAL_SETUP_TOKEN."""
+    return os.getenv("INITIAL_SETUP_TOKEN", "").strip()
+
+
+def validar_setup_token(token_informado: str | None) -> tuple[bool, str | None]:
+    """Valida se o token informado coincide com INITIAL_SETUP_TOKEN caso esteja configurado."""
+    token_esperado = obter_token_setup_esperado()
+    if not token_esperado:
+        # Se não configurado, não exige token (modo padrão flexível)
+        return True, None
+    if not token_informado or token_informado.strip() != token_esperado:
+        return False, "Token de autorização de setup inválido ou ausente."
+    return True, None
+
+
 @auth_bp.route("/setup", methods=["GET", "POST"])
 @limiter.limit("10 per minute")
 def setup():
@@ -342,36 +361,60 @@ def setup():
     from app.services.rbac import ROLE_VENDEDORA
 
     precisa = sistema_precisa_setup()
+    token_esperado = obter_token_setup_esperado()
+    setup_token_required = bool(token_esperado)
+    # Token de setup NUNCA aceito via query string para evitar vazamento em logs, Referer e historico do navegador
 
     if request.method == "GET":
         if not precisa:
             flash("O cadastro inicial já foi realizado. Efetue login.", "info")
             return redirect(url_for("main.index"))
-        return render_template("setup.html")
+        return render_template(
+            "setup.html",
+            setup_token_required=setup_token_required,
+            setup_token="",
+        )
 
     # POST
     if not precisa:
         if request.is_json:
             return jsonify({"erro": "Cadastro inicial já concluído. O sistema já possui administradora configurada."}), 403
-        flash("O cadastro inicial já foi realizado.", "warning")
+        flash("O cadastro inicial já foi realizado. Efetue login.", "warning")
         return redirect(url_for("main.index"))
 
     data = request.get_json(silent=True) if request.is_json else request.form
-    nome = str(data.get("nome", "")).strip()
+    nome = " ".join(str(data.get("nome", "")).strip().split())
     login = str(data.get("login", "")).strip().lower()
     email = str(data.get("email", "")).strip().lower()
     senha = str(data.get("senha", ""))
     confirmar_senha = str(data.get("confirmar_senha", ""))
+    token_informado = str(data.get("setup_token") or "").strip()
 
     erros = []
     if len(nome) < 3:
         erros.append("O nome deve ter pelo menos 3 caracteres.")
+    if len(nome) > 100:
+        erros.append("O nome deve conter no máximo 100 caracteres.")
     if not re.match(r"^[a-zA-Z0-9_.@-]{3,50}$", login):
         erros.append("O login deve ter entre 3 e 50 caracteres alfanuméricos.")
-    if not email or "@" not in email:
-        erros.append("Informe um e-mail válido.")
+    if not email or len(email) > 100 or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        erros.append("Informe um e-mail válido com até 100 caracteres.")
     if senha != confirmar_senha:
         erros.append("A confirmação de senha não confere.")
+
+    valida_tok, msg_tok = validar_setup_token(token_informado)
+    if not valida_tok:
+        if request.is_json:
+            return jsonify({"erro": msg_tok}), 403
+        flash(msg_tok, "danger")
+        return render_template(
+            "setup.html",
+            nome=nome,
+            login=login,
+            email=email,
+            setup_token_required=setup_token_required,
+            setup_token=token_informado,
+        ), 403
 
     valida_senha, msg_senha = validar_politica_senha_admin(senha)
     if not valida_senha:
@@ -383,7 +426,14 @@ def setup():
             return jsonify({"erro": msg_total}), 400
         for err in erros:
             flash(err, "danger")
-        return render_template("setup.html", nome=nome, login=login, email=email), 400
+        return render_template(
+            "setup.html",
+            nome=nome,
+            login=login,
+            email=email,
+            setup_token_required=setup_token_required,
+            setup_token=token_informado,
+        ), 400
 
     # Verifica duplicidade
     if Usuario.query.filter((Usuario.login == login) | (Usuario.email == email)).first():
@@ -391,47 +441,78 @@ def setup():
         if request.is_json:
             return jsonify({"erro": msg_dup}), 409
         flash(msg_dup, "danger")
-        return render_template("setup.html", nome=nome, login=login, email=email), 409
+        return render_template(
+            "setup.html",
+            nome=nome,
+            login=login,
+            email=email,
+            setup_token_required=setup_token_required,
+            setup_token=token_informado,
+        ), 409
 
-    vendedora = Usuario(
-        nome=nome,
-        login=login,
-        email=email,
-        cargo=ROLE_VENDEDORA,
-        nivel_acesso="ADMIN",
-        ativo=True,
-        precisa_trocar_senha=False,
-    )
-    vendedora.set_senha(senha)
+    # Proteção de Concorrência (Race Condition): Serializa em threads e em PostgreSQL (advisory lock)
+    with _SETUP_LOCK:
+        try:
+            if db.engine.dialect.name == "postgresql":
+                db.session.execute(db.text("SELECT pg_advisory_xact_lock(742918)"))
+        except Exception as e:
+            logger.warning("Falha ao invocar pg_advisory_xact_lock: %s", e)
 
-    try:
-        db.session.add(vendedora)
-        db.session.commit()
+        # Re-verifica atomicamente se outro processo ou thread concluiu o setup
+        if not sistema_precisa_setup():
+            db.session.rollback()
+            msg_travado = "Cadastro inicial já concluído. O sistema já possui administradora configurada."
+            if request.is_json:
+                return jsonify({"erro": msg_travado}), 403
+            flash(msg_travado, "warning")
+            return redirect(url_for("main.index"))
 
-        registrar_auditoria(
-            acao="CADASTRO_INICIAL_VENDEDORA_ADMIN",
-            entidade="usuario",
-            entidade_id=vendedora.id_usuario,
-            detalhes={"login": login, "email": email, "cargo": ROLE_VENDEDORA, "metodo": "setup_seguro"},
-            usuario_id=vendedora.id_usuario,
+        vendedora = Usuario(
+            nome=nome,
+            login=login,
+            email=email,
+            cargo=ROLE_VENDEDORA,
+            nivel_acesso="ADMIN",
+            ativo=True,
+            precisa_trocar_senha=False,
         )
-        db.session.commit()
+        vendedora.set_senha(senha)
 
-        login_user(vendedora)
+        try:
+            db.session.add(vendedora)
+            db.session.commit()
 
-        if request.is_json:
-            return jsonify({
-                "mensagem": "Cadastro inicial da Vendedora (Admin) realizado com sucesso!",
-                "redirect": "/dashboard",
-                "usuario": vendedora.to_dict(),
-            }), 201
+            registrar_auditoria(
+                acao="CADASTRO_INICIAL_VENDEDORA_ADMIN",
+                entidade="usuario",
+                entidade_id=vendedora.id_usuario,
+                detalhes={"login": login, "email": email, "cargo": ROLE_VENDEDORA, "metodo": "setup_seguro"},
+                usuario_id=vendedora.id_usuario,
+            )
+            db.session.commit()
 
-        flash("Cadastro inicial concluído com sucesso! Bem-vinda ao IT Clube.", "success")
-        return redirect(url_for("main.dashboard"))
-    except Exception:
-        db.session.rollback()
-        logger.exception("Falha no cadastro inicial seguro")
-        if request.is_json:
-            return jsonify({"erro": "Erro interno ao processar cadastro inicial."}), 500
-        flash("Erro ao salvar cadastro inicial. Tente novamente.", "danger")
-        return render_template("setup.html", nome=nome, login=login, email=email), 500
+            login_user(vendedora)
+
+            if request.is_json:
+                return jsonify({
+                    "mensagem": "Cadastro inicial da Vendedora (Admin) realizado com sucesso!",
+                    "redirect": "/dashboard",
+                    "usuario": vendedora.to_dict(),
+                }), 201
+
+            flash("Cadastro inicial concluído com sucesso! Bem-vinda ao IT Clube.", "success")
+            return redirect(url_for("main.dashboard"))
+        except Exception:
+            db.session.rollback()
+            logger.exception("Falha no cadastro inicial seguro")
+            if request.is_json:
+                return jsonify({"erro": "Erro interno ao processar cadastro inicial."}), 500
+            flash("Erro ao salvar cadastro inicial. Tente novamente.", "danger")
+            return render_template(
+                "setup.html",
+                nome=nome,
+                login=login,
+                email=email,
+                setup_token_required=setup_token_required,
+                setup_token=token_informado,
+            ), 500

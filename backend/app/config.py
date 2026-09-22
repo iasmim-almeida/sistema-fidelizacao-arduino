@@ -5,18 +5,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+INSTANCE_DIR = os.path.join(BACKEND_DIR, "instance")
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+DEFAULT_SQLITE_PATH = os.path.join(INSTANCE_DIR, "fidelizacao.db")
+
+
 def database_url_from_environment() -> str:
-    """Resolve DATABASE_URL or monta uma URI PostgreSQL a partir das variáveis PG*."""
-    database_url = os.getenv("DATABASE_URL", "").strip()
+    """Resolve DATABASE_URL ou monta uma URI PostgreSQL a partir das variáveis PG*."""
+    database_url = os.getenv("DATABASE_URL", "").strip().strip("'\"")
     if database_url:
-        return database_url.strip("'\"")
+        # Render e Neon utilizam postgres://, mas SQLAlchemy 1.4+ exige postgresql:// ou postgresql+psycopg2://
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif database_url.startswith("postgresql://") and not database_url.startswith("postgresql+"):
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return database_url
 
     host = os.getenv("PGHOST", "").strip()
     database = os.getenv("PGDATABASE", "").strip()
     user = os.getenv("PGUSER", "").strip()
     password = os.getenv("PGPASSWORD", "")
     if not all((host, database, user, password)):
-        return "sqlite:///fidelizacao.db"
+        return f"sqlite:///{DEFAULT_SQLITE_PATH}"
 
     sslmode = os.getenv("PGSSLMODE", "require").strip()
     channel_binding = os.getenv("PGCHANNELBINDING", "require").strip()
@@ -49,20 +60,8 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-    _secret = os.getenv("SECRET_KEY")
-    if not _secret or _secret in ("dev-secret-key", "troque-por-uma-chave-longa-e-aleatoria"):
-        import secrets
-        import warnings
-        SECRET_KEY = secrets.token_hex(32)
-        warnings.warn(
-            "ALERTA DE SEGURANÇA: SECRET_KEY ausente ou insegura em produção! "
-            "Uma chave criptográfica forte temporária foi gerada dinamicamente.",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-    else:
-        SECRET_KEY = _secret
-
+    TESTING = False
+    SECRET_KEY = os.getenv("SECRET_KEY", "")
     IOT_DEVICE_KEY = os.getenv("IOT_DEVICE_KEY")
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "True").lower() in ("true", "1")
     SESSION_COOKIE_HTTPONLY = True
@@ -70,6 +69,14 @@ class ProductionConfig(Config):
     REMEMBER_COOKIE_SECURE = os.getenv("REMEMBER_COOKIE_SECURE", "True").lower() in ("true", "1")
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
+
+    # Pool otimizado para PostgreSQL Neon (evita desconexões por scale-to-zero / autosuspend)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "pool_timeout": 30,
+        "max_overflow": 10,
+    }
 
 
 class TestingConfig(Config):

@@ -4,12 +4,14 @@ services:
     runtime: python
     region: ohio
     plan: starter
-    buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt && flask db upgrade"
-    startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 3 --threads 2 --timeout 60 --no-control-socket run:app"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && flask --app wsgi:app db upgrade"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 3 --threads 2 --timeout 60 --no-control-socket wsgi:app"
     healthCheckPath: /health
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: FLASK_APP
+        value: wsgi:app
       - key: PYTHONPATH
         value: backend
       - key: SECRET_KEY

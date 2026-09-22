@@ -13,6 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import re
+from unittest.mock import patch
 from app import create_app
 from app.extensions import db
 from app.models.usuario import Usuario
@@ -150,12 +151,12 @@ def run_tests():
     with app.app_context():
         c_salvo = Cliente.query.filter_by(telefone='11911112222').first()
         assert c_salvo is not None, "Falha: Cliente não foi persistido no banco!"
-        assert c_salvo.verificar_senha('MinhaSenhaSegura99') is True, "Falha: Hash PBKDF2 incorreto!"
+        assert c_salvo.verificar_senha('MinhaSenhaSegura99') is True, "Falha: Hash de senha incorreto!"
         assert c_salvo.verificar_senha('1234') is False, "Falha: Senha 1234 ainda funciona no cliente salvo!"
         # Limpa cliente de teste
         db.session.delete(c_salvo)
         db.session.commit()
-    print("  ✅ [PASSOU] Anti-CSRF ativo, senha fraca bloqueada e cadastro persistido com hash seguro PBKDF2.")
+    print("  ✅ [PASSOU] Anti-CSRF ativo, senha fraca bloqueada e cadastro persistido com hash seguro scrypt.")
 
     # -------------------------------------------------------------
     # TESTE 6: Mitigação de Enumeração de Usuários (VULN-06)
@@ -173,8 +174,9 @@ def run_tests():
     # TESTE 7: Configuração de Segurança em Produção (VULN-05)
     # -------------------------------------------------------------
     print("\n[TESTE 7] Verificando isolamento do modo Debug em Produção...")
-    app_prod = create_app('production')
-    assert app_prod.config['DEBUG'] is False, "Falha: Debug continua ativo na configuração de produção!"
+    with patch.dict(os.environ, {"SECRET_KEY": "audit-test-strong-production-secret-key-123456789"}):
+        app_prod = create_app('production')
+        assert app_prod.config['DEBUG'] is False, "Falha: Debug continua ativo na configuração de produção!"
     print("  ✅ [PASSOU] Ambiente de produção desabilita o depurador interativo (DEBUG=False).")
 
     print("\n" + "=" * 70)

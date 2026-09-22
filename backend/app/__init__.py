@@ -21,8 +21,15 @@ def create_app(config_name: str = "development") -> Flask:
     app.config.from_object(config_by_name.get(config_name, config_by_name["development"]))
 
     if config_name == "production":
+        secret = os.getenv("SECRET_KEY", "").strip().strip("'\"")
+        if not secret or secret in ("dev-secret-key", "troque-por-uma-chave-longa-e-aleatoria", "dev-secret-fideliza-itclube-local-2026-xyz"):
+            raise ValueError(
+                "FALHA CRÍTICA DE SEGURANÇA EM PRODUÇÃO: A variável de ambiente SECRET_KEY é "
+                "obrigatória e deve conter uma chave criptográfica forte. "
+                "Configure SECRET_KEY no painel do Render com generateValue: true ou defina um segredo forte."
+            )
         from werkzeug.middleware.proxy_fix import ProxyFix
-        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=0)
 
     db.init_app(app)
     login_manager.init_app(app)
