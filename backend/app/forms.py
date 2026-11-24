@@ -2,7 +2,7 @@ import re
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError, Regexp
-from app.models.cliente import Cliente
+from app.models.usuario import Usuario
 
 
 class CadastroClienteForm(FlaskForm):
@@ -42,7 +42,6 @@ class CadastroClienteForm(FlaskForm):
         "Senha de Acesso",
         validators=[
             DataRequired(message="A senha e obrigatoria."),
-            # Mitigação VULN-02: Mínimo 8 caracteres e rejeição de senhas fracas
             Length(min=8, max=64, message="A senha deve possuir entre 8 e 64 caracteres."),
             Regexp(
                 r"^(?=.*[A-Za-z])(?=.*\d).+$",
@@ -71,7 +70,7 @@ class CadastroClienteForm(FlaskForm):
         email_limpo = (field.data or "").strip().lower()
         if not email_limpo:
             return
-        cliente_existente = Cliente.query.filter_by(email=email_limpo).first()
+        cliente_existente = Usuario.query.filter_by(email=email_limpo).first()
         if cliente_existente:
             raise ValidationError("Este e-mail ja esta cadastrado no sistema.")
 
@@ -80,8 +79,8 @@ class CadastroClienteForm(FlaskForm):
         tel_limpo = re.sub(r"\D", "", field.data or "")
         if not tel_limpo:
             raise ValidationError("Telefone invalido.")
-        cliente_existente = Cliente.query.filter(
-            (Cliente.telefone == field.data) | (Cliente.telefone == tel_limpo)
+        cliente_existente = Usuario.query.filter(
+            (Usuario.telefone == field.data) | (Usuario.telefone == tel_limpo)
         ).first()
         if cliente_existente:
             raise ValidationError("Este telefone ja esta cadastrado no sistema.")

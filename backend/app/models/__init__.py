@@ -6,7 +6,6 @@ from app.models.recompensa import Recompensa
 from app.models.resgate import Resgate
 from app.models.movimentacao_pontos import MovimentacaoPontos
 from app.models.historico import Historico
-from app.models.auditoria import Auditoria
 
 
 @login_manager.user_loader
@@ -31,7 +30,7 @@ def load_user(user_id: str):
         except (ValueError, TypeError):
             return None
 
-    # Mitigação VULN-08: Rejeita IDs sem prefixo para evitar colisão e escalação de privilégios
+    # IDs sem prefixo são rejeitados para evitar colisão entre perfis.
     return None
 
 
@@ -43,6 +42,5 @@ __all__ = [
     "Resgate",
     "MovimentacaoPontos",
     "Historico",
-    "Auditoria",
     "load_user",
 ]

@@ -27,6 +27,30 @@ STATUS_RECOMPENSA = ("ativa", "pausada")
 
 class Produto(db.Model):
     __tablename__ = "produto"
+    __table_args__ = (
+        db.CheckConstraint("custo_pontos > 0", name="chk_produto_custo"),
+        db.CheckConstraint(
+            "tipo IN ('produto_fisico', 'desconto_percentual', 'desconto_valor_fixo')",
+            name="chk_produto_tipo",
+        ),
+        db.CheckConstraint("status IN ('ativa', 'pausada')", name="chk_produto_status"),
+        db.CheckConstraint(
+            "quantidade_total IS NULL OR quantidade_total >= 0",
+            name="chk_produto_quantidade_total",
+        ),
+        db.CheckConstraint(
+            "quantidade_disponivel IS NULL OR "
+            "(quantidade_disponivel >= 0 AND "
+            "(quantidade_total IS NULL OR quantidade_disponivel <= quantidade_total))",
+            name="chk_produto_quantidade_disponivel",
+        ),
+        db.CheckConstraint(
+            "(tipo = 'produto_fisico' AND valor_beneficio IS NULL) OR "
+            "(tipo = 'desconto_percentual' AND valor_beneficio > 0 AND valor_beneficio <= 100) OR "
+            "(tipo = 'desconto_valor_fixo' AND valor_beneficio > 0)",
+            name="chk_produto_valor_beneficio",
+        ),
+    )
 
     id_produto = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey("usuario.id_usuario", ondelete="SET NULL"), nullable=True, index=True)

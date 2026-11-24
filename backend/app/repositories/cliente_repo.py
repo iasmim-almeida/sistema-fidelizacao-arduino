@@ -9,13 +9,13 @@ class ClienteRepository:
 
     @staticmethod
     def get_by_telefone(telefone: str) -> Cliente | None:
-        return Cliente.query.filter_by(telefone=telefone).first()
+        return Cliente.query.filter_by(telefone=telefone, nivel_acesso="CLIENTE").first()
 
     @staticmethod
     def get_by_email(email: str) -> Cliente | None:
         if not email:
             return None
-        return Cliente.query.filter_by(email=email.strip().lower()).first()
+        return Cliente.query.filter_by(email=email.strip().lower(), nivel_acesso="CLIENTE").first()
 
     @staticmethod
     def create(cliente: Cliente) -> Cliente:

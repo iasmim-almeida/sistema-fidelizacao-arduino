@@ -2,7 +2,6 @@ import click
 from flask import Flask
 from app.extensions import db
 from app.models.usuario import Usuario
-from app.models.auditoria import Auditoria
 from app.services.rbac import ROLE_VENDEDORA
 from app.security.password import validar_complexidade_senha
 
@@ -46,7 +45,6 @@ def register_cli_commands(app: Flask):
             usuario.ativo = True
             usuario.precisa_trocar_senha = False
             usuario.set_senha(senha)
-            acao_auditoria = "BOOTSTRAP_VENDEDORA_ATUALIZADA"
             msg_final = f"Conta Vendedora (Admin) '{login}' atualizada com êxito!"
         else:
             usuario = Usuario(
@@ -60,19 +58,8 @@ def register_cli_commands(app: Flask):
             )
             usuario.set_senha(senha)
             db.session.add(usuario)
-            acao_auditoria = "BOOTSTRAP_VENDEDORA_CRIADA"
             msg_final = f"Conta Vendedora (Admin) '{login}' criada com êxito!"
 
-        db.session.commit()
-
-        aud = Auditoria(
-            id_usuario=usuario.id_usuario,
-            acao=acao_auditoria,
-            entidade="usuario",
-            entidade_id=str(usuario.id_usuario),
-            detalhes=f'{{"login": "{login}", "email": "{email}", "cargo": "{ROLE_VENDEDORA}"}}'
-        )
-        db.session.add(aud)
         db.session.commit()
 
         click.echo(click.style(msg_final, fg="green", bold=True))

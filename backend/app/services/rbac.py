@@ -29,20 +29,13 @@ PERMISSOES = {
     "pontos.adicionar": "Permissão para adicionar pontos (compras e ajustes)",
     "pontos.remover": "Permissão para remover/estornar pontos manualmente",
 
-    "funcionarios.visualizar": "Permissão para listar e visualizar funcionários",
-    "funcionarios.criar": "Permissão para cadastrar novos funcionários",
-    "funcionarios.editar": "Permissão para editar funcionários",
-    "funcionarios.desativar": "Permissão para desativar/ativar funcionários",
-    "funcionarios.alterar_permissao": "Permissão para alterar cargo e permissões",
-
     "recompensas.visualizar": "Permissão para visualizar catálogo de recompensas",
     "recompensas.criar": "Permissão para cadastrar novas recompensas",
     "recompensas.editar": "Permissão para editar e alterar estoque de recompensas",
     "recompensas.desativar": "Permissão para pausar/reativar recompensas",
 
     "resgates.validar": "Permissão para validar e entregar resgates",
-    "relatorios.visualizar": "Permissão para visualizar relatórios e faturamento",
-    "auditoria.visualizar": "Permissão para visualizar logs de auditoria administrativa",
+    "relatorios.visualizar": "Permissão para visualizar indicadores de fidelização",
     "configuracoes.editar": "Permissão para alterar configurações do sistema",
 }
 
@@ -112,11 +105,3 @@ def permissao_requerida(permissao: str):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
-
-
-def pode_gerenciar_cargo(cargo_operador: str, cargo_alvo: str) -> bool:
-    """Verifica se o operador possui privilégio para gerenciar o colaborador."""
-    if not cargo_operador:
-        return False
-    # Vendedora ativa pode gerenciar os colaboradores da loja
-    return normalizar_cargo(cargo_operador) == ROLE_VENDEDORA

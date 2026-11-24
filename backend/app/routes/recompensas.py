@@ -13,7 +13,6 @@ from app.models.recompensa import (
     data_local_atual,
 )
 from app.routes.auth import vendedora_required
-from app.services.auditoria import registrar_auditoria
 
 
 recompensas_bp = Blueprint("recompensas", __name__)
@@ -221,15 +220,6 @@ def criar():
     try:
         db.session.add(recompensa)
         db.session.commit()
-
-        registrar_auditoria(
-            acao="CRIAR_RECOMPENSA",
-            entidade="recompensa",
-            entidade_id=recompensa.id_recompensa,
-            detalhes={"nome": recompensa.nome, "custo_pontos": recompensa.custo_pontos, "tipo": recompensa.tipo},
-        )
-        db.session.commit()
-
     except IntegrityError:
         db.session.rollback()
         return jsonify({"erro": "Não foi possível salvar a recompensa"}), 409
@@ -265,13 +255,6 @@ def editar(id_recompensa):
         setattr(recompensa, campo, valor)
 
     try:
-        db.session.commit()
-        registrar_auditoria(
-            acao="EDITAR_RECOMPENSA",
-            entidade="recompensa",
-            entidade_id=recompensa.id_recompensa,
-            detalhes={"status": recompensa.status, "quantidade_disponivel": recompensa.quantidade_disponivel},
-        )
         db.session.commit()
     except IntegrityError:
         db.session.rollback()

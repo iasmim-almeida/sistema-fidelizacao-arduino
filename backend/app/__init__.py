@@ -2,7 +2,7 @@ import os
 from flask import Flask, jsonify, request, redirect
 from flask_login import current_user
 from flask_wtf.csrf import CSRFError
-from app.config import config_by_name
+from app.config import config_by_name, database_url_from_environment
 from app.extensions import db, login_manager, migrate, csrf, limiter
 
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -21,12 +21,25 @@ def create_app(config_name: str = "development") -> Flask:
     app.config.from_object(config_by_name.get(config_name, config_by_name["development"]))
 
     if config_name == "production":
+        database_uri = database_url_from_environment()
+        if not database_uri.startswith("postgresql+"):
+            raise ValueError(
+                "FALHA CRÍTICA DE CONFIGURAÇÃO: DATABASE_URL deve apontar para PostgreSQL em produção."
+            )
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
+        app.config["INITIAL_SETUP_TOKEN"] = os.getenv("INITIAL_SETUP_TOKEN", "").strip()
+        app.config["IOT_DEVICE_KEY"] = os.getenv("IOT_DEVICE_KEY", "").strip()
+
         secret = os.getenv("SECRET_KEY", "").strip().strip("'\"")
         if not secret or secret in ("dev-secret-key", "troque-por-uma-chave-longa-e-aleatoria", "dev-secret-fideliza-itclube-local-2026-xyz"):
             raise ValueError(
                 "FALHA CRÍTICA DE SEGURANÇA EM PRODUÇÃO: A variável de ambiente SECRET_KEY é "
                 "obrigatória e deve conter uma chave criptográfica forte. "
                 "Configure SECRET_KEY no painel do Render com generateValue: true ou defina um segredo forte."
+            )
+        if len(app.config["IOT_DEVICE_KEY"]) < 32:
+            raise ValueError(
+                "FALHA CRÍTICA DE SEGURANÇA: IOT_DEVICE_KEY deve ter ao menos 32 caracteres em produção."
             )
         from werkzeug.middleware.proxy_fix import ProxyFix
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=0)
@@ -80,9 +93,9 @@ def create_app(config_name: str = "development") -> Flask:
         if "Content-Security-Policy" not in response.headers:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-                "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "font-src 'self' data:; "
                 "img-src 'self' data:; "
                 "connect-src 'self'; "
                 "frame-ancestors 'self';"
@@ -91,7 +104,7 @@ def create_app(config_name: str = "development") -> Flask:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-    from app.models import cliente, compra, recompensa, resgate, usuario, movimentacao_pontos, historico, auditoria  # noqa: F401
+    from app.models import cliente, compra, recompensa, resgate, usuario, movimentacao_pontos, historico  # noqa: F401
 
     from app.routes.main import main_bp
     from app.routes.auth import auth_bp
@@ -99,11 +112,6 @@ def create_app(config_name: str = "development") -> Flask:
     from app.routes.compras import compras_bp
     from app.routes.resgates import resgates_bp
     from app.routes.recompensas import recompensas_bp
-    from app.routes.funcionarios import funcionarios_bp
-    from app.routes.auditoria import auditoria_bp
-
-    # O endpoint IoT ESP8266 precisa de isenção de CSRF para envio de pontuação via hardware
-    csrf.exempt(compras_bp)
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -111,8 +119,6 @@ def create_app(config_name: str = "development") -> Flask:
     app.register_blueprint(compras_bp, url_prefix="/api/compras")
     app.register_blueprint(resgates_bp, url_prefix="/api/resgates")
     app.register_blueprint(recompensas_bp, url_prefix="/api/recompensas")
-    app.register_blueprint(funcionarios_bp, url_prefix="/api/funcionarios")
-    app.register_blueprint(auditoria_bp, url_prefix="/api/auditoria")
 
     # Registro de comandos CLI do Flask (ex: flask create-owner)
     from app.cli import register_cli_commands

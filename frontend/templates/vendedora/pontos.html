@@ -13,15 +13,11 @@
             <div class="card-body p-4">
                 <form id="formPontuar">
                     <div class="row g-3 align-items-end">
-                        <div class="col-md-6">
+                        <div class="col-md-9">
                             <label class="form-label fw-bold small text-secondary">Telefone do cliente</label>
                             <input type="tel" id="telefone" class="form-control form-control-lg" placeholder="11999991111" required autocomplete="tel">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold small text-secondary">Valor da compra (R$) <span class="text-muted fw-normal">(Opcional)</span></label>
-                            <input type="number" step="0.01" id="valor" class="form-control form-control-lg" placeholder="0,00" value="0.00">
-                        </div>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <button type="submit" class="btn btn-fidelidade w-100 py-3 fw-bold" id="btnPontuar"><i class="fas fa-coins me-1"></i> +1 pt</button>
                         </div>
                     </div>
@@ -61,10 +57,10 @@
             <div class="table-responsive">
                 <table class="table table-sm table-hover align-middle mb-0">
                     <thead class="table-light">
-                        <tr><th>Data</th><th>Cliente (ID)</th><th>Valor Registrado</th><th>Pontos</th></tr>
+                        <tr><th>Data</th><th>Cliente (ID)</th><th>Pontos</th></tr>
                     </thead>
                     <tbody id="tbodyCompras">
-                        <tr><td colspan="4" class="text-center text-muted py-3">Carregando...</td></tr>
+                        <tr><td colspan="3" class="text-center text-muted py-3">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -81,13 +77,12 @@ async function carregarCompras(){
         const compras = r.ok ? await r.json() : [];
         const tb = document.getElementById('tbodyCompras');
         if(!compras.length){ 
-            tb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Nenhuma compra registrada.</td></tr>'; 
+            tb.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Nenhuma compra registrada.</td></tr>';
             return; 
         }
         tb.innerHTML = compras.slice(0,10).map(c=>{
             const dt = c.data ? new Date(c.data).toLocaleString('pt-BR') : '-';
-            const val = (c.valor !== null && c.valor !== undefined) ? `R$ ${parseFloat(c.valor).toFixed(2).replace('.', ',')}` : '-';
-            return `<tr><td>${dt}</td><td>#${c.id_cliente}</td><td>${val}</td><td><span class="badge bg-success">+${c.pontos_gerados} pt</span></td></tr>`;
+            return `<tr><td>${dt}</td><td>#${c.id_cliente}</td><td><span class="badge bg-success">+${c.pontos_gerados} pt</span></td></tr>`;
         }).join('');
     } catch(err) {
         console.error('Erro ao carregar histórico de compras:', err);
@@ -104,18 +99,20 @@ document.getElementById('formPontuar').addEventListener('submit', async e => {
     btn.disabled = true;
 
     const telefone = document.getElementById('telefone').value.trim();
-    const valorInput = document.getElementById('valor').value;
-    const valor = valorInput ? parseFloat(valorInput) : 0.0;
+    const idempotencyKey = window.crypto && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     try {
         const resp = await fetch('/api/compras/', {
             method:'POST', 
             headers:{
                 'Content-Type':'application/json',
-                'X-CSRFToken': getCsrfToken()
+                'X-CSRFToken': getCsrfToken(),
+                'X-Idempotency-Key': idempotencyKey
             }, 
             credentials:'include',
-            body: JSON.stringify({ telefone, valor })
+            body: JSON.stringify({ telefone })
         });
         const data = await resp.json();
 
@@ -125,7 +122,6 @@ document.getElementById('formPontuar').addEventListener('submit', async e => {
             document.getElementById('rSaldo').textContent = data.saldo_atualizado + ' pts';
             resultado.classList.remove('d-none');
             e.target.reset();
-            document.getElementById('valor').value = "0.00";
             carregarCompras();
         } else {
             erroBox.textContent = data.erro || 'Erro ao pontuar compra. Verifique o telefone.';

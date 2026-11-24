@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>IT Clube - {% block titulo %}Painel Administrativo{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -29,10 +29,6 @@
 
         {% if current_user.tem_permissao('recompensas.visualizar') %}
         <a href="{{ url_for('main.gestao_recompensas') }}" class="nav-link-sidebar {% if active=='gestao_recompensas' %}active{% endif %}"><i class="fas fa-tags"></i> Gerenciar Recompensas</a>
-        {% endif %}
-
-        {% if current_user.tem_permissao('funcionarios.visualizar') %}
-        <a href="{{ url_for('main.funcionarios') }}" class="nav-link-sidebar {% if active=='funcionarios' %}active{% endif %}"><i class="fas fa-users-cog"></i> Gestão de Equipe</a>
         {% endif %}
 
         <a href="{{ url_for('main.alterar_senha') }}" class="nav-link-sidebar {% if active=='alterar_senha' %}active{% endif %}"><i class="fas fa-key"></i> Alterar Senha</a>
@@ -77,7 +73,7 @@
 
 
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 <script>
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -96,7 +92,11 @@ function getCsrfToken() {
 
 async function realizarLogout() {
     try {
-        await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+        await fetch('/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
     } finally {
         window.location.href = '/';
     }

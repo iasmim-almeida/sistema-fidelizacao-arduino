@@ -7,9 +7,8 @@ from app.models.cliente import Cliente
 from app.models.compra import Compra
 from app.models.resgate import Resgate
 from app.models.movimentacao_pontos import MovimentacaoPontos
+from app.models.usuario import Usuario
 from app.extensions import db
-from app.services.rbac import permissao_requerida
-from app.services.auditoria import registrar_auditoria
 from app.services.pontos import registrar_movimentacao
 from app.security.password import validar_politica_senha_cliente
 
@@ -22,7 +21,7 @@ def me():
     """Retorna os dados do cliente atualmente autenticado."""
     if not getattr(current_user, "is_cliente", False):
         return jsonify({"erro": "Usuario autenticado nao e um cliente"}), 403
-    cliente = db.session.get(Cliente, current_user.id_cliente)
+    cliente = Cliente.query.filter_by(id_cliente=current_user.id_cliente, nivel_acesso="CLIENTE").first()
     return jsonify(cliente.to_dict() if cliente else current_user.to_dict())
 
 
@@ -36,61 +35,46 @@ def atualizar_meu_perfil():
     if not getattr(current_user, "is_cliente", False):
         return jsonify({"erro": "Usuario autenticado nao e um cliente"}), 403
 
-    cliente = db.session.get(Cliente, current_user.id_cliente)
+    cliente = Cliente.query.filter_by(id_cliente=current_user.id_cliente, nivel_acesso="CLIENTE").first()
     if not cliente or not cliente.ativo:
         return jsonify({"erro": "Cliente nao encontrado ou conta inativa."}), 404
 
     data = request.get_json(silent=True) or {}
-    alteracoes = {}
-
     if "nome" in data:
         novo_nome = str(data["nome"]).strip()
         if len(novo_nome) < 3 or len(novo_nome) > 120:
             return jsonify({"erro": "O nome deve conter entre 3 e 120 caracteres."}), 400
-        alteracoes["nome_anterior"] = cliente.nome
         cliente.nome = novo_nome
-        alteracoes["nome_novo"] = novo_nome
 
     if "telefone" in data:
         novo_tel = re.sub(r"\D", "", str(data["telefone"]).strip())
         if len(novo_tel) < 10 or len(novo_tel) > 11:
             return jsonify({"erro": "Telefone invalido. Informe DDD + 8 ou 9 digitos."}), 400
-        duplicado = Cliente.query.filter(
-            (Cliente.telefone == novo_tel) | (Cliente.telefone == str(data["telefone"]).strip()),
-            Cliente.id_cliente != cliente.id_cliente
+        duplicado = Usuario.query.filter(
+            (Usuario.telefone == novo_tel) | (Usuario.telefone == str(data["telefone"]).strip()),
+            Usuario.id_usuario != cliente.id_cliente
         ).first()
         if duplicado:
             return jsonify({"erro": "Ja existe outro cliente com este telefone."}), 409
-        alteracoes["telefone_anterior"] = cliente.telefone
         cliente.telefone = novo_tel
-        alteracoes["telefone_novo"] = novo_tel
 
     if "email" in data:
         novo_email = str(data["email"]).strip().lower() or None
         if novo_email:
             if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", novo_email):
                 return jsonify({"erro": "Formato de e-mail invalido."}), 400
-            duplicado = Cliente.query.filter(
-                Cliente.email == novo_email,
-                Cliente.id_cliente != cliente.id_cliente
+            duplicado = Usuario.query.filter(
+                Usuario.email == novo_email,
+                Usuario.id_usuario != cliente.id_cliente
             ).first()
             if duplicado:
                 return jsonify({"erro": "Ja existe outro cliente com este e-mail."}), 409
-        alteracoes["email_anterior"] = cliente.email
         cliente.email = novo_email
-        alteracoes["email_novo"] = novo_email
 
     if "endereco" in data:
         cliente.endereco = str(data["endereco"]).strip() or None
 
     try:
-        db.session.commit()
-        registrar_auditoria(
-            acao="EDITAR_PERFIL_CLIENTE",
-            entidade="cliente",
-            entidade_id=cliente.id_cliente,
-            detalhes=alteracoes,
-        )
         db.session.commit()
         return jsonify({
             "mensagem": "Perfil atualizado com sucesso.",
@@ -108,7 +92,7 @@ def alterar_minha_senha():
     if not getattr(current_user, "is_cliente", False):
         return jsonify({"erro": "Usuario autenticado nao e um cliente"}), 403
 
-    cliente = db.session.get(Cliente, current_user.id_cliente)
+    cliente = Cliente.query.filter_by(id_cliente=current_user.id_cliente, nivel_acesso="CLIENTE").first()
     if not cliente or not cliente.ativo:
         return jsonify({"erro": "Cliente nao encontrado ou conta inativa."}), 404
 
@@ -138,14 +122,6 @@ def alterar_minha_senha():
         cliente.precisa_trocar_senha = False
         db.session.commit()
 
-        registrar_auditoria(
-            acao="ALTERAR_SENHA_CLIENTE",
-            entidade="cliente",
-            entidade_id=cliente.id_cliente,
-            detalhes={"telefone": cliente.telefone},
-        )
-        db.session.commit()
-
         return jsonify({"mensagem": "Senha alterada com sucesso."}), 200
     except Exception:
         db.session.rollback()
@@ -161,7 +137,7 @@ def listar():
     Vendedoras/administradores possuem acesso à lista completa.
     """
     if getattr(current_user, "is_cliente", False):
-        cliente = db.session.get(Cliente, current_user.id_cliente)
+        cliente = Cliente.query.filter_by(id_cliente=current_user.id_cliente, nivel_acesso="CLIENTE").first()
         return jsonify(cliente.to_dict() if cliente else {})
 
     if not getattr(current_user, "is_vendedora", False):
@@ -175,6 +151,7 @@ def listar():
     if telefone:
         tel_limpo = re.sub(r"\D", "", str(telefone).strip())
         cliente = Cliente.query.filter(
+            Cliente.nivel_acesso == "CLIENTE",
             (Cliente.telefone == telefone) | (Cliente.telefone == tel_limpo)
         ).first()
         if not cliente:
@@ -259,17 +236,19 @@ def obter(id):
     elif not current_user.tem_permissao("clientes.visualizar"):
         return jsonify({"erro": "Acesso negado. Requer permissão 'clientes.visualizar'."}), 403
 
-    cliente = db.session.get(Cliente, id)
+    cliente = Cliente.query.filter_by(id_cliente=id, nivel_acesso="CLIENTE").first()
     if not cliente:
         return jsonify({"erro": "Cliente nao encontrado"}), 404
 
     dados = cliente.to_dict()
 
     # Métricas e histórico detalhado
-    compras_count = Compra.query.filter_by(id_cliente=id).count()
-    resgates_count = Resgate.query.filter_by(id_cliente=id).count()
-    ultima_compra = Compra.query.filter_by(id_cliente=id).order_by(Compra.data.desc()).first()
-    ultimo_resgate = Resgate.query.filter_by(id_cliente=id).order_by(Resgate.data.desc()).first()
+    compras = Compra.query.filter_by(id_cliente=id, tipo_movimentacao="COMPRA")
+    resgates = Resgate.query.filter_by(id_cliente=id, tipo_movimentacao="RESGATE")
+    compras_count = compras.count()
+    resgates_count = resgates.count()
+    ultima_compra = compras.order_by(Compra.data.desc()).first()
+    ultimo_resgate = resgates.order_by(Resgate.data.desc()).first()
 
     dados["total_compras"] = compras_count
     dados["total_resgates"] = resgates_count
@@ -303,14 +282,14 @@ def cadastrar():
     if len(tel_limpo) < 10 or len(tel_limpo) > 11:
         return jsonify({"erro": "Telefone invalido. Informe o DDD e o numero com 10 ou 11 digitos."}), 400
 
-    if Cliente.query.filter((Cliente.telefone == telefone) | (Cliente.telefone == tel_limpo)).first():
+    if Usuario.query.filter((Usuario.telefone == telefone) | (Usuario.telefone == tel_limpo)).first():
         return jsonify({"erro": "Ja existe um cliente cadastrado com este telefone."}), 409
 
     email = (data.get("email") or "").strip().lower() or None
     if email:
         if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
             return jsonify({"erro": "Formato de e-mail invalido."}), 400
-        if Cliente.query.filter_by(email=email).first():
+        if Usuario.query.filter_by(email=email).first():
             return jsonify({"erro": "Ja existe um cliente cadastrado com este e-mail."}), 409
 
     endereco = str(data["endereco"]).strip()[:255] if data.get("endereco") else None
@@ -342,14 +321,6 @@ def cadastrar():
         db.session.add(cliente)
         db.session.commit()
 
-        registrar_auditoria(
-            acao="CRIAR_CLIENTE",
-            entidade="cliente",
-            entidade_id=cliente.id_cliente,
-            detalhes={"nome": nome, "telefone": tel_limpo, "email": email, "cadastrado_por_vendedora": True},
-        )
-        db.session.commit()
-
         res = cliente.to_dict()
         res["precisa_trocar_senha"] = True
         if senha_gerada:
@@ -371,53 +342,38 @@ def editar(id):
     if not current_user.tem_permissao("clientes.editar"):
         return jsonify({"erro": "Acesso negado. Requer permissão 'clientes.editar'."}), 403
 
-    cliente = db.session.get(Cliente, id)
+    cliente = Cliente.query.filter_by(id_cliente=id, nivel_acesso="CLIENTE").first()
     if not cliente:
         return jsonify({"erro": "Cliente nao encontrado"}), 404
 
     data = request.get_json(silent=True) or {}
-    alteracoes = {}
-
     if "nome" in data:
         novo_nome = str(data["nome"]).strip()
         if len(novo_nome) < 3:
             return jsonify({"erro": "O nome deve conter ao menos 3 caracteres."}), 400
-        alteracoes["nome_anterior"] = cliente.nome
         cliente.nome = novo_nome
-        alteracoes["nome_novo"] = novo_nome
 
     if "telefone" in data:
         novo_tel = re.sub(r"\D", "", str(data["telefone"]).strip())
         if len(novo_tel) < 10 or len(novo_tel) > 11:
             return jsonify({"erro": "Telefone inválido (deve conter DDD + 8 ou 9 dígitos)."}), 400
-        duplicado = Cliente.query.filter(Cliente.telefone == novo_tel, Cliente.id_cliente != id).first()
+        duplicado = Usuario.query.filter(Usuario.telefone == novo_tel, Usuario.id_usuario != id).first()
         if duplicado:
             return jsonify({"erro": "Já existe outro cliente com este telefone."}), 409
-        alteracoes["telefone_anterior"] = cliente.telefone
         cliente.telefone = novo_tel
-        alteracoes["telefone_novo"] = novo_tel
 
     if "email" in data:
         novo_email = str(data["email"]).strip().lower() or None
         if novo_email:
-            duplicado = Cliente.query.filter(Cliente.email == novo_email, Cliente.id_cliente != id).first()
+            duplicado = Usuario.query.filter(Usuario.email == novo_email, Usuario.id_usuario != id).first()
             if duplicado:
                 return jsonify({"erro": "Já existe outro cliente com este e-mail."}), 409
-        alteracoes["email_anterior"] = cliente.email
         cliente.email = novo_email
-        alteracoes["email_novo"] = novo_email
 
     if "endereco" in data:
         cliente.endereco = str(data["endereco"]).strip() or None
 
     try:
-        db.session.commit()
-        registrar_auditoria(
-            acao="EDITAR_CLIENTE",
-            entidade="cliente",
-            entidade_id=cliente.id_cliente,
-            detalhes=alteracoes,
-        )
         db.session.commit()
         return jsonify({
             "mensagem": "Cliente atualizado com sucesso.",
@@ -438,26 +394,15 @@ def alterar_status(id):
     if not current_user.tem_permissao("clientes.desativar"):
         return jsonify({"erro": "Acesso negado. Requer permissão 'clientes.desativar'."}), 403
 
-    cliente = db.session.get(Cliente, id)
+    cliente = Cliente.query.filter_by(id_cliente=id, nivel_acesso="CLIENTE").first()
     if not cliente:
         return jsonify({"erro": "Cliente nao encontrado"}), 404
 
     data = request.get_json(silent=True) or {}
     novo_status = bool(data.get("ativo", not cliente.ativo))
-    motivo = str(data.get("motivo", "")).strip()
-
-    status_anterior = cliente.ativo
     cliente.ativo = novo_status
-    acao = "ATIVAR_CLIENTE" if novo_status else "DESATIVAR_CLIENTE"
 
     try:
-        db.session.commit()
-        registrar_auditoria(
-            acao=acao,
-            entidade="cliente",
-            entidade_id=cliente.id_cliente,
-            detalhes={"status_anterior": status_anterior, "novo_status": novo_status, "motivo": motivo},
-        )
         db.session.commit()
         return jsonify({
             "mensagem": f"Cliente {'ativado' if novo_status else 'desativado'} com sucesso.",
@@ -514,26 +459,12 @@ def ajustar_pontos(id):
             quantidade=delta,
             origem=f"manual_{current_user.login}",
             motivo=motivo,
-            usuario_id=current_user.id_usuario,
         )
 
         if not sucesso:
             db.session.rollback()
             return jsonify({"erro": erro}), 400
 
-        db.session.commit()
-
-        registrar_auditoria(
-            acao=f"AJUSTE_PONTOS_{'CREDITO' if delta > 0 else 'DEBITO'}",
-            entidade="cliente",
-            entidade_id=id,
-            detalhes={
-                "quantidade": delta,
-                "motivo": motivo,
-                "saldo_anterior": movimentacao.saldo_anterior,
-                "saldo_posterior": movimentacao.saldo_posterior,
-            },
-        )
         db.session.commit()
 
         return jsonify({
@@ -562,7 +493,7 @@ def extrato(id):
     elif not current_user.tem_permissao("pontos.visualizar"):
         return jsonify({"erro": "Acesso negado. Requer permissão 'pontos.visualizar'."}), 403
 
-    cliente = db.session.get(Cliente, id)
+    cliente = Cliente.query.filter_by(id_cliente=id, nivel_acesso="CLIENTE").first()
     if not cliente:
         return jsonify({"erro": "Cliente não encontrado."}), 404
 

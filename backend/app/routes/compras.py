@@ -1,13 +1,14 @@
 import hmac
 import re
-from decimal import Decimal, InvalidOperation
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
+from flask_wtf.csrf import validate_csrf
+from sqlalchemy.exc import IntegrityError
+from wtforms.validators import ValidationError
 from app.models.compra import Compra
 from app.models.cliente import Cliente
-from app.extensions import db
+from app.extensions import csrf, db, limiter
 from app.services.pontos import registrar_movimentacao
-from app.services.auditoria import registrar_auditoria
 
 compras_bp = Blueprint("compras", __name__)
 
@@ -36,8 +37,8 @@ def verificar_autenticacao_pontuacao():
 @compras_bp.route("/", methods=["GET"])
 @login_required
 def listar():
-    """Mitigação VULN-01: Exige login e segrega visão de compras por perfil."""
-    query = Compra.query
+    """Exige login e segrega a visão de compras por perfil."""
+    query = Compra.query.filter(Compra.tipo_movimentacao == "COMPRA")
 
     if getattr(current_user, "is_cliente", False):
         query = query.filter_by(id_cliente=current_user.id_cliente)
@@ -55,20 +56,32 @@ def listar():
 
 
 @compras_bp.route("/", methods=["POST"])
+@csrf.exempt
+@limiter.limit("30 per minute")
 def registrar():
     """
-    Mitigação VULN-01 e VULN-03: Pontuação restrita a vendedoras ou hardware autorizado.
+    Pontuação restrita a vendedoras ou hardware autorizado.
     Executa com bloqueio pessimista (with_for_update) e ledger atômico de transação.
     """
     autorizado, origem = verificar_autenticacao_pontuacao()
     if not autorizado:
         return jsonify({"erro": "Acesso nao autorizado para pontuacao."}), 401
 
+    if origem == "vendedora" and current_app.config.get("WTF_CSRF_ENABLED", True):
+        token_csrf = request.headers.get("X-CSRFToken") or request.headers.get("X-CSRF-Token")
+        try:
+            validate_csrf(token_csrf)
+        except ValidationError:
+            return jsonify({"erro": "Token CSRF ausente ou invalido"}), 400
+
     data = request.get_json() or {}
+    chave_idempotencia = str(request.headers.get("X-Idempotency-Key") or "").strip() or None
+    if chave_idempotencia and not re.fullmatch(r"[A-Za-z0-9._:-]{8,128}", chave_idempotencia):
+        return jsonify({"erro": "X-Idempotency-Key deve conter de 8 a 128 caracteres seguros"}), 400
 
     try:
         # Busca com lock pessimista para evitar concorrência no saldo
-        query_cli = Cliente.query.with_for_update()
+        query_cli = Cliente.query.with_for_update().filter(Cliente.nivel_acesso == "CLIENTE")
         id_cli_raw = data.get("id_cliente")
         if id_cli_raw is not None:
             if isinstance(id_cli_raw, bool) or not isinstance(id_cli_raw, int):
@@ -97,56 +110,68 @@ def registrar():
             db.session.rollback()
             return jsonify({"erro": "Cliente está inativo. Pontuação não permitida."}), 400
 
-        valor_raw = data.get("valor")
-        if valor_raw is not None and str(valor_raw).strip() != "":
-            try:
-                valor = Decimal(str(valor_raw))
-            except (InvalidOperation, TypeError):
+        if chave_idempotencia:
+            existente = Compra.query.filter_by(
+                tipo_movimentacao="COMPRA",
+                chave_idempotencia=chave_idempotencia,
+            ).first()
+            if existente:
                 db.session.rollback()
-                return jsonify({"erro": "valor invalido"}), 400
+                if existente.id_cliente != cliente.id_cliente:
+                    return jsonify({"erro": "Chave de idempotência já utilizada em outra operação"}), 409
+                return jsonify({
+                    "status": "sucesso",
+                    "duplicada": True,
+                    "origem": existente.origem,
+                    "pontos_adicionados": 0,
+                    "compra": existente.to_dict(),
+                    "cliente": cliente.to_dict(),
+                    "saldo_atualizado": cliente.pontos_acumulados,
+                }), 200
 
-            if valor < 0:
-                db.session.rollback()
-                return jsonify({"erro": "valor nao pode ser negativo"}), 400
-
-            if valor > Decimal("50000.00"):
-                db.session.rollback()
-                return jsonify({"erro": "valor excede o limite maximo por transacao"}), 400
-        else:
-            valor = Decimal("0.00")
-
-        # Regra de negócio IT Clube: 1 COMPRA = 1 PONTO (independente do valor monetário)
+        # Regra de negócio obrigatória IT Clube: 1 COMPRA VÁLIDA = 1 PONTO
         pontos_gerados = 1
 
-        # A compra e a movimentação são a mesma linha no histórico unificado.
-        usuario_id = current_user.id_usuario if current_user.is_authenticated and getattr(current_user, "is_vendedora", False) else None
         sucesso, mov, erro = registrar_movimentacao(
             cliente_id=cliente.id_cliente,
             tipo="COMPRA",
             quantidade=pontos_gerados,
             origem=origem,
-            motivo=f"Compra registrada (+1 ponto)",
-            usuario_id=usuario_id,
+            motivo="Compra registrada (+1 ponto)",
+            chave_idempotencia=chave_idempotencia,
         )
 
         if not sucesso:
             db.session.rollback()
             return jsonify({"erro": erro or "Falha ao creditar pontos no ledger."}), 400
 
-        mov.valor_compra = valor
         mov.descricao = "Compra registrada (+1 ponto)"
         compra = mov
 
-        db.session.commit()
-
-        if usuario_id:
-            registrar_auditoria(
-                acao="PONTUAR_COMPRA",
-                entidade="compra",
-                entidade_id=compra.id_compra,
-                detalhes={"id_cliente": cliente.id_cliente, "valor": str(valor), "pontos": pontos_gerados, "origem": origem},
-            )
+        try:
             db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            if chave_idempotencia:
+                existente = Compra.query.filter_by(
+                    tipo_movimentacao="COMPRA",
+                    chave_idempotencia=chave_idempotencia,
+                ).first()
+                if existente and existente.id_cliente == cliente.id_cliente:
+                    cliente_atual = Cliente.query.filter_by(
+                        id_cliente=cliente.id_cliente,
+                        nivel_acesso="CLIENTE",
+                    ).first()
+                    return jsonify({
+                        "status": "sucesso",
+                        "duplicada": True,
+                        "origem": existente.origem,
+                        "pontos_adicionados": 0,
+                        "compra": existente.to_dict(),
+                        "cliente": cliente_atual.to_dict(),
+                        "saldo_atualizado": cliente_atual.pontos_acumulados,
+                    }), 200
+            raise
 
         return jsonify({
             "status": "sucesso",

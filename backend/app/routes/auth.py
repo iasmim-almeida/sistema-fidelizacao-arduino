@@ -1,16 +1,15 @@
-import os
+import hmac
 import logging
 import re
 import threading
 from datetime import datetime, timezone
 from functools import wraps
-from flask import Blueprint, jsonify, request, redirect, url_for, render_template, flash, session
+from flask import Blueprint, current_app, jsonify, request, redirect, url_for, render_template, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models.usuario import Usuario
 from app.models.cliente import Cliente
 from app.extensions import db, limiter, csrf
 from app.forms import CadastroClienteForm, validar_politica_senha_admin
-from app.services.auditoria import registrar_auditoria
 
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__)
@@ -83,16 +82,16 @@ def cadastrar_cliente_web():
         senha = form.senha.data
 
         # Validação extra de telefone duplicado
-        cliente_existente = Cliente.query.filter_by(telefone=telefone_limpo).first()
+        cliente_existente = Cliente.query.filter_by(telefone=telefone_limpo, nivel_acesso="CLIENTE").first()
         if cliente_existente:
             flash("Este telefone ja esta cadastrado. Faca login.", "warning")
             return render_template("cadastro.html", form=form)
 
-        if email_limpo and Cliente.query.filter_by(email=email_limpo).first():
+        if email_limpo and Cliente.query.filter_by(email=email_limpo, nivel_acesso="CLIENTE").first():
             flash("Este e-mail ja esta cadastrado. Faca login.", "warning")
             return render_template("cadastro.html", form=form)
 
-        # Criação segura com hash PBKDF2 (padrão do Werkzeug)
+        # O modelo usa o algoritmo de hash de senha seguro fornecido pelo Werkzeug.
         cliente = Cliente(
             nome=form.nome.data.strip(),
             telefone=telefone_limpo,
@@ -126,7 +125,7 @@ def cadastrar_cliente_web():
 @limiter.limit("10 per minute")
 def login_vendedora():
     data = request.get_json() or {}
-    identificador = (data.get("email") or data.get("login") or "").strip()
+    identificador = (data.get("identificador") or data.get("email") or data.get("login") or "").strip()
     senha = str(data.get("senha", ""))
 
     if not identificador or not senha:
@@ -138,28 +137,15 @@ def login_vendedora():
 
     if usuario and getattr(usuario, "is_vendedora", False):
         if not getattr(usuario, "ativo", True):
-            registrar_auditoria(
-                acao="LOGIN_FALHA",
-                entidade="usuario",
-                entidade_id=usuario.id_usuario,
-                detalhes={"motivo": "conta_inativa", "login": identificador},
-            )
-            db.session.commit()
+            logger.warning("Login administrativo recusado para conta inativa: usuario_id=%s", usuario.id_usuario)
             return jsonify({"erro": "Conta inativa. Entre em contato com a administração."}), 401
 
         if usuario.verificar_senha(senha):
             usuario.ultimo_login = datetime.now(timezone.utc).replace(tzinfo=None)
             db.session.commit()
 
-            registrar_auditoria(
-                acao="LOGIN_SUCESSO",
-                entidade="usuario",
-                entidade_id=usuario.id_usuario,
-                detalhes={"login": usuario.login, "cargo": usuario.cargo},
-            )
-            db.session.commit()
-
             login_user(usuario)
+            logger.info("Login administrativo concluído: usuario_id=%s", usuario.id_usuario)
             return jsonify({
                 "mensagem": "Login de vendedora realizado com sucesso",
                 "tipo": "vendedora",
@@ -167,13 +153,7 @@ def login_vendedora():
                 "usuario": usuario.to_dict(),
             })
 
-    registrar_auditoria(
-        acao="LOGIN_FALHA",
-        entidade="usuario",
-        entidade_id=None,
-        detalhes={"login_tentado": identificador},
-    )
-    db.session.commit()
+    logger.warning("Tentativa de login administrativo recusada: ip=%s", request.remote_addr)
     return jsonify({"erro": "Credenciais de vendedora invalidas"}), 401
 
 
@@ -192,16 +172,17 @@ def login_cliente():
     tel_limpo = re.sub(r"\D", "", identificador)
 
     cliente = None
-    cliente = Cliente.query.filter_by(login=identificador).first()
+    cliente = Cliente.query.filter_by(login=identificador, nivel_acesso="CLIENTE").first()
     if tel_limpo:
         cliente = cliente or Cliente.query.filter(
+            Cliente.nivel_acesso == "CLIENTE",
             (Cliente.telefone == identificador) | (Cliente.telefone == tel_limpo)
         ).first()
 
     if not cliente and "@" in identificador:
-        cliente = Cliente.query.filter_by(email=identificador).first()
+        cliente = Cliente.query.filter_by(email=identificador, nivel_acesso="CLIENTE").first()
 
-    # Mitigação VULN-06 e Segregação de Perfis: Resposta uniforme e validação de perfil cliente
+    # A resposta uniforme evita enumeração de contas.
     if not cliente or not getattr(cliente, "is_cliente", False) or not cliente.verificar_senha(senha):
         return jsonify({"erro": "Telefone ou senha invalidos."}), 401
 
@@ -215,7 +196,7 @@ def login_cliente():
     precisa_trocar = bool(getattr(cliente, "precisa_trocar_senha", False))
 
     return jsonify({
-        "mensagem": "Cadastro realizado pela equipe da loja: solicitada a troca de senha no primeiro acesso." if precisa_trocar else "Login de cliente realizado com sucesso",
+        "mensagem": "Cadastro administrativo: solicitada a troca de senha no primeiro acesso." if precisa_trocar else "Login de cliente realizado com sucesso",
         "tipo": "cliente",
         "precisa_trocar_senha": precisa_trocar,
         "cadastrado_por_vendedora": precisa_trocar,
@@ -225,20 +206,13 @@ def login_cliente():
 
 
 # ---------- LOGOUT UNIFICADO ----------
-@auth_bp.route("/logout", methods=["GET", "POST"])
-@csrf.exempt
+@auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
-    if current_user.is_authenticated:
-        registrar_auditoria(
-            acao="LOGOUT",
-            entidade="usuario" if getattr(current_user, "is_vendedora", False) else "cliente",
-            entidade_id=current_user.get_id(),
-        )
-        db.session.commit()
-
+    usuario_id = current_user.get_id()
     logout_user()
     session.clear()
+    logger.info("Sessão encerrada: usuario=%s", usuario_id)
     if request.is_json or request.path.startswith("/api") or request.path.startswith("/auth"):
         return jsonify({"mensagem": "Logout realizado com sucesso", "redirect": "/"})
     return redirect(url_for("main.index"))
@@ -305,14 +279,6 @@ def alterar_senha_admin():
 
         session.modified = True
 
-        registrar_auditoria(
-            acao="ALTERAR_SENHA",
-            entidade="usuario",
-            entidade_id=user_id,
-            detalhes={"login": user_login},
-        )
-        db.session.commit()
-
         logger.info(
             "Senha de administrador alterada com sucesso. usuario_id=%s, login=%s",
             user_id,
@@ -338,16 +304,17 @@ def sistema_precisa_setup() -> bool:
 
 def obter_token_setup_esperado() -> str:
     """Retorna o token de bootstrap se configurado na variável de ambiente INITIAL_SETUP_TOKEN."""
-    return os.getenv("INITIAL_SETUP_TOKEN", "").strip()
+    return str(current_app.config.get("INITIAL_SETUP_TOKEN") or "").strip()
 
 
 def validar_setup_token(token_informado: str | None) -> tuple[bool, str | None]:
-    """Valida se o token informado coincide com INITIAL_SETUP_TOKEN caso esteja configurado."""
+    """Valida o token de setup e falha de forma fechada quando obrigatório."""
     token_esperado = obter_token_setup_esperado()
     if not token_esperado:
-        # Se não configurado, não exige token (modo padrão flexível)
+        if current_app.config.get("REQUIRE_INITIAL_SETUP_TOKEN", False):
+            return False, "Setup indisponível: INITIAL_SETUP_TOKEN não está configurado."
         return True, None
-    if not token_informado or token_informado.strip() != token_esperado:
+    if not token_informado or not hmac.compare_digest(token_informado.strip(), token_esperado):
         return False, "Token de autorização de setup inválido ou ausente."
     return True, None
 
@@ -362,13 +329,17 @@ def setup():
 
     precisa = sistema_precisa_setup()
     token_esperado = obter_token_setup_esperado()
-    setup_token_required = bool(token_esperado)
+    token_obrigatorio = current_app.config.get("REQUIRE_INITIAL_SETUP_TOKEN", False)
+    setup_token_required = bool(token_esperado) or token_obrigatorio
     # Token de setup NUNCA aceito via query string para evitar vazamento em logs, Referer e historico do navegador
 
     if request.method == "GET":
         if not precisa:
             flash("O cadastro inicial já foi realizado. Efetue login.", "info")
             return redirect(url_for("main.index"))
+        if token_obrigatorio and not token_esperado:
+            logger.error("Setup bloqueado: INITIAL_SETUP_TOKEN ausente em ambiente protegido")
+            return "Setup indisponível por configuração de segurança.", 503
         return render_template(
             "setup.html",
             setup_token_required=setup_token_required,
@@ -381,6 +352,10 @@ def setup():
             return jsonify({"erro": "Cadastro inicial já concluído. O sistema já possui administradora configurada."}), 403
         flash("O cadastro inicial já foi realizado. Efetue login.", "warning")
         return redirect(url_for("main.index"))
+
+    if token_obrigatorio and not token_esperado:
+        logger.error("Setup bloqueado: INITIAL_SETUP_TOKEN ausente em ambiente protegido")
+        return jsonify({"erro": "Setup indisponível por configuração de segurança."}), 503
 
     data = request.get_json(silent=True) if request.is_json else request.form
     nome = " ".join(str(data.get("nome", "")).strip().split())
@@ -482,16 +457,8 @@ def setup():
             db.session.add(vendedora)
             db.session.commit()
 
-            registrar_auditoria(
-                acao="CADASTRO_INICIAL_VENDEDORA_ADMIN",
-                entidade="usuario",
-                entidade_id=vendedora.id_usuario,
-                detalhes={"login": login, "email": email, "cargo": ROLE_VENDEDORA, "metodo": "setup_seguro"},
-                usuario_id=vendedora.id_usuario,
-            )
-            db.session.commit()
-
             login_user(vendedora)
+            logger.info("Cadastro inicial concluído: usuario_id=%s", vendedora.id_usuario)
 
             if request.is_json:
                 return jsonify({

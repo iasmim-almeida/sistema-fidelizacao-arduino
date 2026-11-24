@@ -43,8 +43,9 @@ class Config:
     SQLALCHEMY_DATABASE_URI = database_url_from_environment()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_SORT_KEYS = False
-    PONTOS_POR_REAL = int(os.getenv("PONTOS_POR_REAL", "1"))
     TIMEZONE = os.getenv("TIMEZONE", "America/Sao_Paulo")
+    INITIAL_SETUP_TOKEN = os.getenv("INITIAL_SETUP_TOKEN", "").strip()
+    REQUIRE_INITIAL_SETUP_TOKEN = False
     # Segurança dos Cookies de Sessão
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
@@ -55,7 +56,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    IOT_DEVICE_KEY = os.getenv("IOT_DEVICE_KEY", "fideliza-iot-key-padrao")
+    IOT_DEVICE_KEY = os.getenv("IOT_DEVICE_KEY")
 
 
 class ProductionConfig(Config):
@@ -63,6 +64,7 @@ class ProductionConfig(Config):
     TESTING = False
     SECRET_KEY = os.getenv("SECRET_KEY", "")
     IOT_DEVICE_KEY = os.getenv("IOT_DEVICE_KEY")
+    REQUIRE_INITIAL_SETUP_TOKEN = True
     SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "True").lower() in ("true", "1")
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
@@ -83,7 +85,7 @@ class TestingConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = "sqlite://"
-    IOT_DEVICE_KEY = "fideliza-iot-key-padrao"
+    IOT_DEVICE_KEY = "test-only-device-key-not-for-production"
 
 
 config_by_name = {

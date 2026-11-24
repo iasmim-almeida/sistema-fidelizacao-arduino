@@ -13,6 +13,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+arduino/esp8266/secrets.h
 
 # Bancos de dados locais SQLite e instancias
 *.db

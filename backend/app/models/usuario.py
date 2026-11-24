@@ -22,6 +22,10 @@ def login_padrao(context):
 
 class Usuario(UserMixin, db.Model):
     __tablename__ = "usuario"
+    __table_args__ = (
+        db.CheckConstraint("pontos_acumulados >= 0", name="chk_usuario_pontos"),
+        db.CheckConstraint("nivel_acesso IN ('CLIENTE', 'ADMIN')", name="chk_usuario_nivel"),
+    )
 
     id_usuario = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
@@ -34,7 +38,7 @@ class Usuario(UserMixin, db.Model):
     senha_hash = db.Column(db.String(255), nullable=False, default="!senha_nao_configurada!")
     nivel_acesso = db.Column(db.String(20), default="CLIENTE", nullable=False)
 
-    # Campos do modelo de funcionários / vendedoras
+    # Campos de estado e perfil administrativo
     cargo = db.Column(db.String(30), default="vendedora", nullable=False)
     ativo = db.Column(db.Boolean, default=True, nullable=False)
     ultimo_login = db.Column(db.DateTime, nullable=True)

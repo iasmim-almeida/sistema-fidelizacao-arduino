@@ -9,8 +9,6 @@ from app.extensions import db
 from app.models.cliente import Cliente
 from app.models.recompensa import Recompensa, data_local_atual
 from app.models.resgate import Resgate
-from app.models.movimentacao_pontos import MovimentacaoPontos
-from app.services.auditoria import registrar_auditoria
 
 
 resgates_bp = Blueprint("resgates", __name__)
@@ -21,7 +19,7 @@ CHAVES_PERMITIDAS = {"id_cliente", "telefone", "id_recompensa"}
 @login_required
 def listar():
     """Segrega o histórico: cliente vê o próprio; vendedora vê o global."""
-    query = Resgate.query
+    query = Resgate.query.filter(Resgate.tipo_movimentacao == "RESGATE")
 
     if getattr(current_user, "is_cliente", False):
         query = query.filter_by(id_cliente=current_user.id_cliente)
@@ -57,6 +55,7 @@ def _identificar_cliente(data):
         identificador = str(data["telefone"]).strip()
         tel_limpo = re.sub(r"\D", "", identificador)
         encontrado = Cliente.query.filter(
+            Cliente.nivel_acesso == "CLIENTE",
             (Cliente.telefone == identificador) | (Cliente.telefone == tel_limpo)
         ).first()
         alvo_id = encontrado.id_cliente if encontrado else None
@@ -102,7 +101,7 @@ def registrar():
             db.session.rollback()
             return jsonify({"erro": "Recompensa não encontrada"}), 404
 
-        cliente = Cliente.query.with_for_update().filter_by(id_cliente=alvo_id).first()
+        cliente = Cliente.query.with_for_update().filter_by(id_cliente=alvo_id, nivel_acesso="CLIENTE").first()
         if not cliente:
             db.session.rollback()
             return jsonify({"erro": "Cliente não encontrado"}), 404
@@ -169,8 +168,6 @@ def registrar():
         cliente.pontos_acumulados -= recompensa.custo_pontos
 
         origem = "vendedora" if getattr(current_user, "is_vendedora", False) else "cliente"
-        usuario_id = current_user.id_usuario if getattr(current_user, "is_vendedora", False) else None
-
         resgate = Resgate(
             id_usuario=cliente.id_usuario,
             id_produto=recompensa.id_produto,
@@ -183,22 +180,6 @@ def registrar():
             data_movimentacao=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.session.add(resgate)
-        db.session.flush()
-
-        # Registro em auditoria
-        registrar_auditoria(
-            acao="VALIDAR_RESGATE",
-            entidade="resgate",
-            entidade_id=resgate.id_resgate,
-            detalhes={
-                "id_cliente": cliente.id_cliente,
-                "id_recompensa": recompensa.id_recompensa,
-                "pontos": recompensa.custo_pontos,
-                "saldo_posterior": saldo_anterior - recompensa.custo_pontos,
-            },
-            usuario_id=usuario_id,
-        )
-
         db.session.commit()
         resposta = {
             "status": "sucesso",

@@ -20,10 +20,8 @@ def registrar_movimentacao(
     quantidade: int,
     origem: str = "sistema",
     motivo: str | None = None,
-    usuario_id: int | None = None,
-    compra_id: int | None = None,
-    resgate_id: int | None = None,
     recompensa_id: int | None = None,
+    chave_idempotencia: str | None = None,
 ) -> tuple[bool, Historico | None, str | None]:
     """
     Executa a alteração atômica do saldo do cliente e persiste o registro no ledger imutável.
@@ -43,7 +41,7 @@ def registrar_movimentacao(
         return False, None, "A quantidade de pontos para movimentação não pode ser zero."
 
     # Bloqueia a linha do cliente para concorrência
-    cliente = Cliente.query.with_for_update().filter_by(id_usuario=cliente_id).first()
+    cliente = Cliente.query.with_for_update().filter_by(id_usuario=cliente_id, nivel_acesso="CLIENTE").first()
     if not cliente:
         return False, None, "Cliente não encontrado."
 
@@ -67,6 +65,7 @@ def registrar_movimentacao(
         saldo_anterior=saldo_anterior,
         saldo_posterior=novo_saldo,
         origem=origem,
+        chave_idempotencia=chave_idempotencia,
         descricao=motivo.strip() if motivo else None,
         data_movimentacao=datetime.now(timezone.utc).replace(tzinfo=None),
     )

@@ -5,21 +5,18 @@
 {% block page_subtitle %}Visão geral do programa de fidelização{% endblock %}
 
 {% block content %}
-<!-- Seção de Cartões com as Métricas Oficiais do TCC -->
 <div class="row g-4 mb-4">
-    <!-- Card 1: Taxa de Recorrência (Equação 1) -->
     <div class="col-md-4">
         <div class="card-stats h-100 shadow-sm border-0">
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <small class="text-muted fw-bold">Taxa de Recorrência</small>
+                <small class="text-muted fw-bold">Frequência de Recompra</small>
                 <div class="icon-circle" style="background-color:#e8f0fe;color:#0d6efd;"><i class="fas fa-users"></i></div>
             </div>
             <h4 class="fw-bold m-0 mt-1" id="kRecorrencia">0.0 <span class="fs-6 text-muted fw-normal">compras/cli</span></h4>
-            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Média aritmética de visitas por cliente cadastrado na base.</small>
+            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Compras dos últimos 30 dias por cliente ativo.</small>
         </div>
     </div>
     
-    <!-- Card 2: Taxa de Rotatividade / Churn (Equação 2) -->
     <div class="col-md-4">
         <div class="card-stats h-100 shadow-sm border-0">
             <div class="d-flex align-items-center justify-content-between mb-2">
@@ -27,19 +24,18 @@
                 <div class="icon-circle" style="background-color:#fff1f5;color:#dc3545;"><i class="fas fa-arrow-trend-down"></i></div>
             </div>
             <h4 class="fw-bold m-0 mt-1 text-danger" id="kRotatividade">0.0%</h4>
-            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Percentual de usuários sem registros de pontuação nos últimos 30 dias.</small>
+            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Clientes cadastrados sem compras há mais de 30 dias.</small>
         </div>
     </div>
 
-    <!-- Card 3: Taxa de Resgate de Prêmios (Equação 3) -->
     <div class="col-md-4">
         <div class="card-stats h-100 shadow-sm border-0">
             <div class="d-flex align-items-center justify-content-between mb-2">
-                <small class="text-muted fw-bold">Resgate de Prêmios</small>
+                <small class="text-muted fw-bold">Índice de Resgate</small>
                 <div class="icon-circle" style="background-color:#e7f8ed;color:#198754;"><i class="fas fa-gift"></i></div>
             </div>
             <h4 class="fw-bold m-0 mt-1 text-success" id="kResgate">0.0%</h4>
-            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Proporção de pontos emitidos convertidos em recompensas físicas.</small>
+            <small class="text-muted d-block mt-2 font-monospace" style="font-size: 0.75rem;">Pontos resgatados sobre pontos emitidos nos últimos 30 dias.</small>
         </div>
     </div>
 </div>
@@ -96,50 +92,33 @@
 
 {% block scripts %}
 <!-- Inclusão da Biblioteca Chart.js diretamente no cliente -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
 
 <script>
 async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.ok?r.json():[]; }
 
 (async () => {
     // 1. Busca os dados brutos das APIs nativas do back-end
-    const [clientes, compras, resgates] = await Promise.all([
-        j('/api/clientes/'), j('/api/compras/'), j('/api/resgates/')
+    const [clientes, compras, resgates, indicadores] = await Promise.all([
+        j('/api/clientes/'),
+        j('/api/compras/'),
+        j('/api/resgates/'),
+        j('/api/relatorios/indicadores?dias=30')
     ]);
     const cmap = {}; clientes.forEach(c=>cmap[c.id_cliente]=c);
 
-    // 2. Cálculos Gerais da base e movimentações
-    const totalClientes = clientes.length;
-    const totalCompras = compras.length;
-    const pontosEmitidos = compras.reduce((s,c)=>s+(c.pontos_gerados||0),0);
-    const pontosResgatados = resgates.reduce((s,r)=>s+(r.pontos_utilizados||0),0); 
-
-    // ====================================================
-    // CÁLCULO DAS TRÊS EQUAÇÕES ACADÊMICAS DO TCC (Meili, 2022)
-    // ====================================================
-    
-    // Métrica 1: Taxa de Recorrência (Frequência Média de Visitas)
-    const recorrencia = totalClientes > 0 ? (totalCompras / totalClientes).toFixed(1) : "0.0";
+    const recorrencia = Number(indicadores.frequencia_recompra || 0).toFixed(2);
     document.getElementById('kRecorrencia').innerHTML = `${recorrencia} <span class="fs-6 text-muted fw-normal">compras/cli</span>`;
 
-    // Métrica 2: Taxa de Rotatividade (Churn Adaptativo de 30 dias)
-    const hoje = new Date();
-    const limite30Dias = new Date(hoje.getTime() - (30 * 24 * 60 * 60 * 1000));
-    
-    // Filtra IDs únicos de clientes que efetuaram compras nos últimos 30 dias
-    const idsClientesAtivos = new Set(
-        compras
-            .filter(c => new Date(c.data) >= limite30Dias)
-            .map(c => c.id_cliente)
-    );
-    
-    const qtdAtivos = idsClientesAtivos.size;
-    const qtdInativos = totalClientes - qtdAtivos;
-    const rotatividade = totalClientes > 0 ? ((qtdInativos / totalClientes) * 100).toFixed(1) : "0.0";
-    document.getElementById('kRotatividade').textContent = rotatividade + "%";
+    const qtdAtivos = Number(indicadores.clientes_com_compra_ultimos_30_dias || 0);
+    const qtdInativos = Number(indicadores.clientes_sem_compra_ultimos_30_dias || 0);
+    document.getElementById('kRotatividade').textContent = indicadores.rotatividade_aplicavel
+        ? Number(indicadores.taxa_rotatividade || 0).toFixed(2) + "%"
+        : "Não aplicável";
 
-    // Métrica 3: Taxa de Resgate de Prêmios (Redemption Rate)
-    const resgate = pontosEmitidos > 0 ? ((pontosResgatados / pontosEmitidos) * 100).toFixed(1) : "0.0";
+    const pontosEmitidos = Number(indicadores.pontos_emitidos || 0);
+    const pontosResgatados = Number(indicadores.pontos_resgatados || 0);
+    const resgate = Number(indicadores.indice_resgate || 0).toFixed(2);
     document.getElementById('kResgate').textContent = resgate + "%";
 
 
@@ -189,9 +168,9 @@ async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.
 
 
     // ====================================================
-    // MONTAGEM DAS TABELAS ORIGINAIS (Mantendo sua lógica intacta)
+    // Tabelas de apoio
     // ====================================================
-    const top = [...clientes].sort((a,b)=>b.pontos_acumulados-a.pontos_acumulados).slice(0,5);
+    const top = clientes.filter(c=>c.ativo).sort((a,b)=>b.pontos_acumulados-a.pontos_acumulados).slice(0,5);
     document.getElementById('tbodyTop').innerHTML = top.length
         ? top.map(c=>`<tr><td>${escapeHtml(c.nome)}</td><td>${escapeHtml(c.telefone)}</td><td class="text-end pe-3"><span class="badge-ganho" style="background-color:#e7f8ed;color:#198754;padding:3px 8px;border-radius:12px;font-size:0.85rem;">${c.pontos_acumulados} pts</span></td></tr>`).join('')
         : '<tr><td colspan="3" class="text-center text-muted">Sem dados.</td></tr>';

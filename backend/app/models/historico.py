@@ -11,6 +11,13 @@ def agora_utc():
 
 class Historico(db.Model):
     __tablename__ = "historico"
+    __table_args__ = (
+        db.CheckConstraint(
+            "tipo_movimentacao IN ('COMPRA', 'RESGATE', 'AJUSTE_POSITIVO', "
+            "'AJUSTE_NEGATIVO', 'ESTORNO', 'EXPIRACAO')",
+            name="chk_historico_tipo",
+        ),
+    )
 
     id_historico = db.Column(db.Integer, primary_key=True)
     id_usuario = db.Column(db.Integer, db.ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False, index=True)
@@ -19,10 +26,10 @@ class Historico(db.Model):
     data_movimentacao = db.Column(db.DateTime, nullable=False, default=agora_utc, index=True)
     pontos = db.Column(db.Integer, nullable=False)
     descricao = db.Column(db.String(255), nullable=True)
-    valor_compra = db.Column(db.Numeric(10, 2), nullable=True)
     saldo_anterior = db.Column(db.Integer, nullable=True)
     saldo_posterior = db.Column(db.Integer, nullable=True)
     origem = db.Column(db.String(50), nullable=True)
+    chave_idempotencia = db.Column(db.String(128), nullable=True, unique=True, index=True)
 
     id_cliente = synonym("id_usuario")
     id_recompensa = synonym("id_produto")
@@ -34,7 +41,6 @@ class Historico(db.Model):
     quantidade = synonym("pontos")
     pontos_gerados = synonym("pontos")
     pontos_utilizados = synonym("pontos")
-    valor = synonym("valor_compra")
     descricao_recompensa = synonym("descricao")
     motivo = synonym("descricao")
 
@@ -55,7 +61,6 @@ class Historico(db.Model):
             "quantidade": self.pontos,
             "pontos_gerados": self.pontos if self.tipo_movimentacao == "COMPRA" else None,
             "pontos_utilizados": abs(self.pontos) if self.tipo_movimentacao == "RESGATE" else None,
-            "valor": float(self.valor_compra) if self.valor_compra is not None else None,
             "descricao": self.descricao,
             "descricao_recompensa": self.descricao if self.tipo_movimentacao == "RESGATE" else None,
             "saldo_anterior": self.saldo_anterior,
