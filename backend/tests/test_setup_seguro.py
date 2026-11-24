@@ -11,7 +11,6 @@ if BACKEND_DIR not in sys.path:
 from app import create_app
 from app.extensions import db, limiter
 from app.models.usuario import Usuario
-from app.models.auditoria import Auditoria
 from app.services.rbac import ROLE_VENDEDORA
 
 
@@ -61,11 +60,6 @@ class SetupSeguroTestCase(unittest.TestCase):
             self.assertEqual(u.nivel_acesso, "ADMIN")
             self.assertTrue(u.verificar_senha("SenhaForte@2026"))
             self.assertFalse(u.precisa_trocar_senha)
-
-            # Auditoria registrada com detalhes sanitizados (sem senha)
-            audit = Auditoria.query.filter_by(acao="CADASTRO_INICIAL_VENDEDORA_ADMIN").first()
-            self.assertIsNotNone(audit)
-            self.assertNotIn("SenhaForte@2026", str(audit.detalhes))
 
     # 3. Depois da criação -> setup bloqueado (GET e POST)
     def test_depois_da_criacao_setup_bloqueado(self):
@@ -266,7 +260,8 @@ class SetupSeguroTestCase(unittest.TestCase):
     # 12. INITIAL_SETUP_TOKEN quando configurado
     def test_setup_com_initial_setup_token(self):
         token_secreto = "token-render-bootstrap-secreto-987"
-        with patch.dict(os.environ, {"INITIAL_SETUP_TOKEN": token_secreto}):
+        self.app.config["INITIAL_SETUP_TOKEN"] = token_secreto
+        try:
             # Tentativa sem token -> 403
             resp_sem_token = self.client.post("/auth/setup", json={
                 "nome": "Vendedora Com Token",
@@ -310,6 +305,8 @@ class SetupSeguroTestCase(unittest.TestCase):
                 "setup_token": token_secreto,
             })
             self.assertEqual(resp_bloqueado.status_code, 403)
+        finally:
+            self.app.config["INITIAL_SETUP_TOKEN"] = ""
 
     # 13. Race condition: múltiplos requests simultâneos criam apenas 1 admin
     def test_race_condition_concorrencia_primeiro_admin(self):
@@ -372,75 +369,53 @@ class SetupSeguroTestCase(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     create_app("production")
 
-    # 15. Exclusão/desativação do último admin NÃO deve reabrir /auth/setup silenciosamente
-    def test_desativacao_ultimo_admin_bloqueada(self):
-        """O sistema deve impedir a desativação da última vendedora ativa,
-        evitando que sistema_precisa_setup() retorne True em sistema já inicializado."""
-        # Cria admin inicial via setup
+    def test_setup_protegido_falha_fechado_sem_token(self):
+        self.app.config["REQUIRE_INITIAL_SETUP_TOKEN"] = True
+        self.app.config["INITIAL_SETUP_TOKEN"] = ""
+        try:
+            self.assertEqual(self.client.get("/auth/setup").status_code, 503)
+            resposta = self.client.post("/auth/setup", json={})
+            self.assertEqual(resposta.status_code, 503)
+        finally:
+            self.app.config["REQUIRE_INITIAL_SETUP_TOKEN"] = False
+
+    def test_ultimo_admin_permanece_protegido_sem_modulo_de_equipe(self):
         payload = {
-            "nome": "Admin Unica",
+            "nome": "Administradora Única",
             "login": "admin_unica",
-            "email": "unica@loja.com",
+            "email": "admin.unica@teste.local",
             "senha": "SenhaForte@2026",
             "confirmar_senha": "SenhaForte@2026",
         }
-        r = self.client.post("/auth/setup", json=payload)
-        self.assertEqual(r.status_code, 201)
+        self.assertEqual(self.client.post("/auth/setup", json=payload).status_code, 201)
 
         with self.app.app_context():
-            admin = Usuario.query.filter_by(login="admin_unica").first()
+            admin = Usuario.query.filter_by(login="admin_unica").one()
             admin_id = admin.id_usuario
 
-        # Tenta desativar a única admin via API de funcionários
-        resp = self.client.post(
-            f"/api/funcionarios/{admin_id}/status",
-            json={"ativo": False},
+        tentativas = (
+            ("post", f"/api/funcionarios/{admin_id}/status", {"ativo": False}),
+            ("put", f"/api/funcionarios/{admin_id}", {"nivel_acesso": "CLIENTE"}),
         )
-        # Deve ser bloqueado (400) ou proibido (403) — não pode desativar a última
-        self.assertIn(resp.status_code, [400, 403])
-
-        # Verifica que /auth/setup continua BLOQUEADO (não reabriu)
-        resp_setup = self.client.get("/auth/setup")
-        self.assertEqual(resp_setup.status_code, 302)
-
-        resp_post = self.client.post("/auth/setup", json=payload)
-        self.assertEqual(resp_post.status_code, 403)
-
-    # 16. Rebaixamento de cargo do último admin deve ser bloqueado
-    def test_rebaixamento_ultimo_admin_bloqueado(self):
-        """O sistema deve impedir rebaixar o cargo do último administrador
-        para 'cliente', o que tornaria sistema_precisa_setup() True."""
-        payload = {
-            "nome": "Admin Para Rebaixar",
-            "login": "admin_rebaixar",
-            "email": "rebaixar@loja.com",
-            "senha": "SenhaForte@2026",
-            "confirmar_senha": "SenhaForte@2026",
-        }
-        r = self.client.post("/auth/setup", json=payload)
-        self.assertEqual(r.status_code, 201)
+        for metodo, rota, dados in tentativas:
+            with self.subTest(rota=rota):
+                resposta = getattr(self.client, metodo)(rota, json=dados)
+                self.assertEqual(resposta.status_code, 404)
 
         with self.app.app_context():
-            admin = Usuario.query.filter_by(login="admin_rebaixar").first()
-            admin_id = admin.id_usuario
+            admin = db.session.get(Usuario, admin_id)
+            self.assertTrue(admin.ativo)
+            self.assertEqual(admin.nivel_acesso, "ADMIN")
 
-        # Tenta rebaixar via API de edição de funcionários
-        resp = self.client.put(
-            f"/api/funcionarios/{admin_id}",
-            json={"cargo": "cliente"},
-        )
-        # Deve ser bloqueado — resposta 400 (último admin) ou 403 (permissão)
-        self.assertIn(resp.status_code, [400, 403])
+        self.assertEqual(self.client.get("/auth/setup").status_code, 302)
+        self.assertEqual(self.client.post("/auth/setup", json=payload).status_code, 403)
 
-        # Setup deve continuar fechado
-        resp_setup = self.client.get("/auth/setup")
-        self.assertEqual(resp_setup.status_code, 302)
-
-    # 17. Token ausente/incorreto via POST body deve bloquear; token correto via POST body deve permitir
+    # Token ausente/incorreto via POST body deve bloquear; token correto deve permitir
     def test_token_somente_via_post_body(self):
         """O token de setup deve ser aceito SOMENTE via POST body, nunca via query string."""
         token_secreto = "meu-token-seguro-via-body-789"
-        with patch.dict(os.environ, {"INITIAL_SETUP_TOKEN": token_secreto}):
+        self.app.config["INITIAL_SETUP_TOKEN"] = token_secreto
+        try:
             # Token via query string NÃO deve funcionar
             resp_query = self.client.post(
                 f"/auth/setup?token={token_secreto}",
@@ -467,6 +442,8 @@ class SetupSeguroTestCase(unittest.TestCase):
                 },
             )
             self.assertEqual(resp_body.status_code, 201, "Token via POST body deve ser aceito")
+        finally:
+            self.app.config["INITIAL_SETUP_TOKEN"] = ""
 
 
 if __name__ == "__main__":

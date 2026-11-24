@@ -29,7 +29,7 @@ class TrocaSenhaAdminTestCase(unittest.TestCase):
                 nome="Admin Teste",
                 login="admin_test",
                 email="admin@teste.com",
-                nivel_acesso="gestor"
+                nivel_acesso="ADMIN"
             )
             self.admin.set_senha("SenhaAtual@123")
 
@@ -276,7 +276,7 @@ class TrocaSenhaAdminTestCase(unittest.TestCase):
                 nome="Admin Dev CSRF",
                 login="admin_dev_csrf",
                 email="admin_dev_csrf@teste.com",
-                nivel_acesso="gestor"
+                nivel_acesso="ADMIN"
             )
             admin_dev.set_senha("SenhaDev@123")
             _db.session.add(admin_dev)

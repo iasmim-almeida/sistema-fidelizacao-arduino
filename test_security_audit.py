@@ -1,7 +1,4 @@
-"""
-Suíte de Verificação Automatizada de Segurança (SAST / DAST Local)
-Valida a eficácia das mitigações aplicadas no sistema IT Clube.
-"""
+"""Verificações funcionais automatizadas de controles de segurança."""
 import os
 import sys
 
@@ -28,7 +25,7 @@ def run_tests():
 
     app = create_app('testing')
     app.config['WTF_CSRF_ENABLED'] = True
-    app.config['IOT_DEVICE_KEY'] = 'fideliza-iot-key-padrao'
+    app.config['IOT_DEVICE_KEY'] = 'test-only-device-key-not-for-production'
     client = app.test_client()
 
     with app.app_context():
@@ -50,7 +47,7 @@ def run_tests():
     r_cli = client.get('/api/clientes/')
     r_cmp = client.get('/api/compras/')
     r_res = client.get('/api/resgates/')
-    r_post_cmp = client.post('/api/compras/', json={'telefone': '11999991111', 'valor': 50})
+    r_post_cmp = client.post('/api/compras/', json={'telefone': '11999991111'})
 
     assert r_cli.status_code == 401, f"Falha: /api/clientes/ retornou {r_cli.status_code}, esperado 401"
     assert r_cmp.status_code == 401, f"Falha: /api/compras/ retornou {r_cmp.status_code}, esperado 401"
@@ -64,15 +61,15 @@ def run_tests():
     print("\n[TESTE 2] Verificando canal autenticado do ESP8266...")
     r_iot = client.post(
         '/api/compras/',
-        json={'telefone': '11999991111', 'valor': 25.00},
-        headers={'X-Device-Key': app.config.get('IOT_DEVICE_KEY', 'fideliza-iot-key-padrao')}
+        json={'telefone': '11999991111'},
+        headers={'X-Device-Key': app.config['IOT_DEVICE_KEY']}
     )
     assert r_iot.status_code == 201, f"Falha: ESP8266 com chave válida retornou {r_iot.status_code}, esperado 201"
     
     # Teste com chave inválida
     r_iot_fake = client.post(
         '/api/compras/',
-        json={'telefone': '11999991111', 'valor': 25.00},
+        json={'telefone': '11999991111'},
         headers={'X-Device-Key': 'chave-falsa-invasor'}
     )
     assert r_iot_fake.status_code == 401, f"Falha: ESP8266 com chave falsa retornou {r_iot_fake.status_code}, esperado 401"
@@ -174,13 +171,18 @@ def run_tests():
     # TESTE 7: Configuração de Segurança em Produção (VULN-05)
     # -------------------------------------------------------------
     print("\n[TESTE 7] Verificando isolamento do modo Debug em Produção...")
-    with patch.dict(os.environ, {"SECRET_KEY": "audit-test-strong-production-secret-key-123456789"}):
+    ambiente_producao = {
+        "SECRET_KEY": "audit-test-strong-production-secret-key-123456789",
+        "IOT_DEVICE_KEY": "audit-iot-key-with-at-least-32-characters",
+        "DATABASE_URL": "postgresql://user:password@127.0.0.1:5432/itclube_test",
+    }
+    with patch.dict(os.environ, ambiente_producao):
         app_prod = create_app('production')
         assert app_prod.config['DEBUG'] is False, "Falha: Debug continua ativo na configuração de produção!"
     print("  ✅ [PASSOU] Ambiente de produção desabilita o depurador interativo (DEBUG=False).")
 
     print("\n" + "=" * 70)
-    print("🏆 RESULTADO FINAL: 100% DOS TESTES DE SEGURANÇA PASSARAM!")
+    print("🏆 RESULTADO FINAL: 7 VERIFICAÇÕES DE CONTROLES CONCLUÍDAS!")
     print("=" * 70)
 
 

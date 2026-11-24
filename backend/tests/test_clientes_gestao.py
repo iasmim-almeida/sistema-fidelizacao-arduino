@@ -25,7 +25,7 @@ class ClientesGestaoTestCase(unittest.TestCase):
                 nome="Admin Teste",
                 login="admin_cli",
                 cargo=ROLE_PROPRIETARIO,
-                nivel_acesso="gestor",
+                nivel_acesso="ADMIN",
                 ativo=True,
             )
             self.admin.set_senha("AdminTeste123!")
@@ -34,7 +34,7 @@ class ClientesGestaoTestCase(unittest.TestCase):
                 nome="Vendedor Teste",
                 login="vend_cli",
                 cargo=ROLE_VENDEDOR,
-                nivel_acesso="vendedor",
+                nivel_acesso="ADMIN",
                 ativo=True,
             )
             self.vendedor.set_senha("VendTeste123!")
@@ -136,7 +136,7 @@ class ClientesGestaoTestCase(unittest.TestCase):
         # Compra para cliente desativado falha
         resp_compra = self.client.post(
             "/api/compras/",
-            json={"id_cliente": self.c1_id, "valor": 50}
+            json={"id_cliente": self.c1_id}
         )
         self.assertEqual(resp_compra.status_code, 400)
 

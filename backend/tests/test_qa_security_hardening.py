@@ -95,17 +95,15 @@ class QASecurityHardeningTestCase(unittest.TestCase):
         self.assertIn("erro", data)
         self.assertEqual(data["erro"], "Telefone ou senha invalidos.")
 
-    def test_logout_suporta_get_e_post(self):
-        """O endpoint de logout deve invalidar a sessão tanto via POST quanto via GET."""
-        # 1. Via POST
+    def test_logout_exige_post(self):
+        """Logout altera estado somente via POST; GET não é permitido."""
         self.autenticar_cliente()
         resp_post = self.client.post("/auth/logout")
         self.assertIn(resp_post.status_code, [200, 302])
 
-        # 2. Via GET
         self.autenticar_cliente()
         resp_get = self.client.get("/auth/logout")
-        self.assertIn(resp_get.status_code, [200, 302])
+        self.assertEqual(resp_get.status_code, 405)
 
     # ─────────────────────────────────────────────────────────────
     # 2. Cabeçalhos de Segurança HTTP (OWASP A05)
@@ -169,20 +167,19 @@ class QASecurityHardeningTestCase(unittest.TestCase):
         self.autenticar_vendedora()
         resp = self.client.post("/api/compras/", json={
             "id_cliente": "nao_e_numero",
-            "valor": "50.00"
         })
         self.assertEqual(resp.status_code, 400)
         self.assertIn("id_cliente deve ser um número inteiro", resp.get_json()["erro"])
 
-    def test_compras_rejeita_valor_negativo(self):
-        """Valor negativo na compra deve ser rejeitado."""
+    def test_compra_credita_um_ponto_sem_campo_financeiro(self):
+        """Uma compra válida sem campo financeiro gera exatamente um ponto."""
         self.autenticar_vendedora()
         resp = self.client.post("/api/compras/", json={
-            "id_cliente": self.cliente_id,
-            "valor": "-10.00"
+            "id_cliente": self.cliente_id
         })
-        self.assertEqual(resp.status_code, 400)
-        self.assertIn("valor nao pode ser negativo", resp.get_json()["erro"])
+        self.assertEqual(resp.status_code, 201)
+        data = resp.get_json()
+        self.assertEqual(data["pontos_adicionados"], 1)
 
     def test_compras_listar_segrega_por_perfil_e_bloqueia_cliente_em_outro_id(self):
         """Cliente autenticado só pode visualizar suas próprias compras."""

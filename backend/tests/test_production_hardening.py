@@ -87,7 +87,12 @@ class ProductionHardeningTestCase(unittest.TestCase):
 
     def test_production_cookies_e_hsts(self):
         """Valida configuração de cookies seguros e headers em ambiente production."""
-        with patch.dict(os.environ, {"SECRET_KEY": "chave-super-segura-producao-64-caracteres-para-teste-1234567890"}):
+        ambiente = {
+            "SECRET_KEY": "chave-super-segura-producao-64-caracteres-para-teste-1234567890",
+            "IOT_DEVICE_KEY": "iot-test-key-with-at-least-32-characters",
+            "DATABASE_URL": "postgresql://user:password@127.0.0.1:5432/itclube_test",
+        }
+        with patch.dict(os.environ, ambiente):
             app_prod = create_app("production")
             self.assertFalse(app_prod.config["DEBUG"])
             self.assertFalse(app_prod.config["TESTING"])
@@ -98,17 +103,31 @@ class ProductionHardeningTestCase(unittest.TestCase):
             self.assertTrue(app_prod.config["REMEMBER_COOKIE_SECURE"])
 
             client_prod = app_prod.test_client()
-            resp = client_prod.get("/health")
-            self.assertEqual(resp.status_code, 200)
+            resp = client_prod.get("/auth/me")
+            self.assertEqual(resp.status_code, 401)
             self.assertIn("Strict-Transport-Security", resp.headers)
             self.assertIn("max-age=31536000", resp.headers["Strict-Transport-Security"])
 
     def test_production_secret_key_fail_closed(self):
         """Garante que a aplicação falha de forma explícita em PRD se SECRET_KEY estiver ausente ou insegura."""
+        base = {
+            "DATABASE_URL": "postgresql://user:password@127.0.0.1:5432/itclube_test",
+            "IOT_DEVICE_KEY": "iot-test-key-with-at-least-32-characters",
+        }
         for segredo_invalido in ["", "dev-secret-key", "troque-por-uma-chave-longa-e-aleatoria"]:
-            with patch.dict(os.environ, {"SECRET_KEY": segredo_invalido}):
+            with patch.dict(os.environ, {**base, "SECRET_KEY": segredo_invalido}):
                 with self.assertRaises(ValueError):
                     create_app("production")
+
+    def test_production_rejeita_banco_nao_postgresql(self):
+        ambiente = {
+            "SECRET_KEY": "chave-super-segura-producao-64-caracteres-para-teste-1234567890",
+            "IOT_DEVICE_KEY": "iot-test-key-with-at-least-32-characters",
+            "DATABASE_URL": "sqlite:///:memory:",
+        }
+        with patch.dict(os.environ, ambiente):
+            with self.assertRaisesRegex(ValueError, "PostgreSQL"):
+                create_app("production")
 
     def test_cli_create_owner(self):
         """Valida bootstrap administrativo via comando CLI 'flask create-owner'."""
@@ -132,14 +151,12 @@ class ProductionHardeningTestCase(unittest.TestCase):
             self.assertTrue(dona.verificar_senha("FundadoraForte2026!"))
 
     def test_regra_pontuacao_unificada_e_rejeicao_payload_injetado(self):
-        """Garante que qualquer valor gera rigorosamente +1 ponto e tentativas de forçar pontos são ignoradas."""
+        """Cada compra gera um ponto e tentativas de forçar pontuação são ignoradas."""
         self.autenticar("u", self.ids["vendedora"])
 
-        # Compras com valores diversos e injeção de 'pontos=100' no payload
-        for valor in [1.00, 50.00, 10000.00]:
+        for _ in range(3):
             resp = self.client.post("/api/compras/", json={
                 "id_cliente": self.ids["cliente"],
-                "valor": valor,
                 "pontos": 100,
                 "points": 500,
                 "quantidade_pontos": 9999
@@ -167,24 +184,6 @@ class ProductionHardeningTestCase(unittest.TestCase):
             if usuario:
                 self.assertEqual(usuario.nivel_acesso, "CLIENTE")
                 self.assertEqual(usuario.cargo, "cliente")
-
-    def test_concorrencia_resgate_estoque_unitario(self):
-        """Com estoque = 1, dois resgates simultâneos devem resultar em exatamente 1 sucesso e 1 falha."""
-        with self.app.app_context():
-            recompensa = Recompensa(
-                id_usuario=self.ids["proprietaria"],
-                nome_cupom="Item Raro Unico",
-                codigo="RARO-001",
-                custo_pontos=10,
-                tipo="produto_fisico",
-                validade=date.today() + timedelta(days=30),
-                quantidade_total=1,
-                quantidade_disponivel=1,
-                status="ativa"
-            )
-            db.session.add(recompensa)
-            db.session.commit()
-            id_rec = recompensa.id_produto
 
     def test_concorrencia_resgate_estoque_unitario(self):
         """Com estoque = 1, tentativas subsequentes devem resultar em 1 sucesso e falhas com 409 sem estoque negativo."""
@@ -257,15 +256,20 @@ class ProductionHardeningTestCase(unittest.TestCase):
             cli_final = db.session.get(Cliente, self.ids["cliente"])
             self.assertEqual(cli_final.pontos_acumulados, 50, "Saldo de pontos deve permanecer intacto")
 
-    def test_csp_permite_fontes_e_icones(self):
-        """Garante que a diretiva CSP font-src autorize os CDNs jsdelivr e cdnjs para ícones."""
+    def test_csp_restringe_assets_a_origem_local(self):
+        """Assets vendorizados não exigem liberação de CDNs na CSP."""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Content-Security-Policy", resp.headers)
         csp = resp.headers["Content-Security-Policy"]
-        self.assertIn("https://cdn.jsdelivr.net", csp, "CSP deve permitir cdn.jsdelivr.net para ícones/fontes")
-        self.assertIn("https://cdnjs.cloudflare.com", csp, "CSP deve permitir cdnjs.cloudflare.com para FontAwesome")
-        self.assertIn("font-src 'self' https://cdn.jsdelivr.net", csp, "font-src deve incluir cdn.jsdelivr.net explicitamente")
+        self.assertNotIn("https://cdn.jsdelivr.net", csp)
+        self.assertNotIn("https://cdnjs.cloudflare.com", csp)
+        self.assertIn("font-src 'self' data:", csp)
+        asset = self.client.get("/static/vendor/bootstrap/bootstrap.min.css")
+        try:
+            self.assertEqual(asset.status_code, 200)
+        finally:
+            asset.close()
 
     def test_tela_login_sem_credenciais_demo(self):
         """Garante que a tela de login não vaze senhas de demonstração ou botões de preenchimento automático."""
@@ -285,7 +289,7 @@ class ProductionHardeningTestCase(unittest.TestCase):
         self.assertIn("insegura", msg.lower())
 
     def test_seed_bloqueado_em_producao(self):
-        """Garante que o script de seed aborta execução em produção sem override explícito."""
+        """Garante que o script de seed sempre aborta execução em produção."""
         import subprocess
         import sys
         env_teste = os.environ.copy()

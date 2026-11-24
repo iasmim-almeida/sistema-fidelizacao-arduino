@@ -293,6 +293,7 @@ class RecompensasTestCase(unittest.TestCase):
             legado = Resgate(
                 id_cliente=self.ids["cliente_alto"],
                 id_recompensa=None,
+                tipo_movimentacao="RESGATE",
                 pontos_utilizados=10,
                 descricao_recompensa="Prêmio legado",
             )

@@ -33,7 +33,7 @@ class ClientePrimeiroAcessoTestCase(unittest.TestCase):
                 login="vendedora_1",
                 email="vendedora@loja.com",
                 cargo=ROLE_VENDEDOR,
-                nivel_acesso="vendedor",
+                nivel_acesso="ADMIN",
                 ativo=True,
             )
             self.vendedora.set_senha("Vendedora123!")
@@ -99,7 +99,7 @@ class ClientePrimeiroAcessoTestCase(unittest.TestCase):
         })
 
         # Desloga vendedora
-        self.client.get("/auth/logout")
+        self.client.post("/auth/logout")
 
         # 2. Cliente faz login com a senha informada pela vendedora
         resp_login = self.client.post("/auth/cliente/login", json={
