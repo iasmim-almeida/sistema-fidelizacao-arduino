@@ -50,8 +50,8 @@ CREATE TABLE IF NOT EXISTS produto (
     ),
     CONSTRAINT chk_produto_valor_beneficio CHECK (
         (tipo = 'produto_fisico' AND valor_beneficio IS NULL) OR
-        (tipo = 'desconto_percentual' AND valor_beneficio > 0 AND valor_beneficio <= 100) OR
-        (tipo = 'desconto_valor_fixo' AND valor_beneficio > 0)
+        (tipo = 'desconto_percentual' AND valor_beneficio IS NOT NULL AND valor_beneficio > 0 AND valor_beneficio <= 100) OR
+        (tipo = 'desconto_valor_fixo' AND valor_beneficio IS NOT NULL AND valor_beneficio > 0)
     )
 );
 
@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS ix_produto_status ON produto(status);
 
 CREATE TABLE IF NOT EXISTS historico (
     id_historico        SERIAL PRIMARY KEY,
-    id_usuario          INTEGER NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    id_usuario          INTEGER NOT NULL REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     id_produto          INTEGER REFERENCES produto(id_produto) ON DELETE SET NULL,
     tipo_movimentacao   VARCHAR(20) NOT NULL,
     data_movimentacao   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

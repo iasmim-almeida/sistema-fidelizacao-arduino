@@ -51,9 +51,9 @@
 (async () => {
     try {
         const [resMe, resCompras, resResgates] = await Promise.all([
-            fetch('/api/clientes/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
-            fetch('/api/compras/', { credentials: 'include' }).then(r => r.ok ? r.json() : []),
-            fetch('/api/resgates/', { credentials: 'include' }).then(r => r.ok ? r.json() : [])
+            fetch('/api/clientes/me', { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('Saldo indisponível'); return r.json(); }),
+            fetch('/api/compras/', { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('Compras indisponíveis'); return r.json(); }),
+            fetch('/api/resgates/', { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('Resgates indisponíveis'); return r.json(); })
         ]);
 
         if (resMe) {
@@ -70,7 +70,10 @@
         document.getElementById('totalAcumulado').textContent = acumulado + ' pts';
         document.getElementById('totalUtilizado').textContent = utilizado + ' pts';
     } catch (e) {
-        console.error('Erro ao carregar dados de pontos:', e);
+        document.getElementById('saldoAtual').textContent = 'Indisponível';
+        document.getElementById('totalAcumulado').textContent = 'Indisponível';
+        document.getElementById('totalUtilizado').textContent = 'Indisponível';
+        document.getElementById('nomeInfo').textContent = e.message || 'Falha ao carregar pontos. Atualize para tentar novamente.';
     }
 })();
 </script>

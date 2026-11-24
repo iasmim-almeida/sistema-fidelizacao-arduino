@@ -46,8 +46,8 @@ class Produto(db.Model):
         ),
         db.CheckConstraint(
             "(tipo = 'produto_fisico' AND valor_beneficio IS NULL) OR "
-            "(tipo = 'desconto_percentual' AND valor_beneficio > 0 AND valor_beneficio <= 100) OR "
-            "(tipo = 'desconto_valor_fixo' AND valor_beneficio > 0)",
+            "(tipo = 'desconto_percentual' AND valor_beneficio IS NOT NULL AND valor_beneficio > 0 AND valor_beneficio <= 100) OR "
+            "(tipo = 'desconto_valor_fixo' AND valor_beneficio IS NOT NULL AND valor_beneficio > 0)",
             name="chk_produto_valor_beneficio",
         ),
     )

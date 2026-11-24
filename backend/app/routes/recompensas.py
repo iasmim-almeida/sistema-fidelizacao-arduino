@@ -52,7 +52,7 @@ def _decimal_positivo(valor, tipo):
         decimal_val = Decimal(str(valor))
     except (InvalidOperation, TypeError):
         raise ValueError("valor_beneficio inválido") from None
-    if decimal_val <= 0:
+    if not decimal_val.is_finite() or decimal_val <= 0:
         raise ValueError("valor_beneficio deve ser maior que zero")
     if tipo == "desconto_percentual" and decimal_val > Decimal("100.00"):
         raise ValueError("desconto percentual não pode ser maior que 100%")
@@ -89,8 +89,8 @@ def _validar_payload(data, recompensa=None):
     nome = data.get("nome", recompensa.nome if recompensa else "").strip()
     if not nome:
         raise ValueError("nome não pode ser vazio")
-    if len(nome) > 120:
-        raise ValueError("nome não pode ter mais de 120 caracteres")
+    if len(nome) > 100:
+        raise ValueError("nome não pode ter mais de 100 caracteres")
 
     custo = _inteiro(data, "custo_pontos", recompensa.custo_pontos if recompensa else None)
     if custo <= 0:

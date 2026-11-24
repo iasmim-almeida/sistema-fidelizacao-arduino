@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from flask_wtf.csrf import validate_csrf
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import inspect
 from wtforms.validators import ValidationError
 from app.models.compra import Compra
 from app.models.cliente import Cliente
@@ -112,12 +113,11 @@ def registrar():
 
         if chave_idempotencia:
             existente = Compra.query.filter(
-                Compra.tipo_eh("COMPRA"),
                 Compra.chave_idempotencia == chave_idempotencia,
             ).first()
             if existente:
                 db.session.rollback()
-                if existente.id_cliente != cliente.id_cliente:
+                if existente.id_cliente != cliente.id_cliente or str(existente.tipo_movimentacao).strip().upper() != "COMPRA":
                     return jsonify({"erro": "Chave de idempotência já utilizada em outra operação"}), 409
                 return jsonify({
                     "status": "sucesso",
@@ -148,30 +148,7 @@ def registrar():
         mov.descricao = "Compra registrada (+1 ponto)"
         compra = mov
 
-        try:
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            if chave_idempotencia:
-                existente = Compra.query.filter(
-                    Compra.tipo_eh("COMPRA"),
-                    Compra.chave_idempotencia == chave_idempotencia,
-                ).first()
-                if existente and existente.id_cliente == cliente.id_cliente:
-                    cliente_atual = Cliente.query.filter_by(
-                        id_cliente=cliente.id_cliente,
-                        nivel_acesso="CLIENTE",
-                    ).first()
-                    return jsonify({
-                        "status": "sucesso",
-                        "duplicada": True,
-                        "origem": existente.origem,
-                        "pontos_adicionados": 0,
-                        "compra": existente.to_dict(),
-                        "cliente": cliente_atual.to_dict(),
-                        "saldo_atualizado": cliente_atual.pontos_acumulados,
-                    }), 200
-            raise
+        db.session.commit()
 
         return jsonify({
             "status": "sucesso",
@@ -182,6 +159,30 @@ def registrar():
             "saldo_atualizado": cliente.pontos_acumulados,
         }), 201
 
+    except IntegrityError as error:
+        db.session.rollback()
+        constraint = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+        unique_keys = []
+        if chave_idempotencia and getattr(error.orig, "pgcode", None) == "23505":
+            inspector = inspect(db.engine)
+            unique_keys = [i["name"] for i in inspector.get_indexes("historico")
+                           if i["unique"] and i["column_names"] == ["chave_idempotencia"]]
+            unique_keys += [i["name"] for i in inspector.get_unique_constraints("historico")
+                            if i["column_names"] == ["chave_idempotencia"]]
+        if chave_idempotencia and constraint in unique_keys:
+            existente = Compra.query.filter_by(chave_idempotencia=chave_idempotencia).first()
+            if existente:
+                if existente.id_cliente != cliente.id_cliente or str(existente.tipo_movimentacao).strip().upper() != "COMPRA":
+                    return jsonify({"erro": "Chave de idempotência já utilizada em outra operação"}), 409
+                cliente_atual = db.session.get(Cliente, existente.id_cliente)
+                return jsonify({
+                    "status": "sucesso", "duplicada": True,
+                    "origem": existente.origem, "pontos_adicionados": 0,
+                    "compra": existente.to_dict(), "cliente": cliente_atual.to_dict(),
+                    "saldo_atualizado": cliente_atual.pontos_acumulados,
+                }), 200
+        current_app.logger.exception("Falha de integridade ao registrar compra")
+        return jsonify({"erro": "Falha ao registrar compra no banco de dados"}), 500
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Falha transacional ao registrar compra")

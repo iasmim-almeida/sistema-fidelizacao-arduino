@@ -93,27 +93,20 @@ document.getElementById('filtroTipo').addEventListener('change', renderHistorico
 
 (async () => {
     try {
-        const [compras, resgates] = await Promise.all([
-            fetch('/api/compras/', { credentials: 'include' }).then(x => x.ok ? x.json() : []),
-            fetch('/api/resgates/', { credentials: 'include' }).then(x => x.ok ? x.json() : []),
-        ]);
-
-        movimentos = [
-            ...compras.map(x => ({
-                tipo: 'compra',
-                titulo: 'Compra no PDV',
-                sub: 'Loja Física IT Clube',
-                pts: x.pontos_gerados,
-                data: x.data
-            })),
-            ...resgates.map(x => ({
-                tipo: 'resgate',
-                titulo: 'Resgate de Recompensa',
-                sub: x.descricao_recompensa,
-                pts: -x.pontos_utilizados,
-                data: x.data
-            })),
-        ].sort((a, b) => new Date(b.data) - new Date(a.data));
+        const respostaMe = await fetch('/api/clientes/me', { credentials: 'include' });
+        if (!respostaMe.ok) throw new Error('Cliente indisponível');
+        const me = await respostaMe.json();
+        const cliente = me.cliente || me;
+        const resposta = await fetch(`/api/clientes/${cliente.id_cliente}/extrato`, { credentials: 'include' });
+        if (!resposta.ok) throw new Error('Extrato indisponível');
+        const dados = await resposta.json();
+        movimentos = dados.extrato.map(x => ({
+            tipo: x.tipo_movimentacao.toLowerCase(),
+            titulo: x.tipo_movimentacao.replaceAll('_', ' '),
+            sub: x.descricao || x.origem || '',
+            pts: x.delta_pontos,
+            data: x.data
+        })).sort((a, b) => new Date(b.data) - new Date(a.data));
 
         renderHistorico();
     } catch (e) {

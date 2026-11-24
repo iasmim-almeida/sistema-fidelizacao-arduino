@@ -161,6 +161,12 @@ def upgrade():
                 true
             )
         """))
+    # A auditoria já foi copiada. Sua FK legada impede remover usuario_legado
+    # no PostgreSQL; retire somente a referência, preservando a tabela até 0008.
+    if bind.dialect.name == "postgresql":
+        for fk in sa.inspect(bind).get_foreign_keys("auditoria_legado"):
+            if fk["referred_table"] == "usuario_legado":
+                op.drop_constraint(fk["name"], "auditoria_legado", type_="foreignkey")
     for tabela in (
         "movimentacao_legado",
         "resgate_legado",

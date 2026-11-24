@@ -237,6 +237,8 @@ def relatorios_indicadores():
         "rotatividade_aplicavel": rotatividade_aplicavel,
         "taxa_rotatividade": round(taxa_rotatividade, 2) if taxa_rotatividade is not None else None,
         "indice_resgate": round(indice_resgate, 2),
+        "indice_resgate_aplicavel": bool(pontos_emitidos),
+        "frequencia_recompra_aplicavel": bool(clientes_ativos),
     })
 
 

@@ -568,7 +568,7 @@ async function carregarExtratoCliente(id) {
     }
 
     tb.innerHTML = items.map(m => {
-        const quantidade = Number(m.quantidade || 0);
+        const quantidade = Number(m.delta_pontos);
         const dt = m.data_hora ? new Date(m.data_hora).toLocaleString('pt-BR') : '-';
         const sinal = quantidade > 0 ? `+${quantidade}` : `${quantidade}`;
         const badgeClasse = quantidade > 0 ? 'text-success fw-bold' : 'text-danger fw-bold';

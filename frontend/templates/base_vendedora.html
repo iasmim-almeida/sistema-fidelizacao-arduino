@@ -92,13 +92,21 @@ function getCsrfToken() {
 
 async function realizarLogout() {
     try {
-        await fetch('/auth/logout', {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!token) throw new Error('Token de segurança ausente. Atualize a página e tente novamente.');
+        const resposta = await fetch('/auth/logout', {
             method: 'POST',
             credentials: 'include',
-            headers: { 'X-CSRFToken': getCsrfToken() }
+            headers: { 'X-CSRFToken': token }
         });
-    } finally {
+        const sessao = await fetch('/auth/me', { credentials: 'include', cache: 'no-store' });
+        const dados = await sessao.json();
+        if (sessao.status !== 401 || dados.autenticado !== false) {
+            throw new Error(resposta.ok ? 'Não foi possível confirmar o encerramento da sessão.' : 'Não foi possível sair. Tente novamente.');
+        }
         window.location.href = '/';
+    } catch (erro) {
+        window.alert(erro.message || 'Falha de conexão ao sair. Tente novamente.');
     }
 }
 </script>

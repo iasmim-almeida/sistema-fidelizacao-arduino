@@ -211,7 +211,10 @@ def login_cliente():
 def logout():
     usuario_id = current_user.get_id()
     logout_user()
+    remember = session.get("_remember")
     session.clear()
+    if remember == "clear":
+        session["_remember"] = "clear"
     logger.info("Sessão encerrada: usuario=%s", usuario_id)
     if request.is_json or request.path.startswith("/api") or request.path.startswith("/auth"):
         return jsonify({"mensagem": "Logout realizado com sucesso", "redirect": "/"})

@@ -155,6 +155,8 @@ function valorResultado(resultado, fallback) {
         const pontosEmitidos = Number(indicadores.pontos_emitidos || 0);
         const pontosResgatados = Number(indicadores.pontos_resgatados || 0);
         document.getElementById('kResgate').textContent = Number(indicadores.indice_resgate || 0).toFixed(2) + "%";
+        if (!indicadores.indice_resgate_aplicavel) document.getElementById('kResgate').textContent = 'Sem pontos emitidos';
+        if (!indicadores.frequencia_recompra_aplicavel) document.getElementById('kRecorrencia').textContent = 'Sem clientes ativos';
 
         const mensagemPeriodo = document.getElementById('mensagemPeriodo');
         if (!indicadores.tem_movimentacao_periodo) {

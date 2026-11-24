@@ -105,7 +105,7 @@
 async function carregarDashboard() {
     try {
         const r = await fetch('/api/dashboard/estatisticas', { credentials: 'include' });
-        if (!r.ok) return;
+        if (!r.ok) throw new Error('Dashboard indisponível. Atualize para tentar novamente.');
         const data = await r.json();
 
         document.getElementById('totClientes').textContent = data.total_clientes || 0;
@@ -169,7 +169,12 @@ async function carregarDashboard() {
         }
 
     } catch(e) {
-        console.error('Falha ao carregar dashboard', e);
+        for (const id of ['totClientes', 'totClientesAtivos', 'totPontos', 'saldoCirculacao', 'totResgates', 'pontosResgatados', 'totCompras']) {
+            document.getElementById(id).textContent = 'Indisponível';
+        }
+        for (const id of ['listaClientesDash', 'listaComprasDash', 'listaResgatesDash']) {
+            document.getElementById(id).textContent = e.message || 'Falha ao carregar dashboard.';
+        }
     }
 }
 

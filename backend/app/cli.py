@@ -7,6 +7,20 @@ from app.security.password import validar_complexidade_senha
 
 
 def register_cli_commands(app: Flask):
+    @app.cli.command("schema-status")
+    def schema_status():
+        """Confere revisão sem imprimir URI ou credenciais."""
+        from alembic.script import ScriptDirectory
+        from alembic.config import Config
+        from app import MIGRATIONS_DIR
+        config = Config()
+        config.set_main_option("script_location", MIGRATIONS_DIR)
+        expected = set(ScriptDirectory.from_config(config).get_heads())
+        applied = set(db.session.execute(db.text("SELECT version_num FROM alembic_version")).scalars())
+        click.echo(f"Esperada: {', '.join(sorted(expected))}; aplicada: {', '.join(sorted(applied))}")
+        if applied != expected:
+            raise click.ClickException("Revisão divergente")
+
     def _executar_criacao_vendedora(nome, login, email, senha, force):
         """Cria ou bootstraps de forma segura a conta da Vendedora (Admin) do IT Clube."""
         nome = str(nome).strip()

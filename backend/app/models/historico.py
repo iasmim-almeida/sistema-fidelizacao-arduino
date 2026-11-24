@@ -26,7 +26,7 @@ class Historico(db.Model):
     )
 
     id_historico = db.Column(db.Integer, primary_key=True)
-    id_usuario = db.Column(db.Integer, db.ForeignKey("usuario.id_usuario", ondelete="CASCADE"), nullable=False, index=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey("usuario.id_usuario", ondelete="RESTRICT"), nullable=False, index=True)
     id_produto = db.Column(db.Integer, db.ForeignKey("produto.id_produto", ondelete="SET NULL"), nullable=True, index=True)
     tipo_movimentacao = db.Column(db.String(20), nullable=False, default="AJUSTE_POSITIVO", index=True)
     data_movimentacao = db.Column(db.DateTime, nullable=False, default=agora_utc, index=True)
@@ -53,7 +53,7 @@ class Historico(db.Model):
     @classmethod
     def tipo_eh(cls, tipo):
         """Expressão SQL compatível com valores legados em caixa/espaçamento distintos."""
-        return func.upper(func.trim(cls.tipo_movimentacao)) == normalizar_tipo_movimentacao(tipo)
+        return func.upper(func.trim(db.cast(cls.tipo_movimentacao, db.String))) == normalizar_tipo_movimentacao(tipo)
 
     def to_dict(self):
         tipo_normalizado = normalizar_tipo_movimentacao(self.tipo_movimentacao)
@@ -71,6 +71,7 @@ class Historico(db.Model):
             "data_hora": self.data_movimentacao.isoformat() if self.data_movimentacao else None,
             "pontos": self.pontos,
             "quantidade": self.pontos,
+            "delta_pontos": self.delta_pontos,
             "pontos_gerados": self.pontos if tipo_normalizado == "COMPRA" else None,
             "pontos_utilizados": abs(self.pontos) if tipo_normalizado == "RESGATE" else None,
             "descricao": self.descricao,
@@ -80,3 +81,14 @@ class Historico(db.Model):
             "origem": self.origem,
             "motivo": self.descricao,
         }
+
+    @property
+    def delta_pontos(self):
+        tipo = normalizar_tipo_movimentacao(self.tipo_movimentacao)
+        if tipo in ("COMPRA", "AJUSTE_POSITIVO"):
+            return abs(self.pontos)
+        if tipo in ("RESGATE", "AJUSTE_NEGATIVO"):
+            return -abs(self.pontos)
+        if self.saldo_anterior is not None and self.saldo_posterior is not None:
+            return self.saldo_posterior - self.saldo_anterior
+        return self.pontos
