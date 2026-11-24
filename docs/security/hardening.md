@@ -1,5 +1,7 @@
 # Engenharia de Segurança & Hardening — IT Clube
 
+> **Relatório histórico:** controles atuais e limitações vigentes estão em `../../SECURITY.md`.
+
 Este documento detalha as medidas de segurança aplicadas no sistema **IT Clube**, cobrindo o endurecimento de código, mitigação de ameaças do **OWASP Top 10** e as vulnerabilidades corrigidas.
 
 ---

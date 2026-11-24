@@ -1,107 +1,62 @@
-# Catálogo de Endpoints da API REST — IT Clube
+# API atual
 
-Todas as rotas de API residem sob o prefixo `/api/` ou `/auth/` e exigem autenticação prévia (sessão autenticada ou cabeçalho IoT).
+Todas as respostas são JSON, exceto as rotas de página e redirecionamento.
 
----
+## Autenticação
 
-## 1. Autenticação & Cadastro (`/auth/`)
+| Método | Rota | Uso |
+|---|---|---|
+| GET/POST | `/auth/setup` | Primeiro administrador; token obrigatório em produção |
+| POST | `/auth/login` | Login administrativo |
+| POST | `/auth/cliente/login` | Login do cliente |
+| POST | `/auth/logout` | Encerra sessão; exige CSRF |
+| GET | `/auth/me` | Sessão atual |
+| POST | `/auth/alterar-senha` | Senha administrativa |
 
-### `POST /auth/login`
-- **Público:** Vendedoras, Gerentes e Proprietárias.
-- **Payload:** `{"identificador": "admin@loja.com", "senha": "..."}`
-- **Resposta:** `200 OK` + Cookie de Sessão assinado (`u_<id>`).
+## Clientes
 
-### `POST /auth/cliente/login`
-- **Público:** Clientes do programa.
-- **Payload:** `{"telefone": "11999991111", "senha": "..."}`
-- **Resposta:** `200 OK` + Cookie de Sessão assinado (`c_<id>`).
+| Método | Rota |
+|---|---|
+| GET/POST | `/api/clientes/` |
+| GET/PATCH/PUT | `/api/clientes/<id>` |
+| GET/PATCH/PUT | `/api/clientes/me` |
+| POST | `/api/clientes/me/alterar-senha` |
+| POST | `/api/clientes/<id>/status` |
+| POST | `/api/clientes/<id>/pontos/ajuste` |
+| GET | `/api/clientes/<id>/extrato` |
 
-### `POST /auth/cadastro` (Web)
-- **Público:** Novos clientes.
-- **Form Data:** `nome`, `telefone`, `email`, `senha`, `confirmar_senha`, `csrf_token`.
-- **Resposta:** `302 Redirect` para login com mensagem flash de sucesso.
+## Compras
 
-### `POST /auth/logout`
-- **Público:** Todos os usuários autenticados.
-- **Resposta:** `200 OK` (limpa sessão do servidor e cookie).
+`GET /api/compras/` lista somente movimentos `COMPRA` permitidos ao perfil atual.
 
----
+`POST /api/compras/` aceita:
 
-## 2. Autoatendimento do Cliente (`/api/clientes/me`)
+```json
+{"telefone":"11999999999"}
+```
 
-### `GET /api/clientes/me`
-- **Permissão:** Exclusivo do cliente autenticado.
-- **Resposta:** Dados cadastrais (`id_cliente`, `nome`, `telefone`, `email`, `pontos_acumulados`).
+Ou `id_cliente` inteiro. Campos financeiros não fazem parte do contrato. A resposta nova usa `201`; uma repetição de `X-Idempotency-Key` usa `200`, `duplicada=true` e não adiciona ponto.
 
-### `PUT /api/clientes/me`
-- **Permissão:** Exclusivo do cliente autenticado.
-- **Payload:**
-  ```json
-  {
-    "nome": "Maria Silva Atualizada",
-    "telefone": "11988887777",
-    "email": "maria.nova@exemplo.com"
-  }
-  ```
-- **Regra de Segurança:** Tentativas de enviar campos como `pontos` ou `saldo` são ignoradas. Unicidade de telefone e e-mail é validada.
-- **Resposta:** `200 OK` + dados atualizados.
+Autenticação:
 
-### `POST /api/clientes/me/alterar-senha`
-- **Permissão:** Exclusivo do cliente autenticado.
-- **Payload:**
-  ```json
-  {
-    "senha_atual": "SenhaAntiga123!",
-    "nova_senha": "NovaSenhaSegura2026!",
-    "confirmar_senha": "NovaSenhaSegura2026!"
-  }
-  ```
-- **Resposta:** `200 OK` (auditoria registrada sem exibir a senha).
+- sessão administrativa + `X-CSRFToken`; ou
+- dispositivo + `X-Device-Key`.
 
----
+## Recompensas e resgates
 
-## 3. Operação de Caixa & PDV (`/api/`)
+| Método | Rota |
+|---|---|
+| GET/POST | `/api/recompensas/` |
+| GET/PATCH | `/api/recompensas/<id>` |
+| GET/POST | `/api/resgates/` |
 
-### `POST /api/compras/`
-- **Permissão:** Vendedora autenticada OU dispositivo IoT via cabeçalho `X-Device-Key`.
-- **Payload:**
-  ```json
-  {
-    "telefone": "11999991111",
-    "valor": 75.50
-  }
-  ```
-- **Regra de Negócio IT Clube:** Cada requisição confirmada adiciona **1 ponto** à conta do cliente, independente do valor.
-- **Resposta:** `201 Created`
-  ```json
-  {
-    "status": "sucesso",
-    "pontos_adicionados": 1,
-    "saldo_atualizado": 281,
-    "compra": { "id_compra": 10, "pontos_gerados": 1, "valor": 75.50 }
-  }
-  ```
+Resgates usam custo, validade e estoque persistidos no servidor. Clientes não concluem resgates diretamente.
 
-### `POST /api/resgates/`
-- **Permissão:** Vendedora, Gerente ou Proprietária (clientes finais recebem `403 Forbidden`).
-- **Payload:**
-  ```json
-  {
-    "id_cliente": 1,
-    "id_recompensa": 2
-  }
-  ```
-- **Regra de Negócio:** Valida saldo e estoque de forma atômica no banco, debitando os pontos e decrementando o estoque disponível.
-- **Resposta:** `201 Created`.
+## Indicadores
 
-### `GET /api/recompensas/`
-- **Permissão:** Qualquer usuário autenticado (vendedora ou cliente).
-- **Resposta:** Lista de recompensas com `custo_pontos`, `tipo`, `validade`, `pode_resgatar` e `pontos_faltantes`.
+- `GET /api/dashboard/estatisticas`
+- `GET /api/relatorios/indicadores?dias=30`
 
----
+Frequência de Recompra = compras do período / clientes ativos. Índice de Resgate = magnitude dos pontos de movimentos `RESGATE` / pontos de movimentos `COMPRA` no período. Rotatividade = clientes cadastrados sem movimento `COMPRA` nos últimos 30 dias / total de clientes cadastrados; ajustes não representam retorno à loja. Para períodos de avaliação inferiores a 30 dias, a API retorna `rotatividade_aplicavel=false` e `taxa_rotatividade=null`.
 
-## 4. Diagnóstico do Sistema
-
-### `GET /health`
-- **Público:** Orquestradores (Docker, Kubernetes) e balanceadores de carga.
-- **Resposta:** `{"status": "ok"}` (`200 OK`).
+As rotas `/api/funcionarios/` e `/api/auditoria/` não existem.

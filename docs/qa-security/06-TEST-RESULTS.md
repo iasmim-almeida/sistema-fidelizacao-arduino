@@ -1,5 +1,7 @@
 # 06 — Resultados da Execução Inicial de Testes
 
+> **Resultado histórico:** não apresentar estas contagens como execução ou cobertura atual.
+
 Relatório dos testes automatizados existentes executados no início do ciclo de QA e Segurança.
 
 ---

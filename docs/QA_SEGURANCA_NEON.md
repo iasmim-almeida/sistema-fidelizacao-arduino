@@ -1,5 +1,7 @@
 # Relatório de QA, Auditoria de Segurança & Banco Neon — IT Clube
 
+> **Relatório histórico:** descreve um schema e módulos anteriores. Não representa o estado consolidado atual.
+
 ## 1. Visão Geral da Auditoria de Segurança & QA
 
 Este documento consolida a revisão técnica e validação de segurança da aplicação **IT Clube / FideliZa**, cobrindo arquitetura de software, conformidade com o **OWASP Top 10:2025**, concorrência, integridade relacional no **PostgreSQL Neon** e proteção contra vulnerabilidades críticas.

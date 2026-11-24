@@ -1,68 +1,33 @@
-# Camada de Banco de Dados — IT Clube
+# Banco de dados
 
-Este diretório centraliza a arquitetura, esquemas relacionais, scripts de migração (Alembic/Flask-Migrate) e rotinas de semeadura (*seeding*) de dados do sistema **IT Clube**.
+PostgreSQL/Neon é o banco operacional oficial. SQLite é usado somente por testes unitários isolados.
 
----
+## Modelo consolidado
 
-## 1. Estrutura de Diretórios
+- `usuario`: administradores e clientes, discriminados por `nivel_acesso`.
+- `produto`: recompensas, benefícios, validade e estoque.
+- `historico`: ledger transacional de compras, resgates e ajustes.
 
-```
-database/
-├── migrations/          # Histórico versionado de migrações (Flask-Migrate / Alembic)
-│   ├── env.py
-│   ├── script.py.mako
-│   └── versions/        # Arquivos de migração sequenciais
-│       ├── 0001_schema_legado.py
-│       ├── 0002_recompensas_persistentes.py
-│       ├── 0003_evolucao_completa.py
-│       └── 0004_it_clube_regras.py
-├── schema/              # Definições conceituais e diagramas DDL
-├── scripts/             # Scripts utilitários de manutenção SQL
-└── seeds/               # Semeadura de dados com credenciais de demonstração
-    └── seed.py
-```
+`Cliente` é alias de `Usuario`; `Compra`, `Resgate` e `MovimentacaoPontos` são aliases de `Historico`. Toda consulta especializada deve aplicar o discriminador correspondente.
 
----
+## Migrações
 
-## 2. Modelagem Relacional
+- `0001` a `0004`: evolução do schema legado.
+- `0005`: consolida tabelas em `usuario`, `produto`, `historico` e a antiga auditoria.
+- `0006`: adapta schemas Neon preexistentes.
+- `0007`: remove `historico.valor_compra`.
+- `0008`: remove auditoria operacional e legado, corrige índices/constraints e adiciona idempotência.
 
-O banco de dados foi estruturado com foco em rastreabilidade, imutabilidade e integridade referencial:
+As migrações antigas não devem ser reescritas porque podem ter sido aplicadas. `0007` e `0008` são destrutivas e dependem de backup para recuperação.
 
-1. **`usuario`**: Gestão da loja sob perfil administrativo unificado **Vendedora (Admin)**. Senhas armazenadas com hash criptográfico PBKDF2-SHA256 (`generate_password_hash`).
-2. **`cliente`**: Clientes do programa de fidelidade identificados por telefone único e e-mail único. Possuem senha com hash e saldo consolidado de pontos (`pontos_acumulados`).
-3. **`compra`**: Registro de transações do PDV. No IT Clube, **1 compra gera exatamente 1 ponto**, desacoplado de valor financeiro.
-4. **`recompensa`**: Catálogo persistente de prêmios gerenciado pela Vendedora (Admin), contendo custo em pontos, quantidade disponível, validade e tipo.
-5. **`resgate`**: Registro de consumo de pontos e validação física de prêmios, executado e confirmado exclusivamente pela Vendedora (Admin) no balcão da loja.
-6. **`movimentacao_pontos`**: Ledger imutável de movimentação atômica de pontos (`COMPRA`, `RESGATE`, `AJUSTE_MANUAL`, `EXPIRACAO`), garantindo auditoria contábil de cada ponto emitido ou debitado.
-7. **`auditoria`**: Trilha de auditoria administrativa e de segurança registrando IP, User-Agent, entidade modificada, ação e alterações (sem armazenar senhas ou dados sensíveis em texto plano).
+O arquivo `schema/schema_postgresql.sql` é referência do estado final. A cadeia Alembic é a fonte executável.
 
----
+## Validação
 
-## 3. Histórico de Migrações
-
-- **`0001_schema_legado`**: Esquema inicial das entidades `usuario`, `cliente`, `compra` e `resgate`.
-- **`0002_recompensas_persistentes`**: Introdução da tabela `recompensa` com controle de estoque e vigência.
-- **`0003_evolucao_completa`**: Adição de RBAC nos usuários, soft delete, ledger `movimentacao_pontos` e tabela `auditoria`.
-- **`0004_it_clube_regras`**: Unicidade de e-mail do cliente, default de 1 ponto por compra e alinhamento com a marca IT Clube.
-
----
-
-## 4. Como Executar Migrações e Seeds
-
-### Aplicar Migrações
 ```bash
-flask db upgrade
+flask --app run.py db upgrade
+flask --app run.py db current
+flask --app run.py db check
 ```
 
-### Reverter Última Migração
-```bash
-flask db downgrade
-```
-
-### Popular Dados Iniciais (Seed)
-Para criar usuários padrão e clientes de teste para demonstração:
-```bash
-python database/seeds/seed.py
-```
-
-> **Atenção:** As senhas iniciais geradas pelo script de seed obedecem às políticas de complexidade do sistema (mínimo 8 caracteres, maiúsculas, minúsculas e números).
+Execute somente contra banco descartável durante desenvolvimento. Para Neon, siga `docs/MIGRATION_NEON_PLAN.md` e obtenha aprovação individual.

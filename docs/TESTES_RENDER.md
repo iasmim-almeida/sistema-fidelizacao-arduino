@@ -1,5 +1,7 @@
 # Roteiro de Testes e Validação Pós-Deploy no Render — IT Clube
 
+> **Roteiro histórico:** referencia endpoints removidos. Não executar sem revisão e aprovação de deploy.
+
 Este documento orienta a realização do **Smoke Test** e da homologação funcional do sistema **IT Clube** implantado no **Render**.
 
 ---

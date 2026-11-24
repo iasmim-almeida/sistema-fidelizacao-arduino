@@ -1,5 +1,7 @@
 # FideliZa
 
+> **Visão histórica:** regras financeiras e módulos descritos abaixo foram substituídos. Consulte o README atual.
+
 O FideliZa é um sistema acadêmico de fidelização para uma loja física. Ele reúne o portal da gestora, o portal do cliente e um terminal ESP8266 que registra compras no mesmo backend Flask. Compras geram pontos; pontos podem ser trocados por recompensas persistidas e administradas pela loja.
 
 ## 1. Visão do Produto

@@ -1,5 +1,7 @@
 # Checklist Pré-PR — IT Clube
 
+> **Registro histórico:** os comandos e contagens abaixo pertencem a uma versão anterior. Consulte `TESTES_LOCAL.md`.
+
 Este checklist é obrigatório para desenvolvedores, tech leads e revisores antes de mesclar qualquer alteração para as branches principais (`main`, `staging` ou `feat/*`).
 
 ---
@@ -50,7 +52,7 @@ Este checklist é obrigatório para desenvolvedores, tech leads e revisores ante
 ---
 
 ## 4. Regras Fundamentais de Negócio
-- [ ] **Regra de Pontuação Unificada:** Compras de qualquer valor monetário geram rigorosamente **+1 ponto**.
+- [ ] **Regra de Pontuação Unificada:** Cada compra registrada gera rigorosamente **+1 ponto**, sem campo financeiro.
 - [ ] **Bloqueio de Auto-Resgate:** Clientes finais são terminantemente impedidos de realizar auto-resgate (`POST /api/resgates/` retorna 403).
 - [ ] **Autoatendimento Restrito:** Cliente só altera dados do próprio perfil (`/perfil`) e visualiza extrato pessoal.
 - [ ] **Anti Role-Injection:** Tentativas de injeção de cargo no cadastro público são neutralizadas.

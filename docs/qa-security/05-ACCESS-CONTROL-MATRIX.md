@@ -1,5 +1,7 @@
 # 05 — Matriz de Controle de Acesso e Permissões (RBAC)
 
+> **Relatório histórico de QA:** o sistema atual possui somente Administrador/Vendedora e Cliente.
+
 Esta matriz detalha o comportamento do sistema para cada perfil de usuário ao tentar interagir com os endpoints da aplicação.
 
 ---

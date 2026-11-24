@@ -1,5 +1,7 @@
 # 01 — Mapeamento da Aplicação e Arquitetura
 
+> **Relatório histórico de QA:** não representa as rotas ou o schema consolidados na Fase 3.
+
 ## 1. Visão Geral da Arquitetura
 
 O sistema **IT Clube (FideliZa)** é uma plataforma web para gestão de programas de fidelização de clientes, compras no ponto de venda (PDV), resgate de prêmios e pontuação integrada via terminal IoT (ESP8266).

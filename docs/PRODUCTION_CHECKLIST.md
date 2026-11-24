@@ -1,5 +1,7 @@
 # Checklist de Produção (Production Readiness Checklist) — FideliZa / IT Clube
 
+> **Checklist histórico:** não autoriza deploy nem migração. O procedimento vigente está em `DEPLOY_RENDER.md`.
+
 Este checklist operacional e de segurança deve ser executado e validado formalmente antes da liberação do tráfego para usuários finais no ambiente Render + PostgreSQL Neon.
 
 ---

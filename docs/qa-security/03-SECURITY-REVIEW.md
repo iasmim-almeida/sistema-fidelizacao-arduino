@@ -1,5 +1,7 @@
 # 03 — Revisão de Código e Arquitetura de Segurança
 
+> **Relatório histórico de QA:** algoritmos, endpoints e módulos podem divergir do código atual.
+
 Esta revisão de segurança examina a fundo os mecanismos de defesa em profundidade implementados na aplicação.
 
 ---

@@ -1,5 +1,7 @@
 # Go-Live Checklist — FideliZa / IT Clube
 
+> **Checklist histórico e não executável:** contém módulos removidos e resultados antigos. Use `DEPLOY_RENDER.md` e `MIGRATION_NEON_PLAN.md`.
+
 Este documento constitui o portão formal de decisão (*Go/No-Go Gate*) para a entrada em produção do sistema FideliZa / IT Clube na infraestrutura Render conectada ao banco gerenciado PostgreSQL Neon.
 
 ---

@@ -1,5 +1,7 @@
 # 02 — QA Funcional: Casos de Teste e Validações
 
+> **Relatório histórico de QA:** preserve os casos como registro; use `../TESTES_LOCAL.md` para a validação atual.
+
 Este documento detalha o plano de testes e os resultados dos testes funcionais executados na aplicação, englobando **Caminho Feliz (Happy Path)**, **Caminhos Negativos (Negative Path)** e **Casos Extremos (Edge Cases)**.
 
 ---

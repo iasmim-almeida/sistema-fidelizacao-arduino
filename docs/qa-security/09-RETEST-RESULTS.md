@@ -1,5 +1,7 @@
 # 09 — Resultados do Reteste e Validação de Regressão
 
+> **Resultado histórico:** a taxa de aprovação abaixo não representa cobertura nem a suíte atual.
+
 Relatório formal da reexecução da suíte completa de testes automatizados após a implementação das correções de segurança.
 
 ---

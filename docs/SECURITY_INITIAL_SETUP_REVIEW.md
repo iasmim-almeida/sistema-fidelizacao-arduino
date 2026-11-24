@@ -1,5 +1,7 @@
 # Security Review — Cadastro Inicial Seguro (`/auth/setup`)
 
+> **Revisão histórica:** o setup atual exige token em produção e não persiste auditoria operacional.
+
 Este documento consolida a revisão técnica e arquitetural de segurança do fluxo de **Cadastro Inicial Seguro** (`/auth/setup`), avaliando seus controles de proteção, análise de riscos sob as normas **OWASP Top 10:2021** e **NIST SP 800-63B**, correções implementadas e recomendações de operação para o ambiente de produção no **Render + PostgreSQL Neon**.
 
 ---

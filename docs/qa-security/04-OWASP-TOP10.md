@@ -1,5 +1,7 @@
 # 04 — Análise de Riscos: OWASP Top 10
 
+> **Relatório histórico de QA:** não constitui certificação nem substitui a revisão atual em `../../SECURITY.md`.
+
 Avaliação detalhada da aplicação em relação às categorias do **OWASP Top 10 (2021)**:
 
 ---

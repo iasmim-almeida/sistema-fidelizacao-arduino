@@ -1,5 +1,7 @@
 # Implementação do Sistema de Recompensas
 
+> **Registro histórico:** preserve como contexto de implementação. A API e o schema vigentes estão em `api/endpoints.md` e `../database/README.md`.
+
 ## Objetivo
 
 Substituir os prêmios hardcoded e o resgate baseado em dados enviados pelo navegador por recompensas reais, persistidas, administráveis e resgatadas de forma transacional.

@@ -1,5 +1,7 @@
 # 07 — Vulnerabilidades e Achados de Segurança (Security Findings)
 
+> **Relatório histórico:** estados de correção devem ser confirmados no código atual.
+
 Este documento cataloga todos os achados identificados durante a auditoria de segurança e code review, estruturados conforme o padrão corporativo de AppSec.
 
 ---

@@ -1,102 +1,52 @@
-# Guia de Desenvolvimento & Execução — IT Clube
+# Ambiente de desenvolvimento
 
-Este guia orienta a configuração do ambiente de desenvolvimento local, execução de testes e implantação conteinerizada do **IT Clube**.
+## Pré-requisitos
 
----
+- Python 3.12
+- PostgreSQL 16 ou Docker Compose
+- ambiente virtual Python
 
-## 1. Pré-requisitos
+## Banco PostgreSQL descartável
 
-- **Python 3.12+** instalado
-- **Git**
-- **Docker** e **Docker Compose** (opcional, para execução conteinerizada)
-- **PostgreSQL 16+** (opcional, para ambiente de produção; SQLite é suportado localmente)
-
----
-
-## 2. Configuração do Ambiente Local (Sem Docker)
-
-### 2.1. Clonar o Repositório e Criar Ambiente Virtual
 ```bash
-git clone <url-do-repositorio>
-cd sistema-fidelizacao-integrado
+docker compose -f compose.local.yml up -d
+export DATABASE_URL='postgresql://itclube_demo:itclube_demo_local@127.0.0.1:5433/itclube_demo'
+```
 
-# Criação e ativação do ambiente virtual
+O compose usa `tmpfs`; não o utilize para dados que precisem persistir.
+
+## Aplicação
+
+```bash
 python -m venv venv
-
-# No Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
-# No Linux/macOS:
-source venv/bin/activate
+venv/bin/pip install -r requirements.txt
+export FLASK_ENV=development
+export SECRET_KEY='segredo-local-forte'
+export INITIAL_SETUP_TOKEN='token-local-de-setup'
+export IOT_DEVICE_KEY='chave-local-com-32-ou-mais-caracteres'
+venv/bin/flask --app run.py db upgrade
+venv/bin/flask --app run.py run
 ```
 
-### 2.2. Instalação das Dependências
-```bash
-pip install --upgrade pip
-pip install -r backend/requirements.txt
-```
+## Testes unitários
 
-### 2.3. Configuração de Variáveis de Ambiente
-Copie o arquivo `.env.example` para `.env` e preencha com suas configurações:
-```bash
-cp .env.example .env
-```
-Exemplo de configuração mínima para desenvolvimento local:
-```env
-SECRET_KEY=uma-chave-secreta-forte-e-aleatoria-de-pelo-menos-32-caracteres
-DATABASE_URL=sqlite:///fidelizacao.db
-FLASK_ENV=development
-TIMEZONE=America/Sao_Paulo
-IOT_DEVICE_KEY=itclube-iot-device-key-secreta
-HOST=127.0.0.1
-PORT=5000
-```
-
-### 2.4. Inicialização do Banco de Dados & Seeds
-```bash
-# Executa migrações estruturais
-flask db upgrade
-
-# Popula usuários de demonstração e clientes de teste
-python database/seeds/seed.py
-```
-
-### 2.5. Inicialização da Aplicação
-```bash
-python run.py
-```
-Acesse a aplicação em `http://127.0.0.1:5000`.
-
----
-
-## 3. Execução dos Testes Automatizados
-
-### Suíte Completa de Testes Unitários e de Integração
-```bash
-python -m unittest discover backend/tests
-```
-
-### Suíte de Auditoria de Segurança & Hardening
-```bash
-python test_security_audit.py
-```
-
----
-
-## 4. Execução com Docker & Docker Compose
-
-Para rodar a aplicação em contêineres com banco de dados PostgreSQL:
+Os testes usam SQLite em memória e devem remover variáveis externas:
 
 ```bash
-# 1. Construir e inicializar os containers em segundo plano
-docker compose up --build -d
-
-# 2. Acompanhar os logs do backend
-docker compose logs -f backend
-
-# 3. Executar migrações dentro do container
-docker compose exec backend flask db upgrade
-
-# 4. Parar os containers
-docker compose down
+cd backend
+env -u DATABASE_URL -u PGHOST -u PGDATABASE -u PGUSER -u PGPASSWORD \
+  FLASK_ENV=testing PYTHONDONTWRITEBYTECODE=1 \
+  ../venv/bin/python -m unittest discover -s tests -v
 ```
-O serviço estará acessível em `http://localhost:5000`.
+
+## Migrações
+
+Valide `upgrade`, preservação de dados fictícios e `db check` em PostgreSQL descartável. Nunca use a URL Neon operacional para desenvolvimento.
+
+## Dados fictícios opcionais
+
+O seed é bloqueado em produção e não contém senhas padrão. Use-o somente no banco descartável depois de definir `SEED_ADMIN_PASSWORD` e `SEED_CLIENT_PASSWORD` com valores locais fortes.
+
+## Demonstração offline
+
+Os assets web são locais. Para uma apresentação independente da internet, inicialize o PostgreSQL descartável, aplique as migrações e use apenas dados fictícios. Mantenha capturas ou vídeo como contingência para falha do hardware.

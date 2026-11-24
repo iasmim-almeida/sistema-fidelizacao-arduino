@@ -1,5 +1,7 @@
 # 08 — Correções Aplicadas e Hardening Realizado
 
+> **Relatório histórico:** não usar como inventário das correções atuais.
+
 Este relatório documenta detalhadamente as correções implementadas no código-fonte para solucionar as vulnerabilidades encontradas.
 
 ---

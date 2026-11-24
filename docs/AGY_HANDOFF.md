@@ -1,5 +1,7 @@
 # AGY HANDOFF — FideliZa / IT Clube
 
+> **Registro histórico:** este handoff descreve uma versão anterior. Não use rotas, métricas ou resultados de testes daqui como evidência do sistema atual.
+
 > Documento gerado em 2026-09-22T19:59 BRT (sessão AGY `566d2995`).
 > Objetivo: permitir que outro agente/modelo retome o trabalho sem perda de contexto.
 

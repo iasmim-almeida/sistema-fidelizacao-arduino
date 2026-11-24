@@ -1,5 +1,7 @@
 # Checklist Pós-Deploy — FideliZa / IT Clube
 
+> **Checklist histórico e não executável:** referencia módulos e revisões removidos. Consulte `DEPLOY_RENDER.md`.
+
 Este documento estabelece o protocolo operacional de validação obrigatória imediatamente após a conclusão do deploy na infraestrutura Render conectada ao banco PostgreSQL Neon.
 
 ---

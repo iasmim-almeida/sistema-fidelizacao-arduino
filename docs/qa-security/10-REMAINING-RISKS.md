@@ -1,5 +1,7 @@
 # 10 — Riscos Remanescentes e Recomendações Operacionais
 
+> **Relatório histórico:** consulte `../../SECURITY.md` para riscos remanescentes atuais.
+
 Conforme as diretrizes de segurança da informação, nenhuma aplicação pode ser considerada 100% livre de riscos. Este documento cataloga os riscos residuais inerentes à operação do sistema e as recomendações de mitigação para ambiente produtivo.
 
 ---

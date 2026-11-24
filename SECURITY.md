@@ -1,49 +1,39 @@
-# Política de Segurança — IT Clube
+# Segurança do IT Clube
 
-Este documento descreve as políticas de segurança, diretrizes de relato de vulnerabilidades e arquitetura de proteção implementadas no sistema **IT Clube**.
+## Controles atuais
 
----
+- Hash de senhas pelo Werkzeug com salt individual.
+- Sessões Flask-Login com cookies `HttpOnly`, `Secure` em produção e `SameSite=Lax`.
+- CSRF global para operações web autenticadas.
+- A rota de compra é isenta no middleware para permitir IoT, mas valida CSRF manualmente quando a origem é uma sessão administrativa.
+- Logout somente por `POST` e protegido por CSRF.
+- ORM e expressões SQLAlchemy parametrizadas.
+- Resgate valida custo, saldo, validade, status e estoque no servidor.
+- Setup web exige `INITIAL_SETUP_TOKEN` em produção e falha fechado se ausente.
+- Produção exige `SECRET_KEY`, `IOT_DEVICE_KEY` forte e `DATABASE_URL` PostgreSQL.
+- Assets web são servidos localmente; a CSP não libera CDNs externas.
 
-## 1. Versões Suportadas
+## Histórico e logs
 
-As seguintes versões do software recebem ativamente atualizações e patches de segurança:
+O histórico transacional registra tipo, origem, pontos, saldo anterior, saldo posterior e motivo. Ele é parte da regra de negócio e não deve ser removido.
 
-| Versão | Suportada | Notas |
-| :--- | :---: | :--- |
-| `2.0.x` (IT Clube) | :white_check_mark: | Versão atual com arquitetura endurecida e RBAC segregado |
-| `< 2.0.0` (FideliZa Legado) | :x: | Descontinuada; migração imediata recomendada |
+O antigo módulo de auditoria operacional foi descontinuado por requisito. Eventos técnicos relevantes usam o logging da aplicação sem persistir senhas, tokens ou payloads sensíveis.
 
----
+## IoT
 
-## 2. Relatando uma Vulnerabilidade
+- A chave antes versionada deve ser considerada comprometida.
+- Credenciais são provisionadas por `secrets.h`, que é ignorado pelo Git.
+- `X-Idempotency-Key` evita crédito duplicado quando enviado pelo terminal.
+- O protótipo HTTP é apenas para rede local descartável. Comunicação externa requer HTTPS com validação da cadeia de certificados.
+- A rotação da chave real depende de autorização e não foi executada.
 
-A equipe de engenharia do IT Clube leva a segurança a sério. Se você identificar uma falha ou vulnerabilidade em nossa aplicação:
+## Limitações conhecidas
 
-1. **Não divulgue publicamente** a falha até que ela tenha sido devidamente analisada e mitigada.
-2. Envie um e-mail com os detalhes técnicos, passos de reprodução (PoC) e impacto potencial para: **`seguranca@itclube.com.br`**.
-3. Nossa equipe responderá em até 48 horas úteis confirmando o recebimento e o plano de mitigação.
+- O rate limiting usa memória de processo e não é global entre workers.
+- Scripts e estilos inline ainda exigem `'unsafe-inline'` na CSP.
+- Idempotência é compatível e opcional para clientes legados; o firmware definitivo deve sempre enviar a chave.
+- A concorrência real precisa ser validada em PostgreSQL descartável antes do deploy.
 
----
+## Segredos
 
-## 3. Controles e Práticas de Segurança Implementadas
-
-O sistema foi submetido a um processo de hardening rigoroso, cobrindo:
-
-- **Autenticação Segura:**
-  - Armazenamento de credenciais exclusivamente com scrypt (N=32768, r=8, p=1) via Werkzeug 3.x e sal aleatório criptográfico.
-  - Eliminação de qualquer mecanismo ou senha de emergência *hardcoded*.
-  - Deserialização de sessão estrita (`u_<id>` e `c_<id>`), impedindo colisão e escalação vertical de privilégio.
-- **Proteção de API & BOLA/IDOR:**
-  - Controle de acesso granular em 100% dos endpoints REST via `@login_required` e `@permissao_requerida`.
-  - Clientes finais restritos estritamente aos seus próprios dados através da rota `/api/clientes/me`.
-- **Integridade Contábil de Pontos:**
-  - Ledger transacional imutável (`movimentacao_pontos`) que audita todas as emissões e débitos.
-  - Bloqueio completo de auto-resgate: clientes finais recebem `403 Forbidden` ao tentar forçar resgates diretamente; a baixa é prerrogativa do caixa.
-- **Proteção contra CSRF e XSS:**
-  - Validação de tokens CSRF em todas as requisições com mutação de estado (`POST`, `PUT`, `DELETE`).
-  - Sanitização rigorosa de inputs e auto-escaping de templates HTML.
-- **Isolamento de Contêineres:**
-  - Imagem Docker baseada em `python:3.12-slim` com execução sob usuário de privilégios mínimos (`appuser`, UID 10001).
-  - Nenhum arquivo `.env` ou segredo persistido dentro das camadas da imagem.
-- **Trilha de Auditoria Sanitizada:**
-  - Logs de auditoria gravam eventos administrativos e sensíveis sem jamais expor senhas, tokens ou dados pessoais protegidos.
+Nunca versionar `.env`, `secrets.h`, URLs Neon, chaves do Render ou credenciais reais. Em caso de exposição, revogar o segredo no provedor, provisionar um novo valor e só então atualizar os consumidores autorizados.

@@ -1,84 +1,46 @@
-# Módulo IoT e Terminal Físico — IT Clube
+# Firmware ESP8266 do IT Clube
 
-Este diretório contém os códigos de firmware, especificações de montagem eletrônica e documentação da integração de hardware do sistema **IT Clube** via microcontrolador **ESP8266 NodeMCU**.
+## Estado do material versionado
 
----
+O arquivo `esp8266/fidelizacao_esp8266.ino` é um protótipo de conectividade: envia um telefone para `POST /api/compras/` e sinaliza respostas de sucesso no LED D2. Ele não implementa o terminal descrito no TCC.
 
-## 1. Visão Geral da Integração
+Foram pesquisadas todas as branches locais, remotas e versões históricas disponíveis. Nenhuma contém código para teclado matricial ou LCD. O firmware acadêmico esperado utiliza ESP8266 NodeMCU, teclado de 12 teclas, LCD 16×2 I2C, entrada de telefone e retorno pelo display, mas suas pinagens e seu código-fonte precisam ser fornecidos pela equipe. Não se deve inferir ou inventar essas ligações.
 
-O terminal físico de balcão permite registrar pontuações de clientes diretamente no momento da compra. O microcontrolador conecta-se à rede Wi-Fi local da loja e despacha requisições HTTP autenticadas para o backend do IT Clube.
+## Contrato da API
 
-Ao receber a confirmação de pontuação computada com sucesso (`HTTP 201 Created`), o terminal físico aciona um sinalizador luminoso (LED Verde).
+- Endpoint: `POST /api/compras/`
+- Headers: `Content-Type`, `X-Device-Key` e, para proteção contra duplicidade, `X-Idempotency-Key`
+- Corpo: `{"telefone":"DDD_NUMERO"}`
+- `201 Created`: compra nova; um ponto creditado
+- `200 OK` com `duplicada=true`: operação já processada; nenhum ponto adicional
+- `401 Unauthorized`: credencial do dispositivo ausente ou inválida
 
-> **Regra de Pontuação IT Clube:** Cada requisição de compra computada adiciona rigorosamente **1 ponto** à conta do cliente no sistema.
+Uma compra válida corresponde a exatamente um ponto. Não existe valor monetário no contrato.
 
----
+## Provisionamento sem credenciais versionadas
 
-## 2. Componentes de Hardware Utilizados
+1. Copie `esp8266/secrets.example.h` para `esp8266/secrets.h`.
+2. Preencha Wi-Fi, URL e uma chave IoT nova na estação usada para gravar o dispositivo.
+3. Nunca faça commit de `secrets.h`; o arquivo está no `.gitignore`.
+4. Configure a mesma chave em `IOT_DEVICE_KEY` no ambiente do backend somente durante uma janela de rotação aprovada.
+5. Grave e teste o terminal antes de revogar a chave anterior.
 
-| Componente | Quantidade | Descrição / Função |
-| :--- | :---: | :--- |
-| **ESP8266 NodeMCU (ESP-12E)** | 1 | Microcontrolador Wi-Fi principal de comunicação |
-| **LED Difuso Verde (5mm)** | 1 | Sinalizador visual de sucesso de pontuação |
-| **Resistor de 220Ω (1/4W)** | 1 | Limitador de corrente para o LED Verde |
-| **Protoboard (830 ou 400 pontos)** | 1 | Plataforma de prototipagem |
-| **Cabos Jumper Macho-Macho** | 4 | Conexões de sinal e terra (GND) |
-| **Fonte / Cabo Micro-USB 5V/1A** | 1 | Alimentação estável para a placa NodeMCU |
+A chave anteriormente presente no firmware está no histórico público e deve ser considerada comprometida. Sua rotação no Render não foi executada.
 
----
+## HTTPS
 
-## 3. Pinagem e Esquemático de Ligação
+O protótipo atual usa `WiFiClient` e é adequado apenas para uma rede local descartável de demonstração. Para acesso ao Render ou a qualquer rede não confiável, o firmware real deve usar `BearSSL::WiFiClientSecure`, URL HTTPS e uma CA raiz ou cadeia de certificados validada. Não usar `setInsecure()`.
 
-```
-  +---------------------------------------------------+
-  |                 ESP8266 NodeMCU                   |
-  |                                                   |
-  |   [ D2 / GPIO4 ] ------[ Resistor 220Ω ]----+---->| (Ânodo LED Verde)
-  |                                                    |
-  |   [ GND ] -----------------------------------------> (Cátodo LED Verde)
-  +---------------------------------------------------+
-```
+O certificado deve ser obtido do hostname definitivo e atualizado de forma coordenada. Como o hostname e o firmware real não estão disponíveis, o material de CA não foi inventado nem incluído.
 
-### Detalhamento das Conexões:
-1. **Pino D2 (GPIO4)** do NodeMCU conectado a um terminal do **Resistor de 220Ω**.
-2. O outro terminal do resistor conectado ao **terminal longo (Ânodo, +)** do **LED Verde**.
-3. O **terminal curto (Cátodo, -)** do LED Verde conectado diretamente ao pino **GND** do NodeMCU.
+## Prevenção de duplicidade
 
----
+O backend aceita `X-Idempotency-Key` de 8 a 128 caracteres. Repetir a mesma chave devolve o resultado anterior sem creditar novo ponto. O protótipo gera uma chave por envio; o firmware definitivo deve persistir um contador ou identificador de operação para evitar repetição também após reinicialização.
 
-## 4. Protocolo de Comunicação & Segurança (PSK)
+## Compilação do protótipo
 
-Para impedir injeção não autorizada de compras ou pontos por terceiros na rede local, o ESP8266 utiliza **chave de dispositivo pré-compartilhada (Pre-Shared Key - PSK)**:
-
-- **Endpoint de Destino:** `POST /api/compras/`
-- **Cabeçalho Obrigatório:** `X-Device-Key: <CHAVE_CONFIGURADA_NO_ENV>`
-- **Content-Type:** `application/json`
-- **Corpo da Mensagem:**
-  ```json
-  {
-    "telefone": "11999991111",
-    "valor": 50.00
-  }
-  ```
-
-### Tratamento de Respostas pelo Firmware:
-- **`HTTP 201 Created`**: Compra registrada e 1 ponto adicionado. O pino `D2` entra em nível alto (`HIGH`) por 1.500 ms (1,5 segundos), piscando o LED verde.
-- **`HTTP 401 Unauthorized`**: Chave de dispositivo incorreta ou ausente. O LED permanece desligado e o erro é logado na porta Serial (115200 bps).
-- **`HTTP 404 / 400`**: Telefone não encontrado ou dados inválidos.
-
----
-
-## 5. Instruções de Compilação e Gravação
-
-1. Abra a **Arduino IDE** (versão 2.0 ou superior).
-2. Certifique-se de que o pacote de placas ESP8266 está instalado (`Gerenciador de Placas -> esp8266 by ESP8266 Community`).
-3. Selecione a placa: **NodeMCU 1.0 (ESP-12E Module)**.
-4. Abra o arquivo [`arduino/esp8266/fidelizacao_esp8266.ino`](file:///C:/dev/Projetotc/FideliZa-integrado/sistema-fidelizacao-integrado/arduino/esp8266/fidelizacao_esp8266.ino).
-5. Configure suas credenciais de Wi-Fi e endereço do backend:
-   ```cpp
-   const char* SSID     = "SUA_REDE_WIFI";
-   const char* SENHA    = "SUA_SENHA_WIFI";
-   const char* SERVIDOR = "http://<IP_DO_SERVIDOR>:5000/api/compras/";
-   ```
-6. Conecte o cabo USB ao computador, selecione a porta COM correspondente e clique em **Upload**.
-7. Abra o Monitor Serial a **115200 baud** para acompanhar o status da conexão Wi-Fi e das chamadas HTTP.
+1. Instale o pacote ESP8266 na Arduino IDE.
+2. Selecione `NodeMCU 1.0 (ESP-12E Module)`.
+3. Crie `secrets.h` conforme as instruções acima.
+4. Compile o sketch antes de conectar a placa.
+5. A gravação no hardware exige autorização e coordenação com a equipe.

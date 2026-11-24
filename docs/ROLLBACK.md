@@ -1,5 +1,7 @@
 # Guia de Rollback e Recuperação de Desastres — FideliZa / IT Clube
 
+> **Guia histórico:** para `0007` e `0008`, rollback significa restauração de backup, não downgrade. Consulte `MIGRATION_NEON_PLAN.md`.
+
 Este documento define os procedimentos de emergência para contingência, reversão de deploy (*application rollback*), recuperação de banco de dados (*database recovery*) e contenção de vazamento de segredos na plataforma Render e PostgreSQL Neon.
 
 ---
