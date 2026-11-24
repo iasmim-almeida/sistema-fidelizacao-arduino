@@ -19,7 +19,7 @@ CHAVES_PERMITIDAS = {"id_cliente", "telefone", "id_recompensa"}
 @login_required
 def listar():
     """Segrega o histórico: cliente vê o próprio; vendedora vê o global."""
-    query = Resgate.query.filter(Resgate.tipo_movimentacao == "RESGATE")
+    query = Resgate.query.filter(Resgate.tipo_eh("RESGATE"))
 
     if getattr(current_user, "is_cliente", False):
         query = query.filter_by(id_cliente=current_user.id_cliente)

@@ -38,7 +38,7 @@ def verificar_autenticacao_pontuacao():
 @login_required
 def listar():
     """Exige login e segrega a visão de compras por perfil."""
-    query = Compra.query.filter(Compra.tipo_movimentacao == "COMPRA")
+    query = Compra.query.filter(Compra.tipo_eh("COMPRA"))
 
     if getattr(current_user, "is_cliente", False):
         query = query.filter_by(id_cliente=current_user.id_cliente)
@@ -111,9 +111,9 @@ def registrar():
             return jsonify({"erro": "Cliente está inativo. Pontuação não permitida."}), 400
 
         if chave_idempotencia:
-            existente = Compra.query.filter_by(
-                tipo_movimentacao="COMPRA",
-                chave_idempotencia=chave_idempotencia,
+            existente = Compra.query.filter(
+                Compra.tipo_eh("COMPRA"),
+                Compra.chave_idempotencia == chave_idempotencia,
             ).first()
             if existente:
                 db.session.rollback()
@@ -153,9 +153,9 @@ def registrar():
         except IntegrityError:
             db.session.rollback()
             if chave_idempotencia:
-                existente = Compra.query.filter_by(
-                    tipo_movimentacao="COMPRA",
-                    chave_idempotencia=chave_idempotencia,
+                existente = Compra.query.filter(
+                    Compra.tipo_eh("COMPRA"),
+                    Compra.chave_idempotencia == chave_idempotencia,
                 ).first()
                 if existente and existente.id_cliente == cliente.id_cliente:
                     cliente_atual = Cliente.query.filter_by(

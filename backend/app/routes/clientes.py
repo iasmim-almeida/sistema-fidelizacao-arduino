@@ -243,8 +243,8 @@ def obter(id):
     dados = cliente.to_dict()
 
     # Métricas e histórico detalhado
-    compras = Compra.query.filter_by(id_cliente=id, tipo_movimentacao="COMPRA")
-    resgates = Resgate.query.filter_by(id_cliente=id, tipo_movimentacao="RESGATE")
+    compras = Compra.query.filter(Compra.id_cliente == id, Compra.tipo_eh("COMPRA"))
+    resgates = Resgate.query.filter(Resgate.id_cliente == id, Resgate.tipo_eh("RESGATE"))
     compras_count = compras.count()
     resgates_count = resgates.count()
     ultima_compra = compras.order_by(Compra.data.desc()).first()

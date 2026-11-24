@@ -2,9 +2,30 @@
 {% set active = 'clientes' %}
 {% block titulo %}Clientes{% endblock %}
 {% block page_title %}Gestão de Clientes{% endblock %}
-{% block page_subtitle %}Consulte, edite, gerencie saldo e audite o histórico dos seus clientes{% endblock %}
+{% block page_subtitle %}Consulte, edite e acompanhe o histórico dos seus clientes{% endblock %}
 
 {% block content %}
+<style>
+.clientes-table { min-width: 760px; }
+.acoes-clientes { min-width: 156px; white-space: nowrap; }
+.acoes-clientes .btn { min-width: 38px; min-height: 38px; }
+.extrato-cliente-table { min-width: 620px; }
+@media (max-width: 767.98px) {
+    .clientes-table th, .clientes-table td { padding: .65rem .5rem; }
+    .clientes-table th:last-child, .clientes-table td:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: var(--bs-body-bg, #fff);
+        box-shadow: -4px 0 8px rgba(0, 0, 0, .06);
+    }
+    .clientes-table thead th:last-child { background: var(--bs-light, #f8f9fa); z-index: 3; }
+    .modal-fullscreen-sm-down .modal-body { padding: 1rem .75rem; }
+}
+</style>
+
+<div id="alertaClientes" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+
 <!-- Barra de Pesquisa e Filtros -->
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-body">
@@ -49,7 +70,7 @@
         <span class="badge bg-light text-dark border" id="badgeTotalClientes">0 clientes</span>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 clientes-table">
             <thead class="table-light">
                 <tr>
                     <th>Nome</th>
@@ -57,7 +78,7 @@
                     <th>Saldo de Pontos</th>
                     <th>Status</th>
                     <th>Cadastro</th>
-                    <th class="text-end">Ações</th>
+                    <th class="text-end acoes-clientes">Ações</th>
                 </tr>
             </thead>
             <tbody id="tbodyClientes">
@@ -156,13 +177,14 @@
 
 <!-- Modal Detalhes / Perfil Completo do Cliente -->
 <div class="modal fade" id="modalDetalhesCliente" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold"><i class="fas fa-id-card text-warning me-2"></i>Perfil e Histórico do Cliente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div id="alertaModalDetalhes" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="p-3 bg-light rounded">
@@ -181,6 +203,13 @@
                     </div>
                 </div>
 
+                <div class="row g-2 mb-4 text-center">
+                    <div class="col-6 col-md-3"><div class="border rounded p-2 h-100"><small class="text-muted d-block">Compras</small><strong id="detTotalCompras">0</strong></div></div>
+                    <div class="col-6 col-md-3"><div class="border rounded p-2 h-100"><small class="text-muted d-block">Resgates</small><strong id="detTotalResgates">0</strong></div></div>
+                    <div class="col-6 col-md-3"><div class="border rounded p-2 h-100"><small class="text-muted d-block">Última compra</small><strong class="small" id="detUltimaCompra">—</strong></div></div>
+                    <div class="col-6 col-md-3"><div class="border rounded p-2 h-100"><small class="text-muted d-block">Último resgate</small><strong class="small" id="detUltimoResgate">—</strong></div></div>
+                </div>
+
                 <ul class="nav nav-tabs mb-3" id="detTabs">
                     <li class="nav-item">
                         <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabExtrato">Extrato de Pontos (Ledger)</button>
@@ -190,7 +219,7 @@
                 <div class="tab-content">
                     <div class="tab-pane fade show active" id="tabExtrato">
                         <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                            <table class="table table-sm table-hover align-middle">
+                            <table class="table table-sm table-hover align-middle extrato-cliente-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Data/Hora</th>
@@ -281,20 +310,38 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('pesquisa').addEventListener('input', filtrarClientesLocal);
     document.getElementById('filtroStatus').addEventListener('change', carregarClientes);
     document.getElementById('filtroOrdenacao').addEventListener('change', filtrarClientesLocal);
+    document.getElementById('tbodyClientes').addEventListener('click', (event) => {
+        const botao = event.target.closest('[data-action="detalhes-cliente"]');
+        if (botao) abrirDetalhes(Number(botao.dataset.clienteId));
+    });
 });
+
+function mostrarErroClientes(mensagem) {
+    const alerta = document.getElementById('alertaClientes');
+    alerta.textContent = mensagem;
+    alerta.classList.remove('d-none');
+}
+
+async function obterJson(resp, mensagemPadrao) {
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.erro || `${mensagemPadrao} (HTTP ${resp.status})`);
+    return data;
+}
 
 async function carregarClientes() {
     const status = document.getElementById('filtroStatus').value;
     const params = new URLSearchParams();
     if (status) params.append('status', status);
 
-    const resp = await fetch(`/api/clientes/?${params.toString()}`, { credentials: 'include' });
-    if (!resp.ok) {
+    document.getElementById('alertaClientes').classList.add('d-none');
+    try {
+        const resp = await fetch(`/api/clientes/?${params.toString()}`, { credentials: 'include' });
+        clientesLista = await obterJson(resp, 'Erro ao carregar clientes');
+        filtrarClientesLocal();
+    } catch (erro) {
         document.getElementById('tbodyClientes').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Erro ao carregar clientes.</td></tr>';
-        return;
+        mostrarErroClientes(erro.message || 'Não foi possível carregar os clientes.');
     }
-    clientesLista = await resp.json();
-    filtrarClientesLocal();
 }
 
 function filtrarClientesLocal() {
@@ -348,9 +395,9 @@ function renderClientes(lista) {
             <td><span class="badge bg-warning text-dark px-2 py-1">${c.pontos_acumulados} pts</span></td>
             <td>${badgeStatus}</td>
             <td class="small text-muted">${dt}</td>
-            <td class="text-end">
+            <td class="text-end acoes-clientes">
                 <div class="btn-group btn-group-sm">
-                    <button class="btn btn-light" title="Ver Perfil e Histórico" onclick="abrirDetalhes(${c.id_cliente})">
+                    <button type="button" class="btn btn-light" title="Ver Perfil e Histórico" aria-label="Ver perfil e histórico de ${escapeHtml(c.nome)}" data-action="detalhes-cliente" data-cliente-id="${c.id_cliente}">
                         <i class="fas fa-eye text-primary"></i>
                     </button>
                     ${podePontos ? `
@@ -467,22 +514,45 @@ document.getElementById('formEditarCliente').addEventListener('submit', async (e
 });
 
 async function abrirDetalhes(id) {
-    const resp = await fetch(`/api/clientes/${id}`, { credentials: 'include' });
-    if (!resp.ok) return;
-    const c = await resp.json();
-
-    document.getElementById('detNome').textContent = c.nome;
-    document.getElementById('detTelefone').textContent = c.telefone;
-    document.getElementById('detEmail').textContent = c.email || 'Não informado';
-    document.getElementById('detEndereco').textContent = c.endereco || 'Não informado';
-    document.getElementById('detPontos').textContent = `${c.pontos_acumulados} pts`;
-    document.getElementById('detStatusBadge').innerHTML = c.ativo !== false 
-        ? '<span class="badge bg-success">Conta Ativa</span>' 
-        : '<span class="badge bg-secondary">Conta Desativada</span>';
-
-    // Carrega extrato
-    carregarExtratoCliente(id);
+    const alerta = document.getElementById('alertaModalDetalhes');
+    alerta.classList.add('d-none');
+    document.getElementById('detNome').textContent = 'Carregando...';
+    document.getElementById('detTotalCompras').textContent = '—';
+    document.getElementById('detTotalResgates').textContent = '—';
+    document.getElementById('detUltimaCompra').textContent = '—';
+    document.getElementById('detUltimoResgate').textContent = '—';
     modalDetalhes.show();
+
+    try {
+        const resp = await fetch(`/api/clientes/${id}`, { credentials: 'include' });
+        const c = await obterJson(resp, 'Erro ao obter detalhes do cliente');
+
+        document.getElementById('detNome').textContent = c.nome || 'Cliente';
+        document.getElementById('detTelefone').textContent = c.telefone || 'Não informado';
+        document.getElementById('detEmail').textContent = c.email || 'Não informado';
+        document.getElementById('detEndereco').textContent = c.endereco || 'Não informado';
+        document.getElementById('detPontos').textContent = `${Number(c.pontos_acumulados || 0)} pts`;
+        document.getElementById('detStatusBadge').innerHTML = c.ativo !== false
+            ? '<span class="badge bg-success">Conta Ativa</span>'
+            : '<span class="badge bg-secondary">Conta Desativada</span>';
+        document.getElementById('detTotalCompras').textContent = Number(c.total_compras || 0);
+        document.getElementById('detTotalResgates').textContent = Number(c.total_resgates || 0);
+        document.getElementById('detUltimaCompra').textContent = formatarData(c.ultima_compra && c.ultima_compra.data);
+        document.getElementById('detUltimoResgate').textContent = formatarData(c.ultimo_resgate && c.ultimo_resgate.data);
+
+        await carregarExtratoCliente(id);
+    } catch (erro) {
+        document.getElementById('detNome').textContent = 'Detalhes indisponíveis';
+        alerta.textContent = erro.message || 'Não foi possível carregar os detalhes do cliente.';
+        alerta.classList.remove('d-none');
+        document.getElementById('tbodyExtratoCliente').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Extrato indisponível.</td></tr>';
+    }
+}
+
+function formatarData(valor) {
+    if (!valor) return '—';
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ? '—' : data.toLocaleDateString('pt-BR');
 }
 
 async function carregarExtratoCliente(id) {
@@ -490,11 +560,7 @@ async function carregarExtratoCliente(id) {
     tb.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Carregando extrato...</td></tr>';
 
     const resp = await fetch(`/api/clientes/${id}/extrato`, { credentials: 'include' });
-    if (!resp.ok) {
-        tb.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Falha ao obter extrato.</td></tr>';
-        return;
-    }
-    const data = await resp.json();
+    const data = await obterJson(resp, 'Falha ao obter extrato');
     const items = data.extrato || [];
     if (!items.length) {
         tb.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhuma movimentação de pontos até o momento.</td></tr>';
@@ -502,15 +568,17 @@ async function carregarExtratoCliente(id) {
     }
 
     tb.innerHTML = items.map(m => {
+        const quantidade = Number(m.quantidade || 0);
         const dt = m.data_hora ? new Date(m.data_hora).toLocaleString('pt-BR') : '-';
-        const sinal = m.quantidade > 0 ? `+${m.quantidade}` : `${m.quantidade}`;
-        const badgeClasse = m.quantidade > 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+        const sinal = quantidade > 0 ? `+${quantidade}` : `${quantidade}`;
+        const badgeClasse = quantidade > 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+        const saldo = m.saldo_posterior === null || m.saldo_posterior === undefined ? '—' : `${m.saldo_posterior} pts`;
         return `
         <tr>
             <td class="small">${dt}</td>
             <td><span class="badge bg-light text-dark border">${escapeHtml(m.tipo)}</span></td>
             <td class="${badgeClasse}">${sinal} pts</td>
-            <td><strong>${m.saldo_posterior} pts</strong></td>
+            <td><strong>${saldo}</strong></td>
             <td class="small">${escapeHtml(m.motivo || m.origem || '-')}</td>
         </tr>`;
     }).join('');

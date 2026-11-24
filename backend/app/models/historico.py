@@ -1,8 +1,14 @@
 from datetime import datetime, timezone
 
+from sqlalchemy import func
 from sqlalchemy.orm import synonym
 
 from app.extensions import db
+
+
+def normalizar_tipo_movimentacao(valor):
+    """Normaliza discriminadores legados sem alterar o valor persistido."""
+    return str(valor or "").strip().upper()
 
 
 def agora_utc():
@@ -44,25 +50,31 @@ class Historico(db.Model):
     descricao_recompensa = synonym("descricao")
     motivo = synonym("descricao")
 
+    @classmethod
+    def tipo_eh(cls, tipo):
+        """Expressão SQL compatível com valores legados em caixa/espaçamento distintos."""
+        return func.upper(func.trim(cls.tipo_movimentacao)) == normalizar_tipo_movimentacao(tipo)
+
     def to_dict(self):
+        tipo_normalizado = normalizar_tipo_movimentacao(self.tipo_movimentacao)
         return {
             "id_historico": self.id_historico,
-            "id_compra": self.id_historico if self.tipo_movimentacao == "COMPRA" else None,
-            "id_resgate": self.id_historico if self.tipo_movimentacao == "RESGATE" else None,
+            "id_compra": self.id_historico if tipo_normalizado == "COMPRA" else None,
+            "id_resgate": self.id_historico if tipo_normalizado == "RESGATE" else None,
             "id_cliente": self.id_usuario,
             "id_usuario": self.id_usuario,
             "id_produto": self.id_produto,
             "id_recompensa": self.id_produto,
-            "tipo_movimentacao": self.tipo_movimentacao,
-            "tipo": self.tipo_movimentacao,
+            "tipo_movimentacao": tipo_normalizado,
+            "tipo": tipo_normalizado,
             "data": self.data_movimentacao.isoformat() if self.data_movimentacao else None,
             "data_hora": self.data_movimentacao.isoformat() if self.data_movimentacao else None,
             "pontos": self.pontos,
             "quantidade": self.pontos,
-            "pontos_gerados": self.pontos if self.tipo_movimentacao == "COMPRA" else None,
-            "pontos_utilizados": abs(self.pontos) if self.tipo_movimentacao == "RESGATE" else None,
+            "pontos_gerados": self.pontos if tipo_normalizado == "COMPRA" else None,
+            "pontos_utilizados": abs(self.pontos) if tipo_normalizado == "RESGATE" else None,
             "descricao": self.descricao,
-            "descricao_recompensa": self.descricao if self.tipo_movimentacao == "RESGATE" else None,
+            "descricao_recompensa": self.descricao if tipo_normalizado == "RESGATE" else None,
             "saldo_anterior": self.saldo_anterior,
             "saldo_posterior": self.saldo_posterior,
             "origem": self.origem,

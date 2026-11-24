@@ -5,6 +5,9 @@
 {% block page_subtitle %}Visão geral do programa de fidelização{% endblock %}
 
 {% block content %}
+<div id="alertaRelatorios" class="alert alert-danger d-none" role="alert" aria-live="assertive"></div>
+<div id="mensagemPeriodo" class="alert alert-info d-none py-2" role="status" aria-live="polite"></div>
+
 <div class="row g-4 mb-4">
     <div class="col-md-4">
         <div class="card-stats h-100 shadow-sm border-0">
@@ -50,6 +53,7 @@
             </div>
             <div style="position: relative; height: 220px; width: 100%;">
                 <canvas id="graficoRosca"></canvas>
+                <div id="mensagemGraficoRosca" class="d-none h-100 align-items-center justify-content-center text-center text-muted px-3"></div>
             </div>
         </div>
     </div>
@@ -58,10 +62,11 @@
     <div class="col-md-7">
         <div class="table-extrato p-3" style="background: white; border-radius: 8px;">
             <div class="fw-bold mb-3" style="color: var(--sidebar-color); font-size: 0.9rem;">
-                <i class="fas fa-chart-column me-2"></i>Fluxo de Pontuação Geral
+                <i class="fas fa-chart-column me-2"></i>Fluxo de Pontuação (Últimos 30 dias)
             </div>
             <div style="position: relative; height: 220px; width: 100%;">
                 <canvas id="graficoBarras"></canvas>
+                <div id="mensagemGraficoBarras" class="d-none h-100 align-items-center justify-content-center text-center text-muted px-3"></div>
             </div>
         </div>
     </div>
@@ -95,85 +100,126 @@
 <script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
 
 <script>
-async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.ok?r.json():[]; }
+async function obterJsonRelatorio(url) {
+    const resposta = await fetch(url, { credentials: 'include' });
+    const dados = await resposta.json().catch(() => ({}));
+    if (!resposta.ok) {
+        throw new Error(dados.erro || `Falha ao consultar ${url} (HTTP ${resposta.status})`);
+    }
+    return dados;
+}
+
+function exibirMensagemGrafico(canvasId, mensagemId, mensagem) {
+    document.getElementById(canvasId).classList.add('d-none');
+    const elemento = document.getElementById(mensagemId);
+    elemento.textContent = mensagem;
+    elemento.classList.remove('d-none');
+    elemento.classList.add('d-flex');
+}
+
+function valorResultado(resultado, fallback) {
+    return resultado.status === 'fulfilled' ? resultado.value : fallback;
+}
 
 (async () => {
-    // 1. Busca os dados brutos das APIs nativas do back-end
-    const [clientes, compras, resgates, indicadores] = await Promise.all([
-        j('/api/clientes/'),
-        j('/api/compras/'),
-        j('/api/resgates/'),
-        j('/api/relatorios/indicadores?dias=30')
+    const resultados = await Promise.allSettled([
+        obterJsonRelatorio('/api/clientes/'),
+        obterJsonRelatorio('/api/compras/'),
+        obterJsonRelatorio('/api/resgates/'),
+        obterJsonRelatorio('/api/relatorios/indicadores?dias=30')
     ]);
+    const clientes = valorResultado(resultados[0], []);
+    const compras = valorResultado(resultados[1], []);
+    const resgates = valorResultado(resultados[2], []);
+    const indicadores = valorResultado(resultados[3], null);
+    const erros = resultados.filter(r => r.status === 'rejected').map(r => r.reason.message);
+
+    if (erros.length) {
+        const alerta = document.getElementById('alertaRelatorios');
+        alerta.textContent = `Nem todos os dados puderam ser carregados: ${erros.join(' | ')}`;
+        alerta.classList.remove('d-none');
+    }
+
     const cmap = {}; clientes.forEach(c=>cmap[c.id_cliente]=c);
 
-    const recorrencia = Number(indicadores.frequencia_recompra || 0).toFixed(2);
-    document.getElementById('kRecorrencia').innerHTML = `${recorrencia} <span class="fs-6 text-muted fw-normal">compras/cli</span>`;
+    if (indicadores) {
+        const recorrencia = Number(indicadores.frequencia_recompra || 0).toFixed(2);
+        document.getElementById('kRecorrencia').innerHTML = `${recorrencia} <span class="fs-6 text-muted fw-normal">compras/cli</span>`;
 
-    const qtdAtivos = Number(indicadores.clientes_com_compra_ultimos_30_dias || 0);
-    const qtdInativos = Number(indicadores.clientes_sem_compra_ultimos_30_dias || 0);
-    document.getElementById('kRotatividade').textContent = indicadores.rotatividade_aplicavel
-        ? Number(indicadores.taxa_rotatividade || 0).toFixed(2) + "%"
-        : "Não aplicável";
+        const qtdAtivos = Number(indicadores.clientes_com_compra_ultimos_30_dias || 0);
+        const qtdInativos = Number(indicadores.clientes_sem_compra_ultimos_30_dias || 0);
+        document.getElementById('kRotatividade').textContent = indicadores.rotatividade_aplicavel
+            ? Number(indicadores.taxa_rotatividade || 0).toFixed(2) + "%"
+            : "Não aplicável";
 
-    const pontosEmitidos = Number(indicadores.pontos_emitidos || 0);
-    const pontosResgatados = Number(indicadores.pontos_resgatados || 0);
-    const resgate = Number(indicadores.indice_resgate || 0).toFixed(2);
-    document.getElementById('kResgate').textContent = resgate + "%";
+        const pontosEmitidos = Number(indicadores.pontos_emitidos || 0);
+        const pontosResgatados = Number(indicadores.pontos_resgatados || 0);
+        document.getElementById('kResgate').textContent = Number(indicadores.indice_resgate || 0).toFixed(2) + "%";
 
-
-    // ====================================================
-    // RENDERIZAÇÃO GRÁFICA DOS COMPONENTES (Chart.js)
-    // ====================================================
-
-    // Gráfico 1: Rosca (Proporção de Clientes Ativos vs Inativos)
-    const ctxRosca = document.getElementById('graficoRosca').getContext('2d');
-    new Chart(ctxRosca, {
-        type: 'doughnut',
-        data: {
-            labels: ['Ativos', 'Inativos (Churn)'],
-            datasets: [{
-                data: [qtdAtivos, qtdInativos],
-                backgroundColor: ['#198754', '#dc3545'],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+        const mensagemPeriodo = document.getElementById('mensagemPeriodo');
+        if (!indicadores.tem_movimentacao_periodo) {
+            mensagemPeriodo.textContent = indicadores.tem_movimentacao_historica
+                ? 'Existem movimentações históricas, mas nenhuma compra ou resgate ocorreu nos últimos 30 dias.'
+                : 'Ainda não existem compras ou resgates registrados para calcular os indicadores.';
+            mensagemPeriodo.classList.remove('d-none');
+        } else if (!pontosEmitidos) {
+            mensagemPeriodo.textContent = 'Não houve pontos emitidos por compras no período; o Índice de Resgate permanece em 0,00%.';
+            mensagemPeriodo.classList.remove('d-none');
         }
-    });
 
-    // Gráfico 2: Barras (Comparativo de Volumes de Pontos Emitidos e Usados)
-    const ctxBarras = document.getElementById('graficoBarras').getContext('2d');
-    new Chart(ctxBarras, {
-        type: 'bar',
-        data: {
-            labels: ['Pontos Gerados', 'Pontos Resgatados'],
-            datasets: [{
-                data: [pontosEmitidos, pontosResgatados],
-                backgroundColor: ['#0d6efd', '#ffc107'],
-                borderRadius: 4,
-                barThickness: 45
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, grid: { display: true } }, x: { grid: { display: false } } }
+        if (typeof Chart === 'undefined') {
+            throw new Error('A biblioteca Chart.js não foi carregada.');
         }
-    });
 
+        if (qtdAtivos + qtdInativos > 0) {
+            new Chart(document.getElementById('graficoRosca').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Com compra recente', 'Sem compra recente'],
+                    datasets: [{ data: [qtdAtivos, qtdInativos], backgroundColor: ['#198754', '#dc3545'], borderWidth: 1 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+        } else {
+            exibirMensagemGrafico('graficoRosca', 'mensagemGraficoRosca', 'Nenhum cliente cadastrado para compor a Saúde da Base.');
+        }
 
-    // ====================================================
-    // Tabelas de apoio
-    // ====================================================
+        if (pontosEmitidos || pontosResgatados) {
+            new Chart(document.getElementById('graficoBarras').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Pontos Gerados', 'Pontos Resgatados'],
+                    datasets: [{ data: [pontosEmitidos, pontosResgatados], backgroundColor: ['#0d6efd', '#ffc107'], borderRadius: 4, barThickness: 45 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { display: true } }, x: { grid: { display: false } } }
+                }
+            });
+        } else {
+            const mensagem = indicadores.tem_movimentacao_historica
+                ? 'Sem fluxo de pontos nos últimos 30 dias; há registros fora do período.'
+                : 'Nenhuma movimentação de compra ou resgate registrada.';
+            exibirMensagemGrafico('graficoBarras', 'mensagemGraficoBarras', mensagem);
+        }
+    } else {
+        document.getElementById('kRecorrencia').textContent = 'Indisponível';
+        document.getElementById('kRotatividade').textContent = 'Indisponível';
+        document.getElementById('kResgate').textContent = 'Indisponível';
+        exibirMensagemGrafico('graficoRosca', 'mensagemGraficoRosca', 'Indicadores indisponíveis devido a uma falha da API.');
+        exibirMensagemGrafico('graficoBarras', 'mensagemGraficoBarras', 'Fluxo indisponível devido a uma falha da API.');
+    }
+
     const top = clientes.filter(c=>c.ativo).sort((a,b)=>b.pontos_acumulados-a.pontos_acumulados).slice(0,5);
     document.getElementById('tbodyTop').innerHTML = top.length
         ? top.map(c=>`<tr><td>${escapeHtml(c.nome)}</td><td>${escapeHtml(c.telefone)}</td><td class="text-end pe-3"><span class="badge-ganho" style="background-color:#e7f8ed;color:#198754;padding:3px 8px;border-radius:12px;font-size:0.85rem;">${c.pontos_acumulados} pts</span></td></tr>`).join('')
-        : '<tr><td colspan="3" class="text-center text-muted">Sem dados.</td></tr>';
+        : `<tr><td colspan="3" class="text-center text-muted">${resultados[0].status === 'rejected' ? 'Clientes indisponíveis.' : 'Sem clientes ativos.'}</td></tr>`;
 
     const mov = [
         ...compras.map(c=>({t:'compra', cli:cmap[c.id_cliente], pts:c.pontos_gerados, data:c.data})),
@@ -187,8 +233,14 @@ async function j(u){ const r = await fetch(u,{credentials:'include'}); return r.
             const ic = m.t==='compra' ? '<i class="fas fa-cart-shopping text-success me-1"></i>Compra' : '<i class="fas fa-gift text-danger me-1"></i>Resgate';
             return `<tr><td>${ic}</td><td>${escapeHtml(nome)}</td><td class="text-end pe-3">${badge}</td></tr>`;
         }).join('')
-        : '<tr><td colspan="3" class="text-center text-muted">Sem movimentacoes.</td></tr>';
-})();
+        : `<tr><td colspan="3" class="text-center text-muted">${resultados[1].status === 'rejected' || resultados[2].status === 'rejected' ? 'Movimentações parcialmente indisponíveis.' : 'Sem movimentações.'}</td></tr>`;
+})().catch(erro => {
+    const alerta = document.getElementById('alertaRelatorios');
+    alerta.textContent = erro.message || 'Não foi possível renderizar os relatórios.';
+    alerta.classList.remove('d-none');
+    exibirMensagemGrafico('graficoRosca', 'mensagemGraficoRosca', 'Gráfico indisponível.');
+    exibirMensagemGrafico('graficoBarras', 'mensagemGraficoBarras', 'Gráfico indisponível.');
+});
 
 </script>
 {% endblock %}

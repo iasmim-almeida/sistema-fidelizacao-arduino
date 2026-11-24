@@ -67,11 +67,13 @@ def dashboard_estatisticas():
     )
     novos_clientes_mes = clientes.filter(Cliente.data_cadastro >= inicio_mes).count()
 
-    total_compras = Compra.query.filter_by(tipo_movimentacao="COMPRA").count()
-    pontos_emitidos = db.session.query(func.coalesce(func.sum(Compra.pontos_gerados), 0)).filter(Compra.tipo_movimentacao == "COMPRA").scalar()
+    total_compras = Compra.query.filter(Compra.tipo_eh("COMPRA")).count()
+    pontos_emitidos = db.session.query(func.coalesce(func.sum(Compra.pontos_gerados), 0)).filter(Compra.tipo_eh("COMPRA")).scalar()
 
-    total_resgates = Resgate.query.filter_by(tipo_movimentacao="RESGATE").count()
-    pontos_utilizados = db.session.query(func.coalesce(func.sum(Resgate.pontos_utilizados), 0)).filter(Resgate.tipo_movimentacao == "RESGATE").scalar()
+    total_resgates = Resgate.query.filter(Resgate.tipo_eh("RESGATE")).count()
+    pontos_utilizados = db.session.query(
+        func.coalesce(func.sum(func.abs(Resgate.pontos_utilizados)), 0)
+    ).filter(Resgate.tipo_eh("RESGATE")).scalar()
     saldo_circulacao = (
         db.session.query(func.coalesce(func.sum(Cliente.pontos_acumulados), 0))
         .filter(Cliente.nivel_acesso == "CLIENTE")
@@ -80,7 +82,7 @@ def dashboard_estatisticas():
 
     ultimas_compras = (
         db.session.query(Compra, Cliente.nome)
-        .filter(Compra.tipo_movimentacao == "COMPRA")
+        .filter(Compra.tipo_eh("COMPRA"))
         .join(Cliente, Compra.id_cliente == Cliente.id_cliente)
         .filter(Cliente.nivel_acesso == "CLIENTE")
         .order_by(Compra.data.desc())
@@ -99,7 +101,7 @@ def dashboard_estatisticas():
 
     ultimos_resgates = (
         db.session.query(Resgate, Cliente.nome)
-        .filter(Resgate.tipo_movimentacao == "RESGATE")
+        .filter(Resgate.tipo_eh("RESGATE"))
         .join(Cliente, Resgate.id_cliente == Cliente.id_cliente)
         .filter(Cliente.nivel_acesso == "CLIENTE")
         .order_by(Resgate.data.desc())
@@ -152,7 +154,7 @@ def relatorios_indicadores():
     compras_periodo = Compra.query.join(
         Cliente, Compra.id_cliente == Cliente.id_cliente
     ).filter(
-        Compra.tipo_movimentacao == "COMPRA",
+        Compra.tipo_eh("COMPRA"),
         Compra.data >= inicio_periodo,
         Cliente.nivel_acesso == "CLIENTE",
     )
@@ -167,7 +169,7 @@ def relatorios_indicadores():
     resgates_periodo = Resgate.query.join(
         Cliente, Resgate.id_cliente == Cliente.id_cliente
     ).filter(
-        Resgate.tipo_movimentacao == "RESGATE",
+        Resgate.tipo_eh("RESGATE"),
         Resgate.data >= inicio_periodo,
         Cliente.nivel_acesso == "CLIENTE",
     )
@@ -176,6 +178,19 @@ def relatorios_indicadores():
         func.coalesce(func.sum(func.abs(Resgate.pontos_utilizados)), 0)
     ).scalar() or 0
 
+    quantidade_compras_total = Compra.query.join(
+        Cliente, Compra.id_cliente == Cliente.id_cliente
+    ).filter(
+        Compra.tipo_eh("COMPRA"),
+        Cliente.nivel_acesso == "CLIENTE",
+    ).count()
+    quantidade_resgates_total = Resgate.query.join(
+        Cliente, Resgate.id_cliente == Cliente.id_cliente
+    ).filter(
+        Resgate.tipo_eh("RESGATE"),
+        Cliente.nivel_acesso == "CLIENTE",
+    ).count()
+
     frequencia_recompra = quantidade_compras / clientes_ativos if clientes_ativos else 0.0
     indice_resgate = int(pontos_resgatados) / int(pontos_emitidos) * 100 if pontos_emitidos else 0.0
 
@@ -183,7 +198,7 @@ def relatorios_indicadores():
     clientes_com_compra_30_dias = Compra.query.join(
         Cliente, Compra.id_cliente == Cliente.id_cliente
     ).filter(
-        Compra.tipo_movimentacao == "COMPRA",
+        Compra.tipo_eh("COMPRA"),
         Compra.data >= agora - timedelta(days=30),
         Cliente.nivel_acesso == "CLIENTE",
     ).with_entities(
@@ -203,6 +218,8 @@ def relatorios_indicadores():
 
     return jsonify({
         "periodo_dias": dias,
+        "inicio_periodo": inicio_periodo.isoformat(),
+        "fim_periodo": agora.isoformat(),
         "clientes_ativos": clientes_ativos,
         "total_clientes_cadastrados": total_clientes_cadastrados,
         "clientes_com_compra": int(clientes_com_compra),
@@ -210,6 +227,10 @@ def relatorios_indicadores():
         "clientes_sem_compra_ultimos_30_dias": clientes_sem_compra_30_dias,
         "quantidade_compras": quantidade_compras,
         "quantidade_resgates": quantidade_resgates,
+        "quantidade_compras_total": quantidade_compras_total,
+        "quantidade_resgates_total": quantidade_resgates_total,
+        "tem_movimentacao_periodo": bool(quantidade_compras or quantidade_resgates),
+        "tem_movimentacao_historica": bool(quantidade_compras_total or quantidade_resgates_total),
         "pontos_emitidos": int(pontos_emitidos),
         "pontos_resgatados": int(pontos_resgatados),
         "frequencia_recompra": round(frequencia_recompra, 2),
